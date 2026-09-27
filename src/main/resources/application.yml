@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: "optional:file:.env[.properties]"
   datasource:
     url: jdbc:postgresql://ep-odd-flower-ae12er96-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require
     username: ${DB_USER}
@@ -10,7 +12,22 @@ spring:
       password: ${REDIS_PASSWD}
       ssl:
         enabled: true
-
+  ai:
+    model:
+      audio:
+        speech: none
+        transcription: none
+      embedding: none
+      image: none
+      moderation: none
+    vectorstore:
+      type: none
+    openai:
+      api-key: ${GROQ_API_KEY}
+      base-url: https://api.groq.com/openai/v1
+      chat:
+        options:
+          model: llama-3.3-70b-versatile
 insightshub:
   frontend-url: ${FRONTEND_URL}
   backend-url: ${BACKEND_URL}

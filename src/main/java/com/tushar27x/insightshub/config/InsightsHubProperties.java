@@ -6,9 +6,9 @@ import org.springframework.validation.annotation.Validated;
 
 @Validated
 @ConfigurationProperties(prefix = "insightshub")
-public class InsightsHubProperties {
-    @NotBlank String frontendUrl;
-    @NotBlank String backendUrl;
-    @NotBlank String encryptionKey;
-    @NotBlank String jwtSecret;
-}
+public record InsightsHubProperties (
+    @NotBlank String frontendUrl,
+    @NotBlank String backendUrl,
+    @NotBlank String encryptionKey,
+    @NotBlank String jwtSecret
+){}
