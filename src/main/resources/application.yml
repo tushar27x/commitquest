@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://ep-odd-flower-ae12er96-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require
+    username: ${DB_USER}
+    password: ${DB_PASSWD}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: 6379
+      password: ${REDIS_PASSWD}
+      ssl:
+        enabled: true
+
+insightshub:
+  frontend-url: ${FRONTEND_URL}
+  backend-url: ${BACKEND_URL}
+  jwt-secret: ${JWT_SECRET}
+  encryption-key: ${ENCRYPTION_KEY}
