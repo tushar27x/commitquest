@@ -5,6 +5,15 @@ spring:
     url: jdbc:postgresql://ep-odd-flower-ae12er96-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require
     username: ${DB_USER}
     password: ${DB_PASSWD}
+  flyway:
+    schemas: v2
+    default-schema: v2
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: v2
   data:
     redis:
       host: ${REDIS_HOST}
@@ -33,3 +42,7 @@ insightshub:
   backend-url: ${BACKEND_URL}
   jwt-secret: ${JWT_SECRET}
   encryption-key: ${ENCRYPTION_KEY}
+management:
+  endpoint:
+    health:
+      show-details: always
