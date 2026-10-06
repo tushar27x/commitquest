@@ -8,6 +8,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 import java.time.Instant;
 
@@ -52,6 +54,7 @@ public class Users {
     private Instant lastSyncedAt;
 
     @Column(nullable = false, updatable = false, insertable = false)
+    @Generated(event = EventType.INSERT)
     private Instant createdAt;
 
     public Users(Long githubId, String login) {

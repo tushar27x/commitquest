@@ -9,6 +9,7 @@ spring:
     schemas: v2
     default-schema: v2
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
