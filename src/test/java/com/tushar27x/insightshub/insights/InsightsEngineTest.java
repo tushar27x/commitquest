@@ -7,6 +7,7 @@ import com.tushar27x.insightshub.insights.UserStats.RankedRepo;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static com.tushar27x.insightshub.insights.GitHubTestData.contributions;
 import static com.tushar27x.insightshub.insights.GitHubTestData.day;
@@ -20,8 +21,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class InsightsEngineTest {
 
-    /** Classifier stub: these tests are about stats; archetype rules have their own test. */
-    private final InsightsEngine engine = new InsightsEngine((stats, days) -> Archetype.CODE_CRUSADER);
+    private static final ArchetypeScores FIXED = new ArchetypeScores(Archetype.PALADIN, Map.of(), 1);
+
+    /** Classifier stub: these tests are about stats; scoring has its own test. */
+    private final InsightsEngine engine = new InsightsEngine(habits -> FIXED);
 
     private UserStats stats(GitHubUser user) {
         return engine.calculate(user).stats();
@@ -160,22 +163,30 @@ class InsightsEngineTest {
     }
 
     @Test
-    void passesStatsAndSortedDaysToTheClassifier() {
+    void scoresTheHabitProfileBuiltFromTheSameData() {
         var captured = new Object() {
-            UserStats stats;
-            List<GitHubUser.ContributionDay> days;
+            HabitProfile habits;
         };
-        InsightsEngine capturing = new InsightsEngine((stats, days) -> {
-            captured.stats = stats;
-            captured.days = days;
-            return Archetype.BUG_HUNTER;
+        InsightsEngine capturing = new InsightsEngine(habits -> {
+            captured.habits = habits;
+            return FIXED;
         });
 
         InsightsResult result = capturing.calculate(user(contributions(1, 0, 0,
                 List.of(day("2026-10-12", 2), day("2026-10-11", 1)))));
 
-        assertThat(result.archetype()).isEqualTo(Archetype.BUG_HUNTER);
-        assertThat(captured.stats).isSameAs(result.stats());
-        assertThat(captured.days).extracting(GitHubUser.ContributionDay::contributionCount).containsExactly(1, 2);
+        assertThat(result.archetype()).isEqualTo(Archetype.PALADIN);
+        assertThat(result.archetypeScores()).isSameAs(FIXED);
+        assertThat(captured.habits).isSameAs(result.habits());
+        assertThat(result.habits().longestStreak()).isEqualTo(2);
+    }
+
+    @Test
+    void realScorerProducesAllClassScores() {
+        InsightsResult result = new InsightsEngine(new ScoringArchetypeClassifier())
+                .calculate(user(contributions(10, 2, 1, days("2026-10-01", 10))));
+
+        assertThat(result.archetypeScores().scores()).hasSize(Archetype.values().length);
+        assertThat(result.archetype()).isNotNull();
     }
 }

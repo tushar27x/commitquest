@@ -1,6 +1,7 @@
 package com.tushar27x.insightshub.insights;
 
 import com.tushar27x.insightshub.github.model.GitHubUser;
+import com.tushar27x.insightshub.github.model.GitHubUser.Author;
 import com.tushar27x.insightshub.github.model.GitHubUser.Blob;
 import com.tushar27x.insightshub.github.model.GitHubUser.Commit;
 import com.tushar27x.insightshub.github.model.GitHubUser.CommitTarget;
@@ -17,6 +18,7 @@ import com.tushar27x.insightshub.github.model.GitHubUser.RepositoryName;
 import com.tushar27x.insightshub.github.model.GitHubUser.TotalCount;
 import com.tushar27x.insightshub.github.model.GitHubUser.Tree;
 import com.tushar27x.insightshub.github.model.GitHubUser.TreeEntry;
+import com.tushar27x.insightshub.github.model.GitHubUser.UserRef;
 import com.tushar27x.insightshub.github.model.GitHubUser.Week;
 
 import java.time.Instant;
@@ -50,6 +52,19 @@ final class GitHubTestData {
                 new Ref(new CommitTarget(new Connection<>(commits))),
                 new Blob("# " + name),
                 new Tree(files.stream().map(file -> new TreeEntry(file, "blob")).toList()));
+    }
+
+    /** A repository with full control over README text and commits (with authors). */
+    static Repository repo(String name, String readme, List<String> files, List<Commit> commits) {
+        return new Repository(name, 0, new Connection<>(List.of()),
+                new Ref(new CommitTarget(new Connection<>(commits))),
+                new Blob(readme),
+                new Tree(files.stream().map(file -> new TreeEntry(file, "blob")).toList()));
+    }
+
+    /** A commit by the GitHub account {@code login}; null login = email not linked to an account. */
+    static Commit commit(String message, String login) {
+        return new Commit("sha-" + message, message, Instant.EPOCH, new Author(login == null ? null : new UserRef(login)));
     }
 
     static Repository repoWithLanguages(String name, String... languages) {

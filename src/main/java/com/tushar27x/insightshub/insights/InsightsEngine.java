@@ -25,8 +25,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Turns raw GitHub data into {@link UserStats} and an archetype. Port of v1's
- * {@code calculate_user_insights}; pure logic with no I/O, so it is unit-tested directly.
+ * Turns raw GitHub data into {@link UserStats} (a port of v1's {@code calculate_user_insights}),
+ * a {@link HabitProfile} and archetype scores. Pure logic with no I/O, so it is unit-tested directly.
  * <p>
  * Deliberate differences from v1:
  * <ul>
@@ -34,6 +34,8 @@ import java.util.Optional;
  *       v1 crashed on them (BUGS.md B20).</li>
  *   <li>The weekly heatmap is always exactly 7 entries; v1 returned empty lists when the
  *       calendar had no weeks.</li>
+ *   <li>Archetypes are scored D&amp;D-style classes ({@link ScoringArchetypeClassifier}), not v1's
+ *       first-match rules.</li>
  * </ul>
  */
 @Component
@@ -78,7 +80,8 @@ public class InsightsEngine {
                 counts(lastN(days, MONTH_DAYS)),
                 List.copyOf(weekLabels));
 
-        return new InsightsResult(stats, archetypeClassifier.classify(stats, days));
+        HabitProfile habits = HabitProfile.from(user, days);
+        return new InsightsResult(stats, habits, archetypeClassifier.classify(habits));
     }
 
     /** All calendar days with a date, oldest first. */
@@ -122,7 +125,7 @@ public class InsightsEngine {
                 .toList();
     }
 
-    private static List<Commit> history(Repository repo) {
+    static List<Commit> history(Repository repo) {
         if (repo.defaultBranchRef() == null || repo.defaultBranchRef().target() == null) {
             return List.of(); // empty repo, or the ref doesn't point at a commit
         }
@@ -162,7 +165,7 @@ public class InsightsEngine {
         return count == null ? 0 : count.totalCount();
     }
 
-    private static <T> List<T> nodes(Connection<T> connection) {
+    static <T> List<T> nodes(Connection<T> connection) {
         return connection == null || connection.nodes() == null
                 ? Collections.emptyList()
                 : connection.nodes().stream().filter(Objects::nonNull).toList();
