@@ -3,7 +3,7 @@ package com.tushar27x.insightshub.ai;
 import org.springframework.ai.chat.client.ChatClient;
 
 /**
- * One LLM provider: a {@link ChatClient} (with the manager persona as its default system prompt)
+ * One LLM provider: a {@link ChatClient} (with the mentor persona as its default system prompt)
  * and the model names to use per {@link ModelTier}.
  *
  * @param reasoningEffort for reasoning models ({@code low}, {@code medium}, {@code high}); null for models
