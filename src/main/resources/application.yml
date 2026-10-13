@@ -1,6 +1,9 @@
 spring:
   config:
     import: "optional:file:.env[.properties]"
+  threads:
+    virtual:
+      enabled: true  # Java 21 virtual threads for Tomcat and applicationTaskExecutor (parallel AI calls)
   datasource:
     url: jdbc:postgresql://ep-odd-flower-ae12er96-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require
     username: ${DB_USER}
@@ -36,13 +39,24 @@ spring:
       api-key: ${GROQ_API_KEY}
       base-url: https://api.groq.com/openai/v1
       chat:
+        # fail fast so the fallback provider gets its turn (defaults: 3 retries, 60s)
+        max-retries: 1
+        timeout: 30s
         options:
-          model: llama-3.3-70b-versatile
+          model: openai/gpt-oss-120b  # v1's llama-3.3-70b-versatile is retired on Groq (B26)
 insightshub:
   frontend-url: ${FRONTEND_URL}
   backend-url: ${BACKEND_URL}
   jwt-secret: ${JWT_SECRET}
   encryption-key: ${ENCRYPTION_KEY}
+  ai:
+    fast-model: openai/gpt-oss-20b  # cheap model for repo summaries (v1: llama-3.1-8b-instant, retired)
+    reasoning-effort: low  # gpt-oss reasons before answering; "low" keeps that short
+    task-timeout: 90s
+    fallback:  # OpenAI-compatible Gemini endpoint; switched off while GEMINI_API_KEY is empty
+      base-url: https://generativelanguage.googleapis.com/v1beta/openai
+      api-key: ${GEMINI_API_KEY:}
+      model: ${GEMINI_MODEL:gemini-3.6-flash}
 management:
   endpoint:
     health:
