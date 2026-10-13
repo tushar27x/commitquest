@@ -1,0 +1,119 @@
+{
+  "login": "octocat",
+  "name": "The Octocat",
+  "avatarUrl": "https://avatars.githubusercontent.com/u/583231",
+  "url": "https://github.com/octocat",
+  "bio": null,
+  "followers": {
+    "totalCount": 120
+  },
+  "following": {
+    "totalCount": 9
+  },
+  "repositories": {
+    "nodes": [
+      {
+        "name": "hello-world",
+        "stargazerCount": 42,
+        "languages": {
+          "nodes": [
+            {
+              "name": "Java"
+            },
+            {
+              "name": "Dockerfile"
+            }
+          ]
+        },
+        "defaultBranchRef": {
+          "target": {
+            "history": {
+              "nodes": [
+                {
+                  "oid": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+                  "message": "feat: add greeting endpoint",
+                  "committedDate": "2026-10-12T18:30:00Z",
+                  "author": {
+                    "user": {
+                      "login": "octocat"
+                    }
+                  }
+                },
+                {
+                  "oid": "0f9e8d7c6b5a49382716051f2e3d4c5b6a798011",
+                  "message": "wip",
+                  "committedDate": "2026-10-11T02:15:00Z",
+                  "author": {
+                    "user": null
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "readme": {
+          "text": "# Hello World"
+        },
+        "tree": {
+          "entries": [
+            {
+              "name": "Dockerfile",
+              "type": "blob"
+            },
+            {
+              "name": "src",
+              "type": "tree"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "pullRequests": {
+    "nodes": [
+      {
+        "additions": 120,
+        "deletions": 30,
+        "title": "Add greeting"
+      },
+      {
+        "additions": 5,
+        "deletions": 80,
+        "title": "Remove dead code"
+      }
+    ]
+  },
+  "contributionsCollection": {
+    "commitContributionsByRepository": [
+      {
+        "repository": {
+          "name": "hello-world"
+        },
+        "contributions": {
+          "totalCount": 17
+        }
+      }
+    ],
+    "contributionCalendar": {
+      "totalContributions": 3,
+      "weeks": [
+        {
+          "contributionDays": [
+            {
+              "date": "2026-10-11",
+              "contributionCount": 1
+            },
+            {
+              "date": "2026-10-12",
+              "contributionCount": 2
+            }
+          ]
+        }
+      ]
+    },
+    "totalCommitContributions": 17,
+    "totalPullRequestContributions": 2,
+    "totalIssueContributions": 1,
+    "totalRepositoryContributions": 2
+  }
+}

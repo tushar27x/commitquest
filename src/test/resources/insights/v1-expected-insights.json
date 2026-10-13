@@ -1,0 +1,61 @@
+{
+  "stats": {
+    "total_commits": 17,
+    "total_prs": 2,
+    "total_issues": 1,
+    "ranked_repos": [
+      {
+        "name": "hello-world",
+        "count": 17
+      }
+    ],
+    "repo_details": [
+      {
+        "name": "hello-world",
+        "readme": "# Hello World",
+        "files": [
+          "Dockerfile",
+          "src"
+        ]
+      }
+    ],
+    "recent_commits": [
+      "feat: add greeting endpoint",
+      "wip"
+    ],
+    "code_churn": {
+      "additions": 125,
+      "deletions": 110
+    },
+    "top_languages": [
+      "Java",
+      "Dockerfile"
+    ],
+    "total_stars": 42,
+    "active_days_per_year": 2,
+    "social_ratio": "120/9",
+    "last_week_heatmap": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      2
+    ],
+    "last_month_heatmap": [
+      1,
+      2
+    ],
+    "heatmap_labels": [
+      "N/A",
+      "N/A",
+      "N/A",
+      "N/A",
+      "N/A",
+      "Sun",
+      "Mon"
+    ]
+  },
+  "archetype": "🏗️ The Software Architect"
+}
