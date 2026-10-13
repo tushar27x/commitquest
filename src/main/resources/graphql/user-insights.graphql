@@ -1,0 +1,96 @@
+# Ported from v1 (server/app/services/github_service.py), extended for v2:
+# - rateLimit: logged on every call to watch the 5,000 points/hour budget
+# - commit oid / committedDate / author: needed to store commits and detect habits
+# - contributionsCollection(from, to): lets scheduled syncs fetch a narrower window (max 1 year)
+query UserInsights($login: String!, $from: DateTime!, $to: DateTime!) {
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+  user(login: $login) {
+    login
+    name
+    avatarUrl
+    url
+    bio
+    followers {
+      totalCount
+    }
+    following {
+      totalCount
+    }
+    repositories(first: 5, orderBy: {field: STARGAZERS, direction: DESC}) {
+      nodes {
+        name
+        stargazerCount
+        languages(first: 3) {
+          nodes {
+            name
+          }
+        }
+        defaultBranchRef {
+          target {
+            ... on Commit {
+              history(first: 5) {
+                nodes {
+                  oid
+                  message
+                  committedDate
+                  author {
+                    user {
+                      login
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        readme: object(expression: "HEAD:README.md") {
+          ... on Blob {
+            text
+          }
+        }
+        tree: object(expression: "HEAD:") {
+          ... on Tree {
+            entries {
+              name
+              type
+            }
+          }
+        }
+      }
+    }
+    pullRequests(first: 10, orderBy: {field: CREATED_AT, direction: DESC}) {
+      nodes {
+        additions
+        deletions
+        title
+      }
+    }
+    contributionsCollection(from: $from, to: $to) {
+      commitContributionsByRepository(maxRepositories: 5) {
+        repository {
+          name
+        }
+        contributions {
+          totalCount
+        }
+      }
+      contributionCalendar {
+        totalContributions
+        weeks {
+          contributionDays {
+            date
+            contributionCount
+          }
+        }
+      }
+      totalCommitContributions
+      totalPullRequestContributions
+      totalIssueContributions
+      totalRepositoryContributions
+    }
+  }
+}
