@@ -26,7 +26,7 @@ public class DevDataRunner {
             log.info("Save user {}, createdAt={}", user.getGithubId(), user.getCreatedAt());
 
             Insights insights = insightsRepository.findById(id).orElseGet(()-> new Insights(user));
-            insights.setArchetype(Archetype.CODE_CRUSADER);
+            insights.setArchetype(Archetype.PALADIN);
             insights.setStats(Map.of("total_commits", 42, "top_languages", List.of("Java", "Python")));
             insightsRepository.save(insights);
 
