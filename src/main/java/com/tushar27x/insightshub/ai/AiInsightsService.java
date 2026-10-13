@@ -21,7 +21,7 @@ import java.util.function.Supplier;
 @Service
 public class AiInsightsService {
 
-    static final String ROAST_PENDING = "Technical evaluation pending.";
+    static final String YEAR_IN_REVIEW_PENDING = "Your year in review is on its way.";
     static final String WEEKLY_PENDING = "Activity analysis in progress.";
     static final String CRAFT_PENDING = "Code quality audit scheduled.";
 
@@ -44,7 +44,8 @@ public class AiInsightsService {
         long start = System.nanoTime();
         var stats = insights.stats();
 
-        var roast = async("roast", () -> reviewer.roast(stats, insights.archetype()), ROAST_PENDING);
+        var yearInReview = async("year in review", () -> reviewer.yearInReview(stats, insights.archetype()),
+                YEAR_IN_REVIEW_PENDING);
         var weekly = async("weekly review", () -> reviewer.weeklyReview(stats), WEEKLY_PENDING);
         var craft = async("craft review", () -> reviewer.craftReview(stats), CRAFT_PENDING);
         var summaries = async("repo summaries", () -> reviewer.repoSummaries(stats.repoDetails()),
@@ -52,10 +53,10 @@ public class AiInsightsService {
         var sheet = async("character sheet", () -> reviewer.characterSheet(login, insights.archetypeScores(),
                 insights.habits(), stats.topLanguages()), AiReviewer.fallbackSheet(login, insights.archetype()));
 
-        CompletableFuture.allOf(roast, weekly, craft, summaries, sheet).join();
+        CompletableFuture.allOf(yearInReview, weekly, craft, summaries, sheet).join();
         log.info("AI insights for '{}' generated in {} ms", login, (System.nanoTime() - start) / 1_000_000);
 
-        return new AiInsights(roast.join(), weekly.join(), craft.join(), summaries.join(), sheet.join());
+        return new AiInsights(yearInReview.join(), weekly.join(), craft.join(), summaries.join(), sheet.join());
     }
 
     private <T> CompletableFuture<T> async(String task, Supplier<T> generator, T fallback) {

@@ -4,7 +4,8 @@ DATA:
 - Code Churn: {additions} additions, {deletions} deletions.
 
 INSTRUCTIONS:
-1. Analyze the commit messages. Are they lazy (e.g., "wip", "fix")?
-2. Analyze the churn ratio. Are they deleting code (good refactoring) or just bloating the repo?
-3. Be sharp. If their commits are bad, tell them to read a style guide.
-4. Keep it to 2-3 sentences max.
+1. Look at the commit messages. Point out what is good about them; if some are vague
+   (e.g., "wip", "fix"), show how one could be rewritten.
+2. Look at the churn ratio. Deleting code is often healthy refactoring; heavy additions
+   may be a chance to split work into smaller changes.
+3. Keep it to 2-3 sentences max.

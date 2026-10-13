@@ -4,8 +4,14 @@ import com.tushar27x.insightshub.entity.Archetype;
 import com.tushar27x.insightshub.insights.ArchetypeScores;
 import com.tushar27x.insightshub.insights.UserStats.RepoDetail;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.core.io.ClassPathResource;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.IntStream;
 
@@ -21,19 +27,32 @@ class AiReviewerTest {
             {"title": "  tushar27x the Quiet, Monk of the Atomic Commit ", "lore": " Legends speak of tidy diffs. "}""";
 
     @Test
-    void roastCarriesTheStatsAndTheScoredClass() {
-        FakeChatModel model = FakeChatModel.answering("Verdict: fine.");
+    void yearInReviewCarriesTheStatsAndTheScoredClass() {
+        FakeChatModel model = FakeChatModel.answering("Great year.");
 
-        String roast = new AiReviewer(chain(model)).roast(stats(), Archetype.MONK);
+        String review = new AiReviewer(chain(model)).yearInReview(stats(), Archetype.MONK);
 
-        assertThat(roast).isEqualTo("Verdict: fine.");
+        assertThat(review).isEqualTo("Great year.");
         assertThat(model.lastUserText())
                 .contains("Archetype: 🧘 The Monk (disciplined: small pull requests and descriptive commit messages)")
                 .contains("42 commits / 100 days")
                 .contains("12 stars, 7 PRs")
-                .contains("Stack: Java, Go");
+                .contains("Stack: Java, Go")
+                .contains("REVIEW TYPE: Year in Review");
         assertThat(model.lastSystemText()).isEqualTo(FakeChatModel.PERSONA);
         assertThat(model.last().getOptions().getModel()).isEqualTo("big");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"persona", "year-in-review", "weekly-review", "craft-review", "repo-summaries",
+            "character-sheet"})
+    void promptsStayInTheSupportiveMentorVoice(String prompt) throws IOException {
+        // v2 dropped v1's roast: the habit tracker needs encouragement, not insults
+        String text = new ClassPathResource("prompts/" + prompt + ".st")
+                .getContentAsString(StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
+
+        assertThat(text).doesNotContain("roast", "cynical", "witty", "tough love", "tough-love",
+                "sassy", "verdict", "have a life", "call it out", "style guide");
     }
 
     @Test
@@ -74,10 +93,10 @@ class AiReviewerTest {
     }
 
     @Test
-    void textGeneratorsUseV1sMessageWhenEveryProviderFails() {
+    void textGeneratorsUseTheStaticMessageWhenEveryProviderFails() {
         AiReviewer reviewer = new AiReviewer(chain(FakeChatModel.failing(), FakeChatModel.failing()));
 
-        assertThat(reviewer.roast(stats(), Archetype.MONK)).isEqualTo(AiReviewer.PROVIDERS_DOWN);
+        assertThat(reviewer.yearInReview(stats(), Archetype.MONK)).isEqualTo(AiReviewer.PROVIDERS_DOWN);
         assertThat(reviewer.weeklyReview(stats())).isEqualTo(AiReviewer.PROVIDERS_DOWN);
         assertThat(reviewer.craftReview(stats())).isEqualTo(AiReviewer.PROVIDERS_DOWN);
     }

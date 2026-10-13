@@ -19,8 +19,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * The AI generators: v1's roast, weekly review, craft review and repo summaries
- * ({@code services/ai_service.py}), plus the D&amp;D character sheet. Each one always returns something:
+ * The AI generators, written in a supportive mentor persona: a year in review (replaces v1's roast),
+ * v1's weekly review, craft review and repo summaries ({@code services/ai_service.py}), plus the
+ * D&amp;D character sheet. Each one always returns something:
  * the LLM's answer, or a static fallback text.
  * <p>
  * Lists are formatted here, not in the templates: StringTemplate renders a list by concatenating its
@@ -30,8 +31,8 @@ import java.util.stream.IntStream;
 @RequiredArgsConstructor
 public class AiReviewer {
 
-    /** v1's text when both providers failed. */
-    static final String PROVIDERS_DOWN = "Your code is so average it didn't even trigger my fallback circuits. Try harder.";
+    /** Text when every provider failed. */
+    static final String PROVIDERS_DOWN = "Your mentor's notes aren't ready yet. Your stats are up to date; written feedback will follow on the next sync.";
     static final String DEFAULT_REPO_SUMMARY = "Exploration of technical concepts and implementations.";
 
     static final int SUMMARIZED_REPOS = 3;
@@ -39,7 +40,7 @@ public class AiReviewer {
     static final int CRAFT_COMMITS = 10;
     static final int TITLE_MAX_CHARS = 150;
 
-    private static final Resource ROAST = new ClassPathResource("prompts/roast.st");
+    private static final Resource YEAR_IN_REVIEW = new ClassPathResource("prompts/year-in-review.st");
     private static final Resource WEEKLY_REVIEW = new ClassPathResource("prompts/weekly-review.st");
     private static final Resource CRAFT_REVIEW = new ClassPathResource("prompts/craft-review.st");
     private static final Resource REPO_SUMMARIES = new ClassPathResource("prompts/repo-summaries.st");
@@ -48,8 +49,8 @@ public class AiReviewer {
 
     private final LlmChain llm;
 
-    public String roast(UserStats stats, Archetype archetype) {
-        return llm.text("roast", ModelTier.STANDARD, 300, spec -> spec.user(u -> u.text(ROAST)
+    public String yearInReview(UserStats stats, Archetype archetype) {
+        return llm.text("year in review", ModelTier.STANDARD, 300, spec -> spec.user(u -> u.text(YEAR_IN_REVIEW)
                         .param("archetype", archetype.getLabel() + " (" + archetype.getHabit() + ")")
                         .param("commits", stats.totalCommits())
                         .param("activeDays", stats.activeDaysPerYear())

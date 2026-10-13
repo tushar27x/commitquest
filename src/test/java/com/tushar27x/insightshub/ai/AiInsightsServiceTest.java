@@ -36,7 +36,7 @@ class AiInsightsServiceTest {
 
     /** Every generator answers after {@code delayMs}. */
     private void answerAll(long delayMs) {
-        when(reviewer.roast(any(), any())).thenAnswer(delayed(delayMs, "roast"));
+        when(reviewer.yearInReview(any(), any())).thenAnswer(delayed(delayMs, "year"));
         when(reviewer.weeklyReview(any())).thenAnswer(delayed(delayMs, "weekly"));
         when(reviewer.craftReview(any())).thenAnswer(delayed(delayMs, "craft"));
         when(reviewer.repoSummaries(anyList())).thenAnswer(delayed(delayMs, Map.of("app", "An app.")));
@@ -56,7 +56,7 @@ class AiInsightsServiceTest {
 
         AiInsights ai = service(Duration.ofSeconds(5)).generate("tushar27x", insights());
 
-        assertThat(ai).isEqualTo(new AiInsights("roast", "weekly", "craft", Map.of("app", "An app."), SHEET));
+        assertThat(ai).isEqualTo(new AiInsights("year", "weekly", "craft", Map.of("app", "An app."), SHEET));
     }
 
     @Test
@@ -74,12 +74,12 @@ class AiInsightsServiceTest {
     @Test
     void aCrashingGeneratorOnlyLosesItsOwnResult() {
         answerAll(0);
-        when(reviewer.roast(any(), any())).thenThrow(new IllegalStateException("bug"));
+        when(reviewer.yearInReview(any(), any())).thenThrow(new IllegalStateException("bug"));
         when(reviewer.characterSheet(anyString(), any(), any(), anyList())).thenThrow(new IllegalStateException("bug"));
 
         AiInsights ai = service(Duration.ofSeconds(5)).generate("tushar27x", insights());
 
-        assertThat(ai.roast()).isEqualTo(AiInsightsService.ROAST_PENDING);   // v1's route-level fallback
+        assertThat(ai.yearInReview()).isEqualTo(AiInsightsService.YEAR_IN_REVIEW_PENDING);
         assertThat(ai.characterSheet()).isEqualTo(AiReviewer.fallbackSheet("tushar27x", Archetype.MONK));
         assertThat(ai.weeklyReview()).isEqualTo("weekly");
         assertThat(ai.repoSummaries()).containsKey("app");
@@ -94,7 +94,7 @@ class AiInsightsServiceTest {
         long elapsedMs = (System.nanoTime() - start) / 1_000_000;
 
         assertThat(elapsedMs).isLessThan(1_500);
-        assertThat(ai.roast()).isEqualTo(AiInsightsService.ROAST_PENDING);
+        assertThat(ai.yearInReview()).isEqualTo(AiInsightsService.YEAR_IN_REVIEW_PENDING);
         assertThat(ai.weeklyReview()).isEqualTo(AiInsightsService.WEEKLY_PENDING);
         assertThat(ai.craftReview()).isEqualTo(AiInsightsService.CRAFT_PENDING);
         assertThat(ai.repoSummaries()).isEmpty();
