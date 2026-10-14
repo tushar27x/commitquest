@@ -5,7 +5,7 @@ v1 reference (Python/FastAPI): `~/dev/insight_hub/server`. Roadmap and status: `
 
 ## Project index
 
-_Last indexed: 2026-10-14, Phase 7 in review (branch `phase-7/sync-cache`)._
+_Last indexed: 2026-10-14, after Phase 7 (commit `81ed7c0`)._
 
 ### What it is
 
@@ -16,10 +16,10 @@ Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP
 
 ### Status snapshot
 
-- **Done:** Phases 0–6 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
-  insights engine + D&D archetype scoring, AI layer, GitHub OAuth + JWT). PRs #2–#6 merged to `main`.
+- **Done:** Phases 0–7 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
+  insights engine + D&D archetype scoring, AI layer, GitHub OAuth + JWT, sync + Redis cache). PRs #2–#7 merged to `main`.
 - **Open v1 issue:** B26 — v1 production still calls Groq models that were retired.
-- **In review:** Phase 7 (sync + Redis cache); live Redis check after the developer reviews the V3 migration.
+- **Pending:** Phase 7 live check; the first app start applies `V3__insights_sync_columns.sql` to Neon.
 - **Next up:** 🤖 Phase 8 (rate limiting) · 🧑 Phase 2.6 (`V4__activity.sql`).
 - Working agreement & phase details: `PROGRESS.md` (status table at the top, learning log at the bottom).
 
