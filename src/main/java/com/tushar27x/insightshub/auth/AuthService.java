@@ -6,6 +6,7 @@ import com.tushar27x.insightshub.repository.UsersRepository;
 import com.tushar27x.insightshub.security.JwtService;
 import com.tushar27x.insightshub.security.JwtService.IssuedToken;
 import com.tushar27x.insightshub.security.TokenCipher;
+import com.tushar27x.insightshub.sync.SyncService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -14,9 +15,7 @@ import java.net.URI;
 
 /**
  * The login round trip: build GitHub's authorize URL, then turn the returned code into
- * a stored (encrypted) GitHub token and one of our JWTs.
- * <p>
- * Sync of the user's insights is Phase 7 ({@code SyncService}); login only records identity.
+ * a stored (encrypted) GitHub token, a sync of stale insights, and one of our JWTs.
  */
 @Slf4j
 @Service
@@ -26,14 +25,16 @@ public class AuthService {
     private final UsersRepository usersRepository;
     private final TokenCipher tokenCipher;
     private final JwtService jwtService;
+    private final SyncService syncService;
     private final AuthProperties properties;
 
     public AuthService(GitHubOAuthClient gitHub, UsersRepository usersRepository, TokenCipher tokenCipher,
-                       JwtService jwtService, AuthProperties properties) {
+                       JwtService jwtService, SyncService syncService, AuthProperties properties) {
         this.gitHub = gitHub;
         this.usersRepository = usersRepository;
         this.tokenCipher = tokenCipher;
         this.jwtService = jwtService;
+        this.syncService = syncService;
         this.properties = properties;
     }
 
@@ -69,8 +70,22 @@ public class AuthService {
         log.info("Login for '{}' ({}): {} user, verified email {}",
                 account.login(), account.id(), isNew ? "new" : "existing", email == null ? "missing" : "stored");
 
+        syncQuietly(account.id(), account.login());
         IssuedToken token = jwtService.issue(account.id(), account.login());
         return new LoginResult(account.login(), token);
+    }
+
+    /**
+     * Like v1, a failed sync must not fail the login: the user still gets a token, and the next login
+     * (or Phase 10's daily job) tries again. It runs before the response, like v1, so a fresh user's
+     * first {@code /api/user/insights} already has data.
+     */
+    private void syncQuietly(long githubId, String login) {
+        try {
+            syncService.syncIfStale(githubId);
+        } catch (RuntimeException e) {
+            log.error("Sync at login failed for '{}'; login continues", login, e);
+        }
     }
 
     public record LoginResult(String login, IssuedToken token) {

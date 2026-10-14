@@ -2,6 +2,8 @@ package com.tushar27x.insightshub.ai;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.metadata.DefaultUsage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
@@ -18,9 +20,21 @@ final class FakeChatModel implements ChatModel {
 
     final List<Prompt> prompts = new CopyOnWriteArrayList<>();
     private final Function<Prompt, String> answer;
+    private final ChatResponseMetadata metadata;
 
     private FakeChatModel(Function<Prompt, String> answer) {
+        this(answer, new ChatResponseMetadata());
+    }
+
+    private FakeChatModel(Function<Prompt, String> answer, ChatResponseMetadata metadata) {
         this.answer = answer;
+        this.metadata = metadata;
+    }
+
+    /** Also reports token usage, like a real provider. */
+    static FakeChatModel answeringWithUsage(String text, int promptTokens, int completionTokens) {
+        return new FakeChatModel(prompt -> text, ChatResponseMetadata.builder()
+                .usage(new DefaultUsage(promptTokens, completionTokens)).build());
     }
 
     static FakeChatModel answering(String text) {
@@ -40,7 +54,7 @@ final class FakeChatModel implements ChatModel {
     @Override
     public ChatResponse call(Prompt prompt) {
         prompts.add(prompt);
-        return new ChatResponse(List.of(new Generation(new AssistantMessage(answer.apply(prompt)))));
+        return new ChatResponse(List.of(new Generation(new AssistantMessage(answer.apply(prompt)))), metadata);
     }
 
     Prompt last() {

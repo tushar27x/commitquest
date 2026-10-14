@@ -92,10 +92,10 @@ public class AiReviewer {
         }
         String block = repos.stream().map(AiReviewer::describeRepo).collect(Collectors.joining("\n\n"));
 
-        Map<String, String> answered = llm.call("repo summaries", ModelTier.FAST, 120 * repos.size(),
+        Map<String, String> answered = llm.entity("repo summaries", ModelTier.FAST, 120 * repos.size(),
                         spec -> spec.system(REPO_SUMMARIES_SYSTEM)
-                                .user(u -> u.text(REPO_SUMMARIES).param("repos", block))
-                                .call().entity(RepoSummaries.class),
+                                .user(u -> u.text(REPO_SUMMARIES).param("repos", block)),
+                        RepoSummaries.class,
                         result -> result.summaries() != null && !matching(result, repos).isEmpty())
                 .map(result -> matching(result, repos))
                 .orElse(Map.of());
@@ -109,15 +109,15 @@ public class AiReviewer {
                                          List<String> languages) {
         Archetype archetype = scores.primary();
         String className = className(archetype);
-        Optional<CharacterSheet> sheet = llm.call("character sheet", ModelTier.STANDARD, 300,
+        Optional<CharacterSheet> sheet = llm.entity("character sheet", ModelTier.STANDARD, 300,
                 spec -> spec.user(u -> u.text(CHARACTER_SHEET)
-                                .param("login", login)
-                                .param("className", className)
-                                .param("habit", archetype.getHabit())
-                                .param("scores", topScores(scores))
-                                .param("evidence", evidence(habits))
-                                .param("languages", languages.isEmpty() ? "(none)" : String.join(", ", languages)))
-                        .call().entity(CharacterSheet.class),
+                        .param("login", login)
+                        .param("className", className)
+                        .param("habit", archetype.getHabit())
+                        .param("scores", topScores(scores))
+                        .param("evidence", evidence(habits))
+                        .param("languages", languages.isEmpty() ? "(none)" : String.join(", ", languages))),
+                CharacterSheet.class,
                 answer -> isValidSheet(answer, className));
         return sheet
                 .map(answer -> new CharacterSheet(answer.title().strip(), answer.lore().strip()))
