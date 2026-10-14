@@ -16,7 +16,7 @@ public class GitHubClientConfig {
      * Authorization header is set per request, not here.
      */
     @Bean
-    RestClient gitHubRestClient(RestClient.Builder builder) {
+    public RestClient gitHubRestClient(RestClient.Builder builder) {
         return builder
                 .baseUrl(GITHUB_API_URL)
                 .defaultHeader(HttpHeaders.USER_AGENT, "insightshub") // required by GitHub's API
