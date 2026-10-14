@@ -76,13 +76,13 @@ public class AuthService {
     }
 
     /**
-     * Like v1, a failed sync must not fail the login: the user still gets a token, and the next login
-     * (or Phase 10's daily job) tries again. It runs before the response, like v1, so a fresh user's
-     * first {@code /api/user/insights} already has data.
+     * Like v1, a failed sync must not fail the login: the user still gets a token and can refresh later.
+     * It runs before the response, like v1, so a new user's first {@code /api/user/insights} already
+     * has data. Subject to the same 10-minute cooldown as {@code POST /api/user/sync}.
      */
     private void syncQuietly(long githubId, String login) {
         try {
-            syncService.syncIfStale(githubId);
+            syncService.syncIfDue(githubId);
         } catch (RuntimeException e) {
             log.error("Sync at login failed for '{}'; login continues", login, e);
         }

@@ -42,6 +42,7 @@ class SyncServiceTest {
 
     private static final long ID = 583231L;
     private static final Instant NOW = Instant.parse("2026-10-14T12:00:00Z");
+    private static final Duration COOLDOWN = Duration.ofMinutes(10);
 
     private final UsersRepository usersRepository = mock(UsersRepository.class);
     private final TokenCipher cipher = new TokenCipher(SecurityTestData.appProperties());
@@ -59,7 +60,7 @@ class SyncServiceTest {
     @BeforeEach
     void setUp() {
         service = new SyncService(usersRepository, cipher, gitHub, engine, ai, writer, JsonMapper.builder().build(),
-                Clock.fixed(NOW, ZoneOffset.UTC), new SyncProperties(Duration.ofDays(7)));
+                Clock.fixed(NOW, ZoneOffset.UTC), new SyncProperties(COOLDOWN));
         user = new Users(ID, "octocat");
         user.setEncryptedGithubToken(cipher.encrypt("gho_stored", ID));
         when(usersRepository.findById(ID)).thenReturn(Optional.of(user));
@@ -82,23 +83,31 @@ class SyncServiceTest {
     }
 
     @Test
-    void neverSyncedUserIsStaleAtLogin() {
-        assertThat(service.syncIfStale(ID)).isEqualTo(SyncOutcome.SYNCED);
+    void claimedSyncRuns() {
+        when(usersRepository.claimSync(ID, NOW, NOW.minus(COOLDOWN))).thenReturn(1);
+
+        assertThat(service.syncIfDue(ID)).isEqualTo(SyncOutcome.SYNCED);
+        verify(writer).save(eq(ID), any(), eq(result), eq(texts), eq(NOW));
     }
 
     @Test
-    void recentDataIsReusedAtLogin() {
-        user.setLastSyncedAt(NOW.minus(Duration.ofDays(6)));
+    void syncDuringCooldownFetchesNothing() {
+        when(usersRepository.claimSync(ID, NOW, NOW.minus(COOLDOWN))).thenReturn(0);
 
-        assertThat(service.syncIfStale(ID)).isEqualTo(SyncOutcome.FRESH);
+        assertThat(service.syncIfDue(ID)).isEqualTo(SyncOutcome.COOLDOWN);
         verifyNoInteractions(gitHub, ai, writer);
     }
 
     @Test
-    void weekOldDataIsSyncedAtLogin() {
-        user.setLastSyncedAt(NOW.minus(Duration.ofDays(8)));
+    void nextSyncIsTenMinutesAfterTheLastStart() {
+        user.setSyncRequestedAt(NOW.minus(Duration.ofMinutes(4)));
+        assertThat(service.nextSyncAllowedAt(ID)).isEqualTo(NOW.plus(Duration.ofMinutes(6)));
 
-        assertThat(service.syncIfStale(ID)).isEqualTo(SyncOutcome.SYNCED);
+        user.setSyncRequestedAt(NOW.minus(Duration.ofMinutes(20)));
+        assertThat(service.nextSyncAllowedAt(ID)).isEqualTo(NOW);
+
+        user.setSyncRequestedAt(null);
+        assertThat(service.nextSyncAllowedAt(ID)).isEqualTo(NOW);
     }
 
     @Test

@@ -57,20 +57,35 @@ public class SyncService {
         this.properties = properties;
     }
 
-    /** At login: sync only if the data is missing or older than {@code login-stale-after} (v1: 7 days). */
-    public SyncOutcome syncIfStale(long userId) {
-        Users user = load(userId);
-        Instant last = user.getLastSyncedAt();
-        if (last != null && last.isAfter(clock.instant().minus(properties.loginStaleAfter()))) {
-            log.info("Sync for '{}' skipped: last synced {}", user.getLogin(), last);
-            return SyncOutcome.FRESH;
+    /**
+     * A sync the user started (login or refresh): runs only if none was started in the last
+     * {@code min-interval} (10 min). The cooldown is claimed atomically before the slow work, so
+     * double clicks can't start two syncs, and a sync that fails still counts.
+     */
+    public SyncOutcome syncIfDue(long userId) {
+        Instant now = clock.instant();
+        if (usersRepository.claimSync(userId, now, now.minus(properties.minInterval())) == 0) {
+            log.info("Sync for user {} skipped: one was started less than {} ago", userId, properties.minInterval());
+            return SyncOutcome.COOLDOWN;
         }
-        return sync(user);
+        return sync(load(userId));
+    }
+
+    /** When {@link #syncIfDue} will next run a sync for this user (now, if it would run already). */
+    public Instant nextSyncAllowedAt(long userId) {
+        Instant requested = load(userId).getSyncRequestedAt();
+        Instant now = clock.instant();
+        if (requested == null) {
+            return now;
+        }
+        Instant next = requested.plus(properties.minInterval());
+        return next.isAfter(now) ? next : now;
     }
 
     /**
-     * Always syncs. Returns {@link SyncOutcome#NEEDS_REAUTH} (and flags the user) when GitHub rejects
-     * the stored token; any other failure is thrown, and nothing is written.
+     * Always syncs, without the cooldown (for the Phase 10 scheduler). Returns
+     * {@link SyncOutcome#NEEDS_REAUTH} (and flags the user) when GitHub rejects the stored token;
+     * any other failure is thrown, and nothing is written.
      */
     public SyncOutcome sync(long userId) {
         return sync(load(userId));
@@ -111,8 +126,8 @@ public class SyncService {
 
     public enum SyncOutcome {
         SYNCED,
-        /** Data is recent enough; nothing was fetched. */
-        FRESH,
+        /** A sync was started less than {@code min-interval} ago; nothing was fetched. */
+        COOLDOWN,
         /** No usable GitHub token: the user must log in again. */
         NEEDS_REAUTH
     }

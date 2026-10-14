@@ -12,7 +12,7 @@ _Last indexed: 2026-10-14, Phase 7 in review (branch `phase-7/sync-cache`)._
 Backend-only habit tracker for GitHub activity. `com.tushar27x:insightshub:0.0.1-SNAPSHOT`,
 Java 21, Spring Boot 4.1.1, Spring AI 2.0.0 (BOM), Maven wrapper, virtual threads on.
 Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP surface:
-`/api/auth/{login,callback,logout}` (public), `/api/user/insights` (JWT), `/actuator/health`.
+`/api/auth/{login,callback,logout}` (public), `GET /api/user/insights` and `POST /api/user/sync` (JWT), `/actuator/health`.
 
 ### Status snapshot
 
@@ -36,8 +36,8 @@ Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP
 | `github/model/` | Typed records for the GraphQL response: `GitHubUser`, `UserInsightsData`, `GraphQlResponse` |
 | `insights/` | `InsightsEngine` (pure logic: `GitHubUser` → `InsightsResult`), `UserStats` (snake_case via `@JsonNaming`, parity with v1), `HabitProfile` (15 habit signals, user's own commits only), `ScoringArchetypeClassifier` (0–100 per class, `ALGO_VERSION = 1`, ties → declaration order, all-zero → Rogue), `ArchetypeScores`, `ArchetypeClassifier` (interface) |
 | `security/` | `SecurityConfig` (stateless, CSRF off, `/api/auth/**` + health public), `JwtConfig` (HS256 Nimbus encoder/decoder, issuer `insightshub`), `JwtService` (`sub`=GitHub id, `name`=login), `TokenCipher` (AES-256-GCM, GitHub id as AAD) |
-| `sync/` | `SyncService` (`sync`/`syncIfStale`: token → GitHub → engine → AI → write; no HTTP dependency), `InsightsWriter` (separate bean: `@Transactional` + `@CacheEvict` need the proxy), `SyncProperties` (`insightshub.sync.login-stale-after`) |
-| `user/` | `UserController` (`GET /api/user/insights`, user from JWT `sub` only), `InsightsQueryService` (`@Cacheable`), `InsightsResponse` (snake_case DTO, also the cached value) |
+| `sync/` | `SyncService` (`syncIfDue`: atomic 10-min per-user cooldown via `UsersRepository.claimSync`, used by login + refresh; `sync`: no cooldown, for Phase 10; token → GitHub → engine → AI → write), `InsightsWriter` (separate bean: `@Transactional` + `@CacheEvict` need the proxy), `SyncProperties` (`insightshub.sync.min-interval`) |
+| `user/` | `UserController` (`GET /api/user/insights`, `POST /api/user/sync` → 200 / 429 + `Retry-After` / 409 / 502; user from JWT `sub` only), `InsightsQueryService` (`@Cacheable`), `InsightsResponse` (snake_case DTO, also the cached value) |
 | `repository/` | `UsersRepository` (`findByAlertsEnabledTrue`, `findDueForSync`), `InsightsRepository` (`@EntityGraph`) |
 
 ### Resources

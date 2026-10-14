@@ -59,7 +59,7 @@ insightshub:
     token-ttl: 24h
     redirect-to-frontend: false  # true = v1 behaviour (FRONTEND_URL/dashboard?token=...)
   sync:
-    login-stale-after: 7d  # v1: re-sync at login only when the data is older than a week
+    min-interval: 10m  # per-user cooldown for login/refresh syncs (v1: 7 days, login only)
   ai:
     fast-model: openai/gpt-oss-20b  # cheap model for repo summaries (v1: llama-3.1-8b-instant, retired)
     reasoning-effort: low  # gpt-oss reasons before answering; "low" keeps that short

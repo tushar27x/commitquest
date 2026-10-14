@@ -10,3 +10,6 @@ ALTER TABLE insights
     ADD COLUMN character_lore   TEXT,
     ADD COLUMN archetype_scores JSONB NOT NULL DEFAULT '{}'::jsonb, -- class name -> 0..100, for Phase 13 leaderboards
     ADD COLUMN algo_version     INT;                                -- scoring formula version; never rank across versions
+
+-- When the last sync was started (claimed). Starts the per-user cooldown, even if that sync fails.
+ALTER TABLE users ADD COLUMN sync_requested_at TIMESTAMPTZ;

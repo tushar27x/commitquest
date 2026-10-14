@@ -107,13 +107,13 @@ class AuthServiceTest {
 
         service.completeLogin("code", REDIRECT_URI);
 
-        verify(syncService).syncIfStale(GITHUB_ID);
+        verify(syncService).syncIfDue(GITHUB_ID);
     }
 
     @Test
     void failedSyncStillLogsIn() {
         when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
-        when(syncService.syncIfStale(GITHUB_ID)).thenThrow(new IllegalStateException("GitHub down"));
+        when(syncService.syncIfDue(GITHUB_ID)).thenThrow(new IllegalStateException("GitHub down"));
 
         LoginResult result = service.completeLogin("code", REDIRECT_URI);
 
@@ -128,7 +128,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> service.completeLogin("bad", REDIRECT_URI))
                 .isInstanceOf(OAuthCodeRejectedException.class);
         verify(usersRepository, never()).save(any());
-        verify(syncService, never()).syncIfStale(anyLong());
+        verify(syncService, never()).syncIfDue(anyLong());
     }
 
     private Users savedUser() {
