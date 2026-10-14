@@ -5,7 +5,7 @@ v1 reference (Python/FastAPI): `~/dev/insight_hub/server`. Roadmap and status: `
 
 ## Project index
 
-_Last indexed: 2026-10-14, after Phase 7 (commit `81ed7c0`)._
+_Last indexed: 2026-10-14, Phase 8 in review (branch `phase-8/rate-limiting`)._
 
 ### What it is
 
@@ -19,7 +19,8 @@ Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP
 - **Done:** Phases 0–7 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
   insights engine + D&D archetype scoring, AI layer, GitHub OAuth + JWT, sync + Redis cache). PRs #2–#7 merged to `main`.
 - **Open v1 issue:** B26 — v1 production still calls Groq models that were retired.
-- **Next up:** 🤖 Phase 8 (rate limiting) · 🧑 Phase 2.6 (`V4__activity.sql`).
+- **In review:** Phase 8 (rate limiting).
+- **Next up:** 🤖 Phase 9 (errors, validation, logging) · 🧑 Phase 2.6 (`V4__activity.sql`).
 - Working agreement & phase details: `PROGRESS.md` (status table at the top, learning log at the bottom).
 
 ### Source layout (`src/main/java/com/tushar27x/insightshub/`)
@@ -37,6 +38,7 @@ Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP
 | `security/` | `SecurityConfig` (stateless, CSRF off, `/api/auth/**` + health public), `JwtConfig` (HS256 Nimbus encoder/decoder, issuer `insightshub`), `JwtService` (`sub`=GitHub id, `name`=login), `TokenCipher` (AES-256-GCM, GitHub id as AAD) |
 | `sync/` | `SyncService` (`syncIfDue`: atomic 10-min per-user cooldown via `UsersRepository.claimSync`, used by login + refresh; `sync`: no cooldown, for Phase 10; token → GitHub → engine → AI → write), `InsightsWriter` (separate bean: `@Transactional` + `@CacheEvict` need the proxy), `SyncProperties` (`insightshub.sync.min-interval`) |
 | `user/` | `UserController` (`GET /api/user/insights`, `POST /api/user/sync` → 200 / 429 + `Retry-After` / 409 / 502; user from JWT `sub` only), `InsightsQueryService` (`@Cacheable`), `InsightsResponse` (snake_case DTO, also the cached value) |
+| `ratelimit/` | `@RateLimit(policy, key = IP\|USER)`, `RateLimitInterceptor` (after Spring Security; 429 + `Retry-After` + `ProblemDetail`), `RedisRateLimiter` (Lua `INCR`+`PEXPIRE`, keys `v2:rl:*`, fails open), `RateLimitConfig` (registers it; startup check that every policy exists), `RateLimitProperties` (`insightshub.rate-limit.policies`, incl. `sync-global`) |
 | `repository/` | `UsersRepository` (`findByAlertsEnabledTrue`, `findDueForSync`), `InsightsRepository` (`@EntityGraph`) |
 
 ### Resources
@@ -55,6 +57,7 @@ Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP
 - `InsightsCacheTest` — the real caching annotations through Spring proxies, with an in-memory cache instead of Redis.
 - `AuthApiTest` — `@WebMvcTest` slice with the real security chain (GitHub + repositories mocked, no DB).
   Config for slices goes on a nested `@TestConfiguration`, not the test class (B29).
+- `RateLimitApiTest` — the interceptor behind the real security chain with `InMemoryRateLimiter`; slice tests that include controllers need `RateLimitProperties` + a limiter bean.
 - `InsightsEngineParityTest` — golden JSON against v1: `insights/v1-expected-insights.json` + `v1-parity-user.json`.
 - Opt-in live tests (need env: `GITHUB_TOKEN`, `GROQ_API_KEY`): `GitHubGraphQlClientLiveTest`, `InsightsEngineLiveTest`, `AiLiveTest`.
 - `InsightshubApplicationTests` boots the full context — needs DB/Redis/Groq; Testcontainers is Phase 14.
@@ -64,7 +67,7 @@ Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP
 
 - DB: production Neon Postgres, **schema `v2`** (v1 still runs from `public` on the same DB — never touch it).
   `ddl-auto: validate`; Flyway is the only schema writer.
-- Redis: remote, SSL. Chat: Groq (OpenAI-compatible), `openai/gpt-oss-120b` primary / `gpt-oss-20b` fast,
+- Redis: remote, SSL, 2 s command/connect timeouts (so rate limiting fails open fast). Chat: Groq (OpenAI-compatible), `openai/gpt-oss-120b` primary / `gpt-oss-20b` fast,
   `reasoning_effort: low`; Gemini fallback dormant until `GEMINI_API_KEY` is set.
 - Auth: GitHub OAuth App (callback `${BACKEND_URL}/api/auth/callback`), scopes `read:user user:email` (no `repo`).
   GitHub tokens are stored AES-GCM encrypted and never logged (B30); JWTs are HS256, 24 h.
