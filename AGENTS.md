@@ -5,7 +5,7 @@ v1 reference (Python/FastAPI): `~/dev/insight_hub/server`. Roadmap and status: `
 
 ## Project index
 
-_Last indexed: 2026-10-14, Phase 6 in review (branch `phase-6/auth`)._
+_Last indexed: 2026-10-14, after Phase 6 (commit `a4922cb`)._
 
 ### What it is
 
@@ -16,10 +16,10 @@ Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP
 
 ### Status snapshot
 
-- **Done:** Phases 0–5 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
-  insights engine + D&D archetype scoring, AI layer). PRs #2, #3, #4 merged to `main`.
+- **Done:** Phases 0–6 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
+  insights engine + D&D archetype scoring, AI layer, GitHub OAuth + JWT). PRs #2–#6 merged to `main`.
 - **Open v1 issue:** B26 — v1 production still calls Groq models that were retired.
-- **In review:** Phase 6 (GitHub OAuth + JWT); live login needs the developer's OAuth App credentials.
+- **Pending:** live login check for Phase 6 (needs the developer's OAuth App credentials in `.env`).
 - **Next up:** 🤖 Phase 7 (sync + Redis cache) · 🧑 Phase 2.6 (`V3__activity.sql`).
 - Working agreement & phase details: `PROGRESS.md` (status table at the top, learning log at the bottom).
 
