@@ -111,6 +111,9 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- No imports use it, but it is required: it adds Spring Security's auto-configuration to
+		     @WebMvcTest slices (META-INF/spring/...WebMvcTest.includes). Without it, AuthApiTest has no
+		     HttpSecurity bean and the real filter chain can't be built (B33). -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security-test</artifactId>

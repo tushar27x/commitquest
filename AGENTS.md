@@ -75,7 +75,7 @@ Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP
 
 - One PR per phase: phases 3–9 implemented by the agent; Phase 2.6 and 10–13 by the developer (agent reviews).
 - No AI-agent attribution in commits or PR descriptions (no co-author lines, no "generated with" footers).
-- Bugs go to `BUGS.md` with the next `B` number (currently B1–B32); PR descriptions list the phase's bugs.
+- Bugs go to `BUGS.md` with the next `B` number (currently B1–B33); PR descriptions list the phase's bugs.
 - No key- or token-shaped literals in code or tests, even fake ones: build test keys at runtime (B31).
 - DTOs only from controllers (never entities); no secrets in logs; AI output always has a static fallback;
   the LLM never decides the archetype (code scores it, the LLM adds flavour).
