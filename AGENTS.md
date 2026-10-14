@@ -5,7 +5,7 @@ v1 reference (Python/FastAPI): `~/dev/insight_hub/server`. Roadmap and status: `
 
 ## Project index
 
-_Last indexed: 2026-10-14, Phase 8 in review (branch `phase-8/rate-limiting`)._
+_Last indexed: 2026-10-14, after Phase 8 (commit `a51a427`)._
 
 ### What it is
 
@@ -16,11 +16,11 @@ Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP
 
 ### Status snapshot
 
-- **Done:** Phases 0–7 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
-  insights engine + D&D archetype scoring, AI layer, GitHub OAuth + JWT, sync + Redis cache). PRs #2–#7 merged to `main`.
+- **Done:** Phases 0–8 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
+  insights engine + D&D archetype scoring, AI layer, GitHub OAuth + JWT, sync + Redis cache, rate limiting). PRs #2–#8 merged to `main`.
 - **Open v1 issue:** B26 — v1 production still calls Groq models that were retired.
-- **In review:** Phase 8 (rate limiting).
-- **Next up:** 🤖 Phase 9 (errors, validation, logging) · 🧑 Phase 2.6 (`V4__activity.sql`).
+- **Next up:** 🤖 Phase 9 (errors, validation, logging; last port phase) · 🧑 Phase 2.6 (`V4__activity.sql`).
+- **Open items:** see the latest "End of session" entry at the bottom of `PROGRESS.md`.
 - Working agreement & phase details: `PROGRESS.md` (status table at the top, learning log at the bottom).
 
 ### Source layout (`src/main/java/com/tushar27x/insightshub/`)
@@ -81,6 +81,11 @@ Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP
 - No key- or token-shaped literals in code or tests, even fake ones: build test keys at runtime (B31).
 - DTOs only from controllers (never entities); no secrets in logs; AI output always has a static fallback;
   the LLM never decides the archetype (code scores it, the LLM adds flavour).
+
+### Agent tooling
+
+- Neon agent skills (`neon`, `neon-postgres`) live in `.claude/skills/`, pinned by `skills-lock.json`
+  (installed with `npx neon@latest skills -s neon -s neon-postgres -y`). Claude Code only for now.
 
 ### Commands
 
