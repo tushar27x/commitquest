@@ -39,15 +39,36 @@ public class Insights {
     @Enumerated(EnumType.STRING)
     private Archetype archetype;
 
+    /** Every class's score, keyed by {@link Archetype} name. */
+    @Setter
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false)
+    private Map<String, Integer> archetypeScores = new HashMap<>();
+
+    /** Scores from different versions of the formula must not be ranked together. */
+    @Setter
+    private Integer algoVersion;
+
     // null = not generated yet
     @Setter
-    private String roast;
+    private String yearInReview;
 
     @Setter
     private String weeklyReview;
 
     @Setter
     private String craftReview;
+
+    @Setter
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false)
+    private Map<String, String> repoSummaries = new HashMap<>();
+
+    @Setter
+    private String characterTitle;
+
+    @Setter
+    private String characterLore;
 
     @UpdateTimestamp
     @Column(nullable = false)

@@ -9,6 +9,7 @@ import com.tushar27x.insightshub.security.JwtConfig;
 import com.tushar27x.insightshub.security.JwtService;
 import com.tushar27x.insightshub.security.SecurityTestData;
 import com.tushar27x.insightshub.security.TokenCipher;
+import com.tushar27x.insightshub.sync.SyncService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -21,6 +22,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -34,13 +36,15 @@ class AuthServiceTest {
     private final GitHubOAuthClient gitHub = mock(GitHubOAuthClient.class);
     private final UsersRepository usersRepository = mock(UsersRepository.class);
     private final TokenCipher cipher = new TokenCipher(SecurityTestData.appProperties());
+    private final SyncService syncService = mock(SyncService.class);
     private AuthService service;
 
     @BeforeEach
     void setUp() {
         JwtService jwtService = new JwtService(JwtConfig.encoder(SecurityTestData.JWT_SECRET),
                 Clock.systemUTC(), SecurityTestData.authProperties());
-        service = new AuthService(gitHub, usersRepository, cipher, jwtService, SecurityTestData.authProperties());
+        service = new AuthService(gitHub, usersRepository, cipher, jwtService, syncService,
+                SecurityTestData.authProperties());
 
         when(gitHub.exchangeCode("code", REDIRECT_URI)).thenReturn("gho_secret");
         when(gitHub.fetchAccount("gho_secret")).thenReturn(new GitHubAccount(GITHUB_ID, "octocat"));
@@ -98,12 +102,33 @@ class AuthServiceTest {
     }
 
     @Test
+    void loginSyncsStaleInsights() {
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
+
+        service.completeLogin("code", REDIRECT_URI);
+
+        verify(syncService).syncIfDue(GITHUB_ID);
+    }
+
+    @Test
+    void failedSyncStillLogsIn() {
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
+        when(syncService.syncIfDue(GITHUB_ID)).thenThrow(new IllegalStateException("GitHub down"));
+
+        LoginResult result = service.completeLogin("code", REDIRECT_URI);
+
+        assertThat(result.token().value()).isNotBlank();
+        verify(usersRepository).save(any(Users.class));
+    }
+
+    @Test
     void rejectedCodeSavesNothing() {
         when(gitHub.exchangeCode("bad", REDIRECT_URI)).thenThrow(new OAuthCodeRejectedException("bad_verification_code"));
 
         assertThatThrownBy(() -> service.completeLogin("bad", REDIRECT_URI))
                 .isInstanceOf(OAuthCodeRejectedException.class);
         verify(usersRepository, never()).save(any());
+        verify(syncService, never()).syncIfDue(anyLong());
     }
 
     private Users savedUser() {

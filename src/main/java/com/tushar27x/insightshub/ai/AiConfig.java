@@ -18,7 +18,7 @@ import java.util.List;
 class AiConfig {
 
     static final int FALLBACK_MAX_RETRIES = 1;
-    static final Duration FALLBACK_TIMEOUT = Duration.ofSeconds(30);
+    static final Duration FALLBACK_TIMEOUT = Duration.ofSeconds(20);
 
     /**
      * Groq (auto-configured from {@code spring.ai.openai.*}) first, then the fallback provider if it has a key.
@@ -26,7 +26,9 @@ class AiConfig {
      */
     @Bean
     LlmChain llmChain(OpenAiChatModel groq, AiProperties properties,
-                      @Value("classpath:prompts/persona.st") Resource persona) {
+                      @Value("classpath:prompts/persona.st") Resource persona,
+                      @Value("${spring.ai.openai.chat.max-retries}") int primaryRetries,
+                      @Value("${spring.ai.openai.chat.timeout}") Duration primaryTimeout) {
         List<LlmProvider> providers = new ArrayList<>();
         providers.add(new LlmProvider("groq", client(groq, persona), groq.getOptions().getModel(),
                 properties.fastModel(), properties.reasoningEffort()));
@@ -39,7 +41,25 @@ class AiConfig {
 
         LlmChain chain = new LlmChain(providers);
         log.info("AI providers in order: {}", chain.providerNames());
+
+        Duration worstCase = worstCase(primaryRetries, primaryTimeout);
+        if (providers.size() > 1) {
+            worstCase = worstCase.plus(worstCase(FALLBACK_MAX_RETRIES, FALLBACK_TIMEOUT));
+        }
+        if (worstCase.compareTo(properties.taskTimeout()) >= 0) {
+            log.warn("AI providers can take up to {} per task, but task-timeout is {}: a timed-out task's "
+                    + "HTTP calls keep running in the background. Lower the provider timeouts.",
+                    worstCase, properties.taskTimeout());
+        }
         return chain;
+    }
+
+    /**
+     * Longest one provider can take: every attempt runs into its timeout. Cancelling the task's future
+     * wouldn't stop a blocking HTTP call, so instead the timeouts are sized to end before the task timeout.
+     */
+    static Duration worstCase(int retries, Duration timeout) {
+        return timeout.multipliedBy(retries + 1L);
     }
 
     /** A chat model for any OpenAI-compatible endpoint (Gemini, Groq, ...), failing fast like the primary. */

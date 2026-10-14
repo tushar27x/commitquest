@@ -11,7 +11,7 @@ import com.tushar27x.insightshub.insights.UserStats.RepoDetail;
 import java.util.List;
 import java.util.Map;
 
-final class AiTestData {
+public final class AiTestData {
 
     private AiTestData() {
     }
@@ -36,7 +36,7 @@ final class AiTestData {
                 Archetype.CLERIC, 0, Archetype.BARD, 10, Archetype.MONK, 52, Archetype.ROGUE, 47), 1);
     }
 
-    static InsightsResult insights() {
+    public static InsightsResult insights() {
         return new InsightsResult(stats(), habits(), scores());
     }
 }

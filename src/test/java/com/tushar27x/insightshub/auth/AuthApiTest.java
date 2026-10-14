@@ -6,15 +6,18 @@ import com.tushar27x.insightshub.auth.GitHubOAuthClient.OAuthCodeRejectedExcepti
 import com.tushar27x.insightshub.config.ClockConfig;
 import com.tushar27x.insightshub.config.InsightsHubProperties;
 import com.tushar27x.insightshub.entity.Archetype;
-import com.tushar27x.insightshub.entity.Insights;
 import com.tushar27x.insightshub.entity.Users;
-import com.tushar27x.insightshub.repository.InsightsRepository;
 import com.tushar27x.insightshub.repository.UsersRepository;
 import com.tushar27x.insightshub.security.JwtConfig;
 import com.tushar27x.insightshub.security.JwtService;
 import com.tushar27x.insightshub.security.SecurityConfig;
 import com.tushar27x.insightshub.security.SecurityTestData;
 import com.tushar27x.insightshub.security.TokenCipher;
+import com.tushar27x.insightshub.github.GitHubApiException;
+import com.tushar27x.insightshub.sync.SyncService;
+import com.tushar27x.insightshub.sync.SyncService.SyncOutcome;
+import com.tushar27x.insightshub.user.InsightsQueryService;
+import com.tushar27x.insightshub.user.InsightsResponse;
 import com.tushar27x.insightshub.user.UserController;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
@@ -44,8 +47,11 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -84,7 +90,9 @@ class AuthApiTest {
     @MockitoBean
     private UsersRepository usersRepository;
     @MockitoBean
-    private InsightsRepository insightsRepository;
+    private InsightsQueryService insightsQueryService;
+    @MockitoBean
+    private SyncService syncService;
 
     // --- /api/user/** requires a valid JWT ---
 
@@ -113,26 +121,72 @@ class AuthApiTest {
 
     @Test
     void insightsWithValidTokenIs200AndOnlyForThatUser() throws Exception {
-        Insights insights = new Insights(new Users(GITHUB_ID, "octocat"));
-        insights.setArchetype(Archetype.MONK);
-        insights.setStats(Map.of("total_commits", 42));
-        insights.setWeeklyReview("Steady week.");
-        when(insightsRepository.findById(GITHUB_ID)).thenReturn(Optional.of(insights));
+        when(insightsQueryService.getInsights(GITHUB_ID)).thenReturn(Optional.of(new InsightsResponse(
+                "octocat", Archetype.MONK, Map.of("MONK", 52), Map.of("total_commits", 42),
+                "Good year.", "Steady week.", "Clean commits.", Map.of(), null, Instant.now())));
 
         mvc.perform(get("/api/user/insights").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user_name").value("octocat"))
                 .andExpect(jsonPath("$.stats.total_commits").value(42))
                 .andExpect(jsonPath("$.weekly_review").value("Steady week."))
+                .andExpect(jsonPath("$.year_in_review").value("Good year."))
                 .andExpect(jsonPath("$.encrypted_github_token").doesNotExist());
     }
 
     @Test
     void insightsBeforeFirstSyncIs404() throws Exception {
-        when(insightsRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
+        when(insightsQueryService.getInsights(GITHUB_ID)).thenReturn(Optional.empty());
 
         mvc.perform(get("/api/user/insights").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
                 .andExpect(status().isNotFound());
+    }
+
+    // --- POST /api/user/sync: refresh, at most every 10 minutes ---
+
+    @Test
+    void refreshWithoutTokenIs401() throws Exception {
+        mvc.perform(post("/api/user/sync")).andExpect(status().isUnauthorized());
+        verifyNoInteractions(syncService);
+    }
+
+    @Test
+    void refreshReturnsTheFreshInsights() throws Exception {
+        when(syncService.syncIfDue(GITHUB_ID)).thenReturn(SyncOutcome.SYNCED);
+        when(insightsQueryService.getInsights(GITHUB_ID)).thenReturn(Optional.of(new InsightsResponse(
+                "octocat", Archetype.MONK, Map.of(), Map.of(), "Fresh year.", null, null, Map.of(), null, Instant.now())));
+
+        mvc.perform(post("/api/user/sync").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.year_in_review").value("Fresh year."));
+    }
+
+    @Test
+    void refreshDuringCooldownIs429WithRetryAfter() throws Exception {
+        when(syncService.syncIfDue(GITHUB_ID)).thenReturn(SyncOutcome.COOLDOWN);
+        when(syncService.nextSyncAllowedAt(GITHUB_ID)).thenReturn(Instant.now().plus(Duration.ofMinutes(6)));
+
+        String retryAfter = mvc.perform(post("/api/user/sync").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
+                .andExpect(status().isTooManyRequests())
+                .andReturn().getResponse().getHeader(HttpHeaders.RETRY_AFTER);
+
+        assertThat(Long.parseLong(retryAfter)).isBetween(350L, 360L);
+    }
+
+    @Test
+    void refreshWithRevokedGitHubTokenIs409() throws Exception {
+        when(syncService.syncIfDue(GITHUB_ID)).thenReturn(SyncOutcome.NEEDS_REAUTH);
+
+        mvc.perform(post("/api/user/sync").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void refreshWhileGitHubIsDownIs502() throws Exception {
+        when(syncService.syncIfDue(GITHUB_ID)).thenThrow(new GitHubApiException("HTTP 503"));
+
+        mvc.perform(post("/api/user/sync").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
+                .andExpect(status().isBadGateway());
     }
 
     // --- login round trip ---
@@ -179,9 +233,10 @@ class AuthApiTest {
 
         String jwt = JsonPath.read(callback.getResponse().getContentAsString(), "$.access_token");
         assertThat(jwt).doesNotContain("gho_secret");
-        when(insightsRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
+        when(insightsQueryService.getInsights(GITHUB_ID)).thenReturn(Optional.empty());
         mvc.perform(get("/api/user/insights").header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt))
-                .andExpect(status().isNotFound()); // authenticated; nothing synced yet (Phase 7)
+                .andExpect(status().isNotFound()); // authenticated; the (mocked) sync wrote nothing
+        verify(syncService).syncIfDue(GITHUB_ID);
     }
 
     @Test

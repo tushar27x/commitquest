@@ -53,6 +53,10 @@ public class Users {
     @Setter
     private Instant lastSyncedAt;
 
+    /** Start of the last sync attempt; set atomically by {@code UsersRepository.claimSync}. */
+    @Setter
+    private Instant syncRequestedAt;
+
     @Column(nullable = false, updatable = false, insertable = false)
     @Generated(event = EventType.INSERT)
     private Instant createdAt;

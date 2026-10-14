@@ -50,13 +50,13 @@ class LlmChainTest {
 
     @Test
     void unusableStructuredAnswerFallsThrough() {
-        FakeChatModel primary = FakeChatModel.answering("rejected");
-        FakeChatModel fallback = FakeChatModel.answering("accepted");
+        FakeChatModel primary = FakeChatModel.answering("{\"value\": \"rejected\"}");
+        FakeChatModel fallback = FakeChatModel.answering("{\"value\": \"accepted\"}");
 
-        var answer = chain(primary, fallback).call("t", ModelTier.STANDARD, 100,
-                spec -> spec.user("hi").call().content(), text -> text.equals("accepted"));
+        var answer = chain(primary, fallback).entity("t", ModelTier.STANDARD, 100,
+                spec -> spec.user("hi"), Answer.class, a -> a.value().equals("accepted"));
 
-        assertThat(answer).contains("accepted");
+        assertThat(answer).contains(new Answer("accepted"));
         assertThat(primary.prompts).hasSize(1);
     }
 
@@ -93,6 +93,16 @@ class LlmChainTest {
         assertThat(withEffort.getMaxTokens()).isEqualTo(200 + LlmChain.REASONING_HEADROOM);
         assertThat(without.getReasoningEffort()).isNull();
         assertThat(without.getMaxTokens()).isEqualTo(200);
+    }
+
+    @Test
+    void reportedTokenUsageDoesNotChangeTheAnswer() {
+        FakeChatModel model = FakeChatModel.answeringWithUsage("ok", 120, 30);
+
+        assertThat(chain(model).text("t", ModelTier.STANDARD, 100, spec -> spec.user("hi"))).contains("ok");
+    }
+
+    record Answer(String value) {
     }
 
     @Test

@@ -18,6 +18,8 @@ spring:
     properties:
       hibernate:
         default_schema: v2
+  cache:
+    type: redis  # explicit: fail at startup instead of silently falling back to an in-memory cache
   data:
     redis:
       host: ${REDIS_HOST}
@@ -39,9 +41,10 @@ spring:
       api-key: ${GROQ_API_KEY}
       base-url: https://api.groq.com/openai/v1
       chat:
-        # fail fast so the fallback provider gets its turn (defaults: 3 retries, 60s)
+        # fail fast so the fallback gets its turn (defaults: 3 retries, 60s). 2 attempts x 20s per provider,
+        # x 2 providers = 80s, inside insightshub.ai.task-timeout (90s), so no HTTP call outlives its task.
         max-retries: 1
-        timeout: 30s
+        timeout: 20s
         options:
           model: openai/gpt-oss-120b  # v1's llama-3.3-70b-versatile is retired on Groq (B26)
 insightshub:
@@ -55,6 +58,8 @@ insightshub:
     scopes: "read:user user:email"  # public data + verified email; no `repo` (the token is stored)
     token-ttl: 24h
     redirect-to-frontend: false  # true = v1 behaviour (FRONTEND_URL/dashboard?token=...)
+  sync:
+    min-interval: 10m  # per-user cooldown for login/refresh syncs (v1: 7 days, login only)
   ai:
     fast-model: openai/gpt-oss-20b  # cheap model for repo summaries (v1: llama-3.1-8b-instant, retired)
     reasoning-effort: low  # gpt-oss reasons before answering; "low" keeps that short
