@@ -1,0 +1,232 @@
+package com.tushar27x.insightshub.auth;
+
+import com.jayway.jsonpath.JsonPath;
+import com.tushar27x.insightshub.auth.GitHubOAuthClient.GitHubAccount;
+import com.tushar27x.insightshub.auth.GitHubOAuthClient.OAuthCodeRejectedException;
+import com.tushar27x.insightshub.config.ClockConfig;
+import com.tushar27x.insightshub.config.InsightsHubProperties;
+import com.tushar27x.insightshub.entity.Archetype;
+import com.tushar27x.insightshub.entity.Insights;
+import com.tushar27x.insightshub.entity.Users;
+import com.tushar27x.insightshub.repository.InsightsRepository;
+import com.tushar27x.insightshub.repository.UsersRepository;
+import com.tushar27x.insightshub.security.JwtConfig;
+import com.tushar27x.insightshub.security.JwtService;
+import com.tushar27x.insightshub.security.SecurityConfig;
+import com.tushar27x.insightshub.security.SecurityTestData;
+import com.tushar27x.insightshub.security.TokenCipher;
+import com.tushar27x.insightshub.user.UserController;
+import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * The real security filter chain, JWT issuing/validation and controllers; GitHub and the
+ * database are mocked. No network, no DB (B23).
+ */
+@WebMvcTest(controllers = {AuthController.class, UserController.class}, properties = {
+        "insightshub.frontend-url=http://localhost:3000/",
+        "insightshub.backend-url=http://localhost:8080",
+        "insightshub.jwt-secret=" + SecurityTestData.JWT_SECRET,
+        "insightshub.auth.github-client-id=client-id",
+        "insightshub.auth.github-client-secret=client-secret",
+})
+@Import({SecurityConfig.class, JwtConfig.class, JwtService.class, ClockConfig.class, AuthService.class, TokenCipher.class,
+        AuthApiTest.Properties.class})
+class AuthApiTest {
+
+    private static final long GITHUB_ID = 583231L;
+    private static final String REDIRECT_URI = "http://localhost:8080/api/auth/callback";
+
+    /** Not a compile-time constant (see {@link SecurityTestData}), so it can't go in {@code properties}. */
+    @DynamicPropertySource
+    static void encryptionKey(DynamicPropertyRegistry registry) {
+        registry.add("insightshub.encryption-key", () -> SecurityTestData.ENCRYPTION_KEY);
+    }
+
+    @Autowired
+    private MockMvc mvc;
+    @Autowired
+    private JwtService jwtService;
+
+    @MockitoBean
+    private GitHubOAuthClient gitHub;
+    @MockitoBean
+    private UsersRepository usersRepository;
+    @MockitoBean
+    private InsightsRepository insightsRepository;
+
+    // --- /api/user/** requires a valid JWT ---
+
+    @Test
+    void insightsWithoutTokenIs401() throws Exception {
+        mvc.perform(get("/api/user/insights"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, startsWith("Bearer")));
+    }
+
+    @Test
+    void insightsWithGarbageTokenIs401() throws Exception {
+        mvc.perform(get("/api/user/insights").header(HttpHeaders.AUTHORIZATION, "Bearer not.a.jwt"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void insightsWithExpiredTokenIs401() throws Exception {
+        JwtService yesterday = new JwtService(JwtConfig.encoder(SecurityTestData.JWT_SECRET),
+                Clock.fixed(Instant.now().minus(Duration.ofHours(25)), ZoneOffset.UTC), SecurityTestData.authProperties());
+        String expired = yesterday.issue(GITHUB_ID, "octocat").value();
+
+        mvc.perform(get("/api/user/insights").header(HttpHeaders.AUTHORIZATION, "Bearer " + expired))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void insightsWithValidTokenIs200AndOnlyForThatUser() throws Exception {
+        Insights insights = new Insights(new Users(GITHUB_ID, "octocat"));
+        insights.setArchetype(Archetype.MONK);
+        insights.setStats(Map.of("total_commits", 42));
+        insights.setWeeklyReview("Steady week.");
+        when(insightsRepository.findById(GITHUB_ID)).thenReturn(Optional.of(insights));
+
+        mvc.perform(get("/api/user/insights").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user_name").value("octocat"))
+                .andExpect(jsonPath("$.stats.total_commits").value(42))
+                .andExpect(jsonPath("$.weekly_review").value("Steady week."))
+                .andExpect(jsonPath("$.encrypted_github_token").doesNotExist());
+    }
+
+    @Test
+    void insightsBeforeFirstSyncIs404() throws Exception {
+        when(insightsRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
+
+        mvc.perform(get("/api/user/insights").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
+                .andExpect(status().isNotFound());
+    }
+
+    // --- login round trip ---
+
+    @Test
+    void loginRedirectsToGitHubWithStateCookie() throws Exception {
+        MvcResult result = mvc.perform(get("/api/auth/login"))
+                .andExpect(status().isFound())
+                .andExpect(header().string(HttpHeaders.LOCATION, startsWith("https://github.com/login/oauth/authorize?")))
+                .andReturn();
+
+        Cookie cookie = result.getResponse().getCookie(AuthController.STATE_COOKIE);
+        assertThat(cookie).isNotNull();
+        assertThat(cookie.isHttpOnly()).isTrue();
+        assertThat(cookie.getMaxAge()).isEqualTo(600);
+        assertThat(cookie.getPath()).isEqualTo("/api/auth");
+        assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).contains("SameSite=Lax");
+
+        var params = UriComponentsBuilder.fromUriString(result.getResponse().getRedirectedUrl()).build().getQueryParams();
+        assertThat(params.getFirst("state")).isEqualTo(cookie.getValue());
+        assertThat(params.getFirst("client_id")).isEqualTo("client-id");
+    }
+
+    @Test
+    void fullRoundTripYieldsJwtThatOpensUserEndpoints() throws Exception {
+        Cookie stateCookie = mvc.perform(get("/api/auth/login")).andReturn()
+                .getResponse().getCookie(AuthController.STATE_COOKIE);
+        when(gitHub.exchangeCode("the-code", REDIRECT_URI)).thenReturn("gho_secret");
+        when(gitHub.fetchAccount("gho_secret")).thenReturn(new GitHubAccount(GITHUB_ID, "octocat"));
+        when(gitHub.fetchPrimaryEmail("gho_secret")).thenReturn("octocat@example.com");
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
+        when(usersRepository.save(any(Users.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MvcResult callback = mvc.perform(get("/api/auth/callback")
+                        .param("code", "the-code")
+                        .param("state", stateCookie.getValue())
+                        .cookie(stateCookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token_type").value("Bearer"))
+                .andExpect(jsonPath("$.login").value("octocat"))
+                .andExpect(jsonPath("$.expires_at").exists())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Max-Age=0")))
+                .andReturn();
+
+        String jwt = JsonPath.read(callback.getResponse().getContentAsString(), "$.access_token");
+        assertThat(jwt).doesNotContain("gho_secret");
+        when(insightsRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
+        mvc.perform(get("/api/user/insights").header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt))
+                .andExpect(status().isNotFound()); // authenticated; nothing synced yet (Phase 7)
+    }
+
+    @Test
+    void callbackWithoutStateCookieIs400() throws Exception {
+        mvc.perform(get("/api/auth/callback").param("code", "c").param("state", "s"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void callbackWithMismatchedStateIs400() throws Exception {
+        mvc.perform(get("/api/auth/callback").param("code", "c").param("state", "attacker")
+                        .cookie(new Cookie(AuthController.STATE_COOKIE, "victim")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void cancelledLoginIs400() throws Exception {
+        mvc.perform(get("/api/auth/callback").param("error", "access_denied").param("state", "s")
+                        .cookie(new Cookie(AuthController.STATE_COOKIE, "s")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectedCodeIs400() throws Exception {
+        when(gitHub.exchangeCode(eq("used"), anyString())).thenThrow(new OAuthCodeRejectedException("bad_verification_code"));
+
+        mvc.perform(get("/api/auth/callback").param("code", "used").param("state", "s")
+                        .cookie(new Cookie(AuthController.STATE_COOKIE, "s")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void logoutRedirectsToFrontend() throws Exception {
+        mvc.perform(get("/api/auth/logout"))
+                .andExpect(status().isFound())
+                .andExpect(header().string(HttpHeaders.LOCATION, "http://localhost:3000"));
+    }
+
+    /** The main class's {@code @ConfigurationPropertiesScan} doesn't apply in a slice test. */
+    @TestConfiguration
+    @EnableConfigurationProperties({InsightsHubProperties.class, AuthProperties.class})
+    static class Properties {
+    }
+
+    private String bearer(long githubId) {
+        return "Bearer " + jwtService.issue(githubId, "octocat").value();
+    }
+}

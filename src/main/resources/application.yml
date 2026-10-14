@@ -48,7 +48,13 @@ insightshub:
   frontend-url: ${FRONTEND_URL}
   backend-url: ${BACKEND_URL}
   jwt-secret: ${JWT_SECRET}
-  encryption-key: ${ENCRYPTION_KEY}
+  encryption-key: ${ENCRYPTION_KEY}  # Base64 of 32 random bytes: openssl rand -base64 32
+  auth:  # GitHub OAuth App; callback URL must be ${BACKEND_URL}/api/auth/callback
+    github-client-id: ${GITHUB_CLIENT_ID}
+    github-client-secret: ${GITHUB_CLIENT_SECRET}
+    scopes: "read:user user:email"  # public data + verified email; no `repo` (the token is stored)
+    token-ttl: 24h
+    redirect-to-frontend: false  # true = v1 behaviour (FRONTEND_URL/dashboard?token=...)
   ai:
     fast-model: openai/gpt-oss-20b  # cheap model for repo summaries (v1: llama-3.1-8b-instant, retired)
     reasoning-effort: low  # gpt-oss reasons before answering; "low" keeps that short
@@ -60,4 +66,4 @@ insightshub:
 management:
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized  # anonymous callers get only UP/DOWN; a valid JWT sees DB/Redis details
