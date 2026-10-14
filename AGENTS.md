@@ -19,7 +19,6 @@ Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP
 - **Done:** Phases 0–7 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
   insights engine + D&D archetype scoring, AI layer, GitHub OAuth + JWT, sync + Redis cache). PRs #2–#7 merged to `main`.
 - **Open v1 issue:** B26 — v1 production still calls Groq models that were retired.
-- **Pending:** Phase 7 live check; the first app start applies `V3__insights_sync_columns.sql` to Neon.
 - **Next up:** 🤖 Phase 8 (rate limiting) · 🧑 Phase 2.6 (`V4__activity.sql`).
 - Working agreement & phase details: `PROGRESS.md` (status table at the top, learning log at the bottom).
 
