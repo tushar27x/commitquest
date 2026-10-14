@@ -14,7 +14,12 @@ import com.tushar27x.insightshub.insights.InsightsResult;
 import com.tushar27x.insightshub.repository.UsersRepository;
 import com.tushar27x.insightshub.security.SecurityTestData;
 import com.tushar27x.insightshub.security.TokenCipher;
+import com.tushar27x.insightshub.ratelimit.RateLimitProperties;
+import com.tushar27x.insightshub.ratelimit.RateLimitProperties.Policy;
+import com.tushar27x.insightshub.ratelimit.RateLimiter;
+import com.tushar27x.insightshub.ratelimit.RateLimiter.Decision;
 import com.tushar27x.insightshub.sync.SyncService.SyncOutcome;
+import com.tushar27x.insightshub.sync.SyncService.SyncResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -50,6 +55,8 @@ class SyncServiceTest {
     private final InsightsEngine engine = mock(InsightsEngine.class);
     private final AiInsightsService ai = mock(AiInsightsService.class);
     private final InsightsWriter writer = mock(InsightsWriter.class);
+    private final RateLimiter rateLimiter = mock(RateLimiter.class);
+    private static final Policy GLOBAL = new Policy(30, Duration.ofMinutes(1));
     private final InsightsResult result = AiTestData.insights();
     private final AiInsights texts = new AiInsights("year", "week", "craft", Map.of("app", "An app."),
             new CharacterSheet("octocat the Monk", "Calm."));
@@ -60,7 +67,9 @@ class SyncServiceTest {
     @BeforeEach
     void setUp() {
         service = new SyncService(usersRepository, cipher, gitHub, engine, ai, writer, JsonMapper.builder().build(),
-                Clock.fixed(NOW, ZoneOffset.UTC), new SyncProperties(COOLDOWN));
+                Clock.fixed(NOW, ZoneOffset.UTC), new SyncProperties(COOLDOWN), rateLimiter,
+                new RateLimitProperties(true, Map.of(RateLimitProperties.SYNC_GLOBAL, GLOBAL)));
+        when(rateLimiter.tryAcquire("sync:global", GLOBAL)).thenReturn(new Decision(true, 30, 29, Duration.ofSeconds(50)));
         user = new Users(ID, "octocat");
         user.setEncryptedGithubToken(cipher.encrypt("gho_stored", ID));
         when(usersRepository.findById(ID)).thenReturn(Optional.of(user));
@@ -83,31 +92,38 @@ class SyncServiceTest {
     }
 
     @Test
-    void claimedSyncRuns() {
+    void dueSyncPassesAllGatesAndRuns() {
+        user.setSyncRequestedAt(NOW.minus(Duration.ofMinutes(20)));
         when(usersRepository.claimSync(ID, NOW, NOW.minus(COOLDOWN))).thenReturn(1);
 
-        assertThat(service.syncIfDue(ID)).isEqualTo(SyncOutcome.SYNCED);
+        assertThat(service.syncIfDue(ID)).isEqualTo(new SyncResult(SyncOutcome.SYNCED, Duration.ZERO));
         verify(writer).save(eq(ID), any(), eq(result), eq(texts), eq(NOW));
     }
 
     @Test
-    void syncDuringCooldownFetchesNothing() {
-        when(usersRepository.claimSync(ID, NOW, NOW.minus(COOLDOWN))).thenReturn(0);
+    void cooldownIsCheckedFirstAndUsesNoGlobalCapacity() {
+        user.setSyncRequestedAt(NOW.minus(Duration.ofMinutes(4)));
 
-        assertThat(service.syncIfDue(ID)).isEqualTo(SyncOutcome.COOLDOWN);
+        assertThat(service.syncIfDue(ID)).isEqualTo(new SyncResult(SyncOutcome.COOLDOWN, Duration.ofMinutes(6)));
+        verifyNoInteractions(rateLimiter, gitHub, ai, writer);
+        verify(usersRepository, never()).claimSync(anyLong(), any(), any());
+    }
+
+    @Test
+    void globalCapReachedIsBusyAndDoesNotStartTheCooldown() {
+        when(rateLimiter.tryAcquire("sync:global", GLOBAL)).thenReturn(new Decision(false, 30, 0, Duration.ofSeconds(17)));
+
+        assertThat(service.syncIfDue(ID)).isEqualTo(new SyncResult(SyncOutcome.BUSY, Duration.ofSeconds(17)));
+        verify(usersRepository, never()).claimSync(anyLong(), any(), any()); // the user can retry once capacity frees up
         verifyNoInteractions(gitHub, ai, writer);
     }
 
     @Test
-    void nextSyncIsTenMinutesAfterTheLastStart() {
-        user.setSyncRequestedAt(NOW.minus(Duration.ofMinutes(4)));
-        assertThat(service.nextSyncAllowedAt(ID)).isEqualTo(NOW.plus(Duration.ofMinutes(6)));
+    void losingTheClaimRaceIsCooldown() {
+        when(usersRepository.claimSync(ID, NOW, NOW.minus(COOLDOWN))).thenReturn(0);
 
-        user.setSyncRequestedAt(NOW.minus(Duration.ofMinutes(20)));
-        assertThat(service.nextSyncAllowedAt(ID)).isEqualTo(NOW);
-
-        user.setSyncRequestedAt(null);
-        assertThat(service.nextSyncAllowedAt(ID)).isEqualTo(NOW);
+        assertThat(service.syncIfDue(ID)).isEqualTo(new SyncResult(SyncOutcome.COOLDOWN, COOLDOWN));
+        verifyNoInteractions(gitHub, ai, writer);
     }
 
     @Test

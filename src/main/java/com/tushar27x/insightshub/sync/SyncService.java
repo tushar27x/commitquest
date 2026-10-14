@@ -8,6 +8,9 @@ import com.tushar27x.insightshub.github.GitHubGraphQlClient;
 import com.tushar27x.insightshub.github.model.UserInsightsData;
 import com.tushar27x.insightshub.insights.InsightsEngine;
 import com.tushar27x.insightshub.insights.InsightsResult;
+import com.tushar27x.insightshub.ratelimit.RateLimitProperties;
+import com.tushar27x.insightshub.ratelimit.RateLimiter;
+import com.tushar27x.insightshub.ratelimit.RateLimiter.Decision;
 import com.tushar27x.insightshub.repository.UsersRepository;
 import com.tushar27x.insightshub.security.TokenCipher;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +19,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 
@@ -42,10 +46,13 @@ public class SyncService {
     private final JsonMapper jsonMapper;
     private final Clock clock;
     private final SyncProperties properties;
+    private final RateLimiter rateLimiter;
+    private final RateLimitProperties rateLimits;
 
     public SyncService(UsersRepository usersRepository, TokenCipher tokenCipher, GitHubGraphQlClient gitHub,
                        InsightsEngine engine, AiInsightsService ai, InsightsWriter writer, JsonMapper jsonMapper,
-                       Clock clock, SyncProperties properties) {
+                       Clock clock, SyncProperties properties, RateLimiter rateLimiter,
+                       RateLimitProperties rateLimits) {
         this.usersRepository = usersRepository;
         this.tokenCipher = tokenCipher;
         this.gitHub = gitHub;
@@ -55,31 +62,48 @@ public class SyncService {
         this.jsonMapper = jsonMapper;
         this.clock = clock;
         this.properties = properties;
+        this.rateLimiter = rateLimiter;
+        this.rateLimits = rateLimits;
     }
 
     /**
-     * A sync the user started (login or refresh): runs only if none was started in the last
-     * {@code min-interval} (10 min). The cooldown is claimed atomically before the slow work, so
-     * double clicks can't start two syncs, and a sync that fails still counts.
+     * A sync the user started (login or refresh). Three gates, cheapest first:
+     * <ol>
+     *   <li>the user's own 10-minute cooldown, read without writing, so spamming during a cooldown
+     *       can't use up the global cap;</li>
+     *   <li>the global cap on syncs across all users ({@code sync-global}), which protects the shared LLM key;</li>
+     *   <li>the atomic claim of the cooldown, so double clicks can't start two syncs. A sync that
+     *       fails after this point still counts.</li>
+     * </ol>
      */
-    public SyncOutcome syncIfDue(long userId) {
+    public SyncResult syncIfDue(long userId) {
+        Users user = load(userId);
         Instant now = clock.instant();
-        if (usersRepository.claimSync(userId, now, now.minus(properties.minInterval())) == 0) {
-            log.info("Sync for user {} skipped: one was started less than {} ago", userId, properties.minInterval());
-            return SyncOutcome.COOLDOWN;
+        Duration cooldownLeft = cooldownLeft(user.getSyncRequestedAt(), now);
+        if (!cooldownLeft.isZero()) {
+            log.info("Sync for '{}' skipped: cooldown, {} left", user.getLogin(), cooldownLeft);
+            return new SyncResult(SyncOutcome.COOLDOWN, cooldownLeft);
         }
-        return sync(load(userId));
+
+        Decision global = rateLimiter.tryAcquire("sync:global", rateLimits.policy(RateLimitProperties.SYNC_GLOBAL));
+        if (!global.allowed()) {
+            log.warn("Sync for '{}' skipped: global sync cap reached, resets in {}", user.getLogin(), global.retryAfter());
+            return new SyncResult(SyncOutcome.BUSY, global.retryAfter());
+        }
+
+        if (usersRepository.claimSync(userId, now, now.minus(properties.minInterval())) == 0) {
+            log.info("Sync for '{}' skipped: another request started one first", user.getLogin());
+            return new SyncResult(SyncOutcome.COOLDOWN, properties.minInterval());
+        }
+        return new SyncResult(sync(user), Duration.ZERO);
     }
 
-    /** When {@link #syncIfDue} will next run a sync for this user (now, if it would run already). */
-    public Instant nextSyncAllowedAt(long userId) {
-        Instant requested = load(userId).getSyncRequestedAt();
-        Instant now = clock.instant();
-        if (requested == null) {
-            return now;
+    private Duration cooldownLeft(Instant lastRequested, Instant now) {
+        if (lastRequested == null) {
+            return Duration.ZERO;
         }
-        Instant next = requested.plus(properties.minInterval());
-        return next.isAfter(now) ? next : now;
+        Duration left = Duration.between(now, lastRequested.plus(properties.minInterval()));
+        return left.isNegative() ? Duration.ZERO : left;
     }
 
     /**
@@ -124,10 +148,16 @@ public class SyncService {
                 .orElseThrow(() -> new IllegalArgumentException("No user " + userId));
     }
 
+    /** @param retryAfter for {@code COOLDOWN} and {@code BUSY}: when a new attempt can succeed */
+    public record SyncResult(SyncOutcome outcome, Duration retryAfter) {
+    }
+
     public enum SyncOutcome {
         SYNCED,
         /** A sync was started less than {@code min-interval} ago; nothing was fetched. */
         COOLDOWN,
+        /** The global cap on syncs per minute is reached; nothing was fetched. */
+        BUSY,
         /** No usable GitHub token: the user must log in again. */
         NEEDS_REAUTH
     }

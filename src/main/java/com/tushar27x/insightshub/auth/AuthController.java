@@ -3,6 +3,8 @@ package com.tushar27x.insightshub.auth;
 import com.tushar27x.insightshub.auth.AuthService.LoginResult;
 import com.tushar27x.insightshub.auth.GitHubOAuthClient.OAuthCodeRejectedException;
 import com.tushar27x.insightshub.config.InsightsHubProperties;
+import com.tushar27x.insightshub.ratelimit.RateLimit;
+import com.tushar27x.insightshub.ratelimit.RateLimit.KeyType;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -52,6 +54,7 @@ public class AuthController {
         this.frontendUrl = stripTrailingSlash(properties.frontendUrl());
     }
 
+    @RateLimit(policy = "login", key = KeyType.IP)
     @GetMapping("/login")
     public ResponseEntity<Void> login() {
         String state = newState();
@@ -62,6 +65,7 @@ public class AuthController {
     }
 
     /** GitHub sends {@code code} on success, or {@code error} (e.g. {@code access_denied}) when the user cancels. */
+    @RateLimit(policy = "callback", key = KeyType.IP) // each callback costs 3 GitHub calls and may sync
     @GetMapping("/callback")
     public ResponseEntity<LoginResponse> callback(@RequestParam(required = false) String code,
                                                   @RequestParam(required = false) String state,

@@ -1,8 +1,10 @@
 package com.tushar27x.insightshub.user;
 
 import com.tushar27x.insightshub.github.GitHubApiException;
+import com.tushar27x.insightshub.ratelimit.RateLimit;
+import com.tushar27x.insightshub.ratelimit.RateLimit.KeyType;
 import com.tushar27x.insightshub.sync.SyncService;
-import com.tushar27x.insightshub.sync.SyncService.SyncOutcome;
+import com.tushar27x.insightshub.sync.SyncService.SyncResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -15,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Clock;
 import java.time.Duration;
 
 /**
@@ -29,15 +30,14 @@ public class UserController {
 
     private final InsightsQueryService insightsQueryService;
     private final SyncService syncService;
-    private final Clock clock;
 
-    public UserController(InsightsQueryService insightsQueryService, SyncService syncService, Clock clock) {
+    public UserController(InsightsQueryService insightsQueryService, SyncService syncService) {
         this.insightsQueryService = insightsQueryService;
         this.syncService = syncService;
-        this.clock = clock;
     }
 
     /** The insights from the last sync, served from Redis after the first read. 404 until the first sync. */
+    @RateLimit(policy = "insights", key = KeyType.USER)
     @GetMapping("/insights")
     public InsightsResponse insights(@AuthenticationPrincipal Jwt jwt) {
         return insightsOf(githubId(jwt));
@@ -45,30 +45,34 @@ public class UserController {
 
     /**
      * Refreshes the user's insights now and returns them. At most one sync per user every
-     * {@code insightshub.sync.min-interval} (10 min); earlier calls get 429 with {@code Retry-After}.
+     * {@code insightshub.sync.min-interval} (10 min), and only while the global sync cap has room;
+     * otherwise 429 with {@code Retry-After}.
      * Synchronous: a sync takes about 10–30 s (GitHub + five LLM calls).
      */
     @PostMapping("/sync")
     public ResponseEntity<InsightsResponse> refresh(@AuthenticationPrincipal Jwt jwt) {
         long githubId = githubId(jwt);
-        SyncOutcome outcome;
+        SyncResult result;
         try {
-            outcome = syncService.syncIfDue(githubId);
+            result = syncService.syncIfDue(githubId);
         } catch (GitHubApiException e) {
             log.warn("Refresh for user {} failed: {}", githubId, e.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "GitHub is unavailable; try again later", e);
         }
-        return switch (outcome) {
+        return switch (result.outcome()) {
             case SYNCED -> ResponseEntity.ok(insightsOf(githubId));
-            case COOLDOWN -> {
-                long seconds = Duration.between(clock.instant(), syncService.nextSyncAllowedAt(githubId)).toSeconds();
-                yield ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                        .header(HttpHeaders.RETRY_AFTER, Long.toString(Math.max(1, seconds)))
-                        .build();
-            }
+            // BUSY: too many syncs across all users right now; same answer for the client: wait and retry
+            case COOLDOWN, BUSY -> ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header(HttpHeaders.RETRY_AFTER, Long.toString(retryAfterSeconds(result.retryAfter())))
+                    .build();
             case NEEDS_REAUTH -> throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "GitHub no longer accepts your token; log in again at /api/auth/login");
         };
+    }
+
+    /** Whole seconds, rounded up, at least 1 (a {@code Retry-After} of 0 would invite an instant retry). */
+    static long retryAfterSeconds(Duration wait) {
+        return Math.max(1, (wait.toMillis() + 999) / 1000);
     }
 
     private InsightsResponse insightsOf(long githubId) {
