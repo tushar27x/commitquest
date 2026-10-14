@@ -19,7 +19,6 @@ Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13). No frontend. HTTP
 - **Done:** Phases 0–6 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
   insights engine + D&D archetype scoring, AI layer, GitHub OAuth + JWT). PRs #2–#6 merged to `main`.
 - **Open v1 issue:** B26 — v1 production still calls Groq models that were retired.
-- **Pending:** live login check for Phase 6 (needs the developer's OAuth App credentials in `.env`).
 - **Next up:** 🤖 Phase 7 (sync + Redis cache) · 🧑 Phase 2.6 (`V3__activity.sql`).
 - Working agreement & phase details: `PROGRESS.md` (status table at the top, learning log at the bottom).
 
