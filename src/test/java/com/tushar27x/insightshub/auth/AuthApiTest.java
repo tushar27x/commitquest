@@ -16,6 +16,9 @@ import com.tushar27x.insightshub.security.TokenCipher;
 import com.tushar27x.insightshub.github.GitHubApiException;
 import com.tushar27x.insightshub.sync.SyncService;
 import com.tushar27x.insightshub.sync.SyncService.SyncOutcome;
+import com.tushar27x.insightshub.sync.SyncService.SyncResult;
+import com.tushar27x.insightshub.ratelimit.InMemoryRateLimiter;
+import com.tushar27x.insightshub.ratelimit.RateLimitProperties;
 import com.tushar27x.insightshub.user.InsightsQueryService;
 import com.tushar27x.insightshub.user.InsightsResponse;
 import com.tushar27x.insightshub.user.UserController;
@@ -24,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
@@ -66,6 +70,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "insightshub.jwt-secret=" + SecurityTestData.JWT_SECRET,
         "insightshub.auth.github-client-id=client-id",
         "insightshub.auth.github-client-secret=client-secret",
+        // the real rate-limit interceptor is part of the slice; limits high enough not to interfere here
+        "insightshub.rate-limit.policies.login.requests=1000",
+        "insightshub.rate-limit.policies.login.per=1m",
+        "insightshub.rate-limit.policies.callback.requests=1000",
+        "insightshub.rate-limit.policies.callback.per=1m",
+        "insightshub.rate-limit.policies.insights.requests=1000",
+        "insightshub.rate-limit.policies.insights.per=1m",
 })
 @Import({SecurityConfig.class, JwtConfig.class, JwtService.class, ClockConfig.class, AuthService.class, TokenCipher.class,
         AuthApiTest.Properties.class})
@@ -152,7 +163,7 @@ class AuthApiTest {
 
     @Test
     void refreshReturnsTheFreshInsights() throws Exception {
-        when(syncService.syncIfDue(GITHUB_ID)).thenReturn(SyncOutcome.SYNCED);
+        when(syncService.syncIfDue(GITHUB_ID)).thenReturn(new SyncResult(SyncOutcome.SYNCED, Duration.ZERO));
         when(insightsQueryService.getInsights(GITHUB_ID)).thenReturn(Optional.of(new InsightsResponse(
                 "octocat", Archetype.MONK, Map.of(), Map.of(), "Fresh year.", null, null, Map.of(), null, Instant.now())));
 
@@ -163,19 +174,27 @@ class AuthApiTest {
 
     @Test
     void refreshDuringCooldownIs429WithRetryAfter() throws Exception {
-        when(syncService.syncIfDue(GITHUB_ID)).thenReturn(SyncOutcome.COOLDOWN);
-        when(syncService.nextSyncAllowedAt(GITHUB_ID)).thenReturn(Instant.now().plus(Duration.ofMinutes(6)));
+        when(syncService.syncIfDue(GITHUB_ID)).thenReturn(new SyncResult(SyncOutcome.COOLDOWN, Duration.ofMillis(359_400)));
 
         String retryAfter = mvc.perform(post("/api/user/sync").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
                 .andExpect(status().isTooManyRequests())
                 .andReturn().getResponse().getHeader(HttpHeaders.RETRY_AFTER);
 
-        assertThat(Long.parseLong(retryAfter)).isBetween(350L, 360L);
+        assertThat(retryAfter).isEqualTo("360"); // 359.4 s, rounded up
+    }
+
+    @Test
+    void refreshWhileTooManyUsersSyncIs429() throws Exception {
+        when(syncService.syncIfDue(GITHUB_ID)).thenReturn(new SyncResult(SyncOutcome.BUSY, Duration.ofSeconds(17)));
+
+        mvc.perform(post("/api/user/sync").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "17"));
     }
 
     @Test
     void refreshWithRevokedGitHubTokenIs409() throws Exception {
-        when(syncService.syncIfDue(GITHUB_ID)).thenReturn(SyncOutcome.NEEDS_REAUTH);
+        when(syncService.syncIfDue(GITHUB_ID)).thenReturn(new SyncResult(SyncOutcome.NEEDS_REAUTH, Duration.ZERO));
 
         mvc.perform(post("/api/user/sync").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
                 .andExpect(status().isConflict());
@@ -277,8 +296,12 @@ class AuthApiTest {
 
     /** The main class's {@code @ConfigurationPropertiesScan} doesn't apply in a slice test. */
     @TestConfiguration
-    @EnableConfigurationProperties({InsightsHubProperties.class, AuthProperties.class})
+    @EnableConfigurationProperties({InsightsHubProperties.class, AuthProperties.class, RateLimitProperties.class})
     static class Properties {
+        @Bean
+        InMemoryRateLimiter rateLimiter() {
+            return new InMemoryRateLimiter();
+        }
     }
 
     private String bearer(long githubId) {
