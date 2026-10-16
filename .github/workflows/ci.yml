@@ -1,0 +1,52 @@
+# CI for every PR and push to main. No secrets: the backend tests run against Testcontainers
+# (Postgres + Redis in Docker, never Neon), and the web tests use fixtures.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (./mvnw verify)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      # Unit tests (Surefire), then the *IT classes on Testcontainers (Failsafe).
+      - run: ./mvnw -B verify
+
+  web:
+    name: Web (lint, test, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      # Before build: `prebuild` regenerates the design files and would hide drift from docs/design/.
+      - run: npm run design:check
+      - run: npm run lint
+      # Includes lib/api/fixtures.test.ts: fixture drift from docs/api/fixtures/ and validation against the types.
+      - run: npm test
+      - run: npm run build
