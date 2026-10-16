@@ -131,10 +131,14 @@ function eventText(event: HeroEvent): { text: string; tone: LogTone } {
   }
 }
 
-/** XP days and events merged, newest first. On the same day an event comes before the XP line. */
+/**
+ * XP days and events merged, newest first. On the same day an event comes before the XP line,
+ * and later events (the list is newest last) before earlier ones.
+ */
 export function recentLog({ events, xp_days }: HeroEvents, today: LocalDate, limit = 4): LogEntry[] {
   const entries: (LogEntry & { order: number })[] = [
-    ...xp_days.map((x) => ({
+    // xp_days lists every settled day; a 0-XP day (missed or rest) is told by its event instead.
+    ...xp_days.filter((x) => x.xp > 0).map((x) => ({
       key: `xp-${x.on_date}`,
       date: x.on_date,
       day: dayLabel(x.on_date, today),

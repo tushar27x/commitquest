@@ -26,20 +26,13 @@ interface EyesRow {
 }
 
 /**
- * The closed-eyes row for a class, or undefined when the class has none (the Paladin's
- * visor hides its eyes). Reads `variants.sleepingEyes` ({CLASS: {row, value}}, PR #19);
- * until the kit has it, falls back to the deprecated `sleepingEyesRow` (MONK, row 4).
- * Drop the fallback once integration removes the old key.
+ * The closed-eyes row for a class (`variants.sleepingEyes`), or undefined when it has none:
+ * the Paladin's visor already hides its eyes. Read through `unknown` because `_doc` sits
+ * next to the rows.
  */
 function sleepingEyes(archetype: Archetype): EyesRow | undefined {
-  // Through `unknown`: the kit's shape changes between versions, and `_doc` sits next to the rows.
-  const variants = kit.variants as unknown as { sleepingEyes?: Record<string, unknown>; sleepingEyesRow?: Record<string, unknown> };
-  if (variants.sleepingEyes) {
-    const eyes = variants.sleepingEyes[archetype];
-    return eyes && typeof eyes === "object" ? (eyes as EyesRow) : undefined;
-  }
-  const legacy = variants.sleepingEyesRow?.[archetype];
-  return typeof legacy === "string" ? { row: 4, value: legacy } : undefined;
+  const eyes = (kit.variants.sleepingEyes as unknown as Record<string, unknown>)[archetype];
+  return eyes && typeof eyes === "object" ? (eyes as EyesRow) : undefined;
 }
 
 /** A class sprite on the shared palette. `sleeping` closes the eyes where the kit has a variant. */

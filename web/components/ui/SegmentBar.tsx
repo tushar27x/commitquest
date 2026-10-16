@@ -5,6 +5,8 @@ export interface SegmentBarProps {
   /** Accessible text, e.g. "140 of 350 XP". */
   label: string;
   fillClass?: string;
+  /** A fill colour that isn't a token class (class accents). */
+  fillColor?: string;
   emptyClass?: string;
   className?: string;
 }
@@ -15,6 +17,7 @@ export function SegmentBar({
   cells,
   label,
   fillClass = "bg-gold",
+  fillColor,
   emptyClass = "bg-stone-lit",
   className = "h-2.5 gap-0.5",
 }: SegmentBarProps) {
@@ -27,7 +30,11 @@ export function SegmentBar({
       style={{ gridTemplateColumns: `repeat(${cells}, minmax(0, 1fr))` }}
     >
       {Array.from({ length: cells }, (_, i) => (
-        <span key={i} className={i < on ? fillClass : emptyClass} />
+        <span
+          key={i}
+          className={i < on ? (fillColor ? "" : fillClass) : emptyClass}
+          style={i < on && fillColor ? { background: fillColor } : undefined}
+        />
       ))}
     </div>
   );

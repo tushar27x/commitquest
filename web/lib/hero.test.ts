@@ -85,6 +85,44 @@ describe("recentLog", () => {
     expect(log.map((e) => e.text)).toEqual(["Reached LV 8!", "+10 XP. Streak 2."]);
   });
 
+  it("skips 0-XP days: their events tell them (B4 lists every settled day)", () => {
+    const log = recentLog(
+      {
+        events: [
+          { type: "LIFE_LOST", on_date: "2026-10-14", details: { lives: 0, reason: "NO_ACTIVITY" } },
+          { type: "LEVEL_DOWN", on_date: "2026-10-14", details: { from: 7, to: 6 } },
+          { type: "RESTED", on_date: "2026-10-15", details: {} },
+        ],
+        xp_days: [
+          { on_date: "2026-10-13", xp: 10, streak: 2 },
+          { on_date: "2026-10-14", xp: 0, streak: 0 },
+          { on_date: "2026-10-15", xp: 0, streak: 0 },
+        ],
+      },
+      "2026-10-16",
+    );
+    expect(log.map((e) => e.text)).toEqual([
+      "Rest day. Nothing lost.",
+      "Hearts ran out. Dropped to LV 6.",
+      "No contributions. Lost a heart.",
+      "+10 XP. Streak 2.",
+    ]);
+  });
+
+  it("shows LIFE_GAINED above LEVEL_UP on the same day (it comes later in the list)", () => {
+    const log = recentLog(
+      {
+        events: [
+          { type: "LEVEL_UP", on_date: "2026-10-15", details: { from: 7, to: 8 } },
+          { type: "LIFE_GAINED", on_date: "2026-10-15", details: { lives: 3, streak: 3 } },
+        ],
+        xp_days: [{ on_date: "2026-10-15", xp: 10, streak: 3 }],
+      },
+      "2026-10-16",
+    );
+    expect(log.map((e) => e.text)).toEqual(["Three days in a row. Won a heart back.", "Reached LV 8!", "+10 XP. Streak 3."]);
+  });
+
   it("labels older days by date", () => {
     expect(dayLabel("2026-10-09", "2026-10-16")).toBe("9 OCT");
     expect(dayLabel("2026-10-10", "2026-10-16")).toBe("SAT");
