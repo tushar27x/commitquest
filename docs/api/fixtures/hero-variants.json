@@ -30,15 +30,48 @@
     "base_mood": "WEAK"
   },
   "sleeping": {
+    "lives": 3,
+    "streak": 3,
     "mood": "SLEEPING",
-    "base_mood": "OKAY",
+    "base_mood": "HAPPY",
     "today": {
       "date": "2026-10-18",
       "active": false,
       "calendar_count": 0,
       "branch_commit_count": 0,
       "day_ends_at": "2026-10-18T18:30:00Z"
-    }
+    },
+    "week": [
+      {
+        "date": "2026-10-12",
+        "status": "active"
+      },
+      {
+        "date": "2026-10-13",
+        "status": "active"
+      },
+      {
+        "date": "2026-10-14",
+        "status": "missed"
+      },
+      {
+        "date": "2026-10-15",
+        "status": "active"
+      },
+      {
+        "date": "2026-10-16",
+        "status": "active"
+      },
+      {
+        "date": "2026-10-17",
+        "status": "active"
+      },
+      {
+        "date": "2026-10-18",
+        "status": "rest"
+      }
+    ],
+    "last_evaluated_on": "2026-10-17"
   },
   "level_up": {
     "level": 8,

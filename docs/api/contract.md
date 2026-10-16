@@ -2,6 +2,8 @@
 
 **Owner: the integration agent.** The backend and UI agents implement against this file. Neither edits it directly: they propose changes in their PR description or in `docs/agents/HANDOFF.md`, and the integration agent updates the contract, the fixtures and the shared types together.
 
+The TypeScript form of this contract is `web/lib/api/types.ts`; `web/lib/api/fixtures.test.ts` checks every fixture against it and fails when `web/public/fixtures/` drifts from `docs/api/fixtures/`.
+
 Example payloads live in `docs/api/fixtures/` and follow the fixture story in `docs/v2-hero-plan.md` §5. The web app's mock mode serves the same files (copied to `web/public/fixtures/`), and contract tests on both sides assert against them.
 
 ## Conventions
@@ -10,7 +12,9 @@ Example payloads live in `docs/api/fixtures/` and follow the fixture story in `d
 - **Auth:** `Authorization: Bearer <jwt>` (HS256, 24 h, `sub` = GitHub id). The user is always taken from the JWT, never from a parameter.
 - **JSON:** snake_case keys. Timestamps are ISO-8601 UTC (`Instant`). Calendar dates are `YYYY-MM-DD` in the **user's timezone**.
 - **Enums** are UPPER_CASE strings: archetypes `PALADIN BARBARIAN WIZARD ARTIFICER CLERIC BARD MONK ROGUE`; weekdays `MONDAY…SUNDAY`.
-- **Errors (Phase 9):** RFC 9457 `application/problem+json`, `{ "type", "title", "status", "detail", "instance" }`. A 429 always carries `Retry-After` in seconds, rounded up and at least 1. The rate-limit interceptor also sends `X-RateLimit-Limit` and `X-RateLimit-Remaining`.
+- **Errors (Phase 9, B2):** RFC 9457 `application/problem+json` on every error, always with all five keys: `{ "type": "about:blank", "title": <HTTP reason phrase>, "status", "detail", "instance": <request path, no query string> }`. `type` is always `about:blank`: tell errors apart by **status and endpoint**, never by `type`, `title` or `detail` text.
+- **Validation 400s** add `errors: [{ "field", "message" }]`, where `field` is the snake_case JSON name (a rule across fields, like "at most 2 rest days", uses that field's name, e.g. `rest_days`). `detail` is then "The request is invalid; see 'errors'". Spring's own 400s (malformed JSON, missing parameter) have no `errors`.
+- **429:** always carries `Retry-After` in whole seconds, rounded up, at least 1. `X-RateLimit-Limit` and `X-RateLimit-Remaining` come **only** from the `@RateLimit` endpoints (`/auth/login`, `/auth/callback`, `GET /user/insights`), on success and on 429. The `/sync` 429s don't carry them; the UI reads only `Retry-After`.
 
 | Status | Meaning for the UI |
 |---|---|
@@ -18,7 +22,10 @@ Example payloads live in `docs/api/fixtures/` and follow the fixture story in `d
 | 404 | No insights yet → "NEW GAME" (start a sync) |
 | 409 | The context explains it: on `/sync`, the GitHub token was revoked → "Reconnect GitHub"; on `/hero/class`, the class isn't qualified |
 | 429 | Cooldown or rate limit → countdown from `Retry-After` |
+| 400 | Validation: show `errors[].message` next to `errors[].field` |
 | 502 | GitHub unavailable → "The road is blocked" + RETRY |
+| 500 | Anything unexpected, on any endpoint (the exception text is never returned) → treat like 502 |
+| (no body) | A proxy or network failure may return no problem JSON → go by the status alone; a network error is treated like 502 |
 
 ---
 
@@ -28,7 +35,7 @@ Example payloads live in `docs/api/fixtures/` and follow the fixture story in `d
 302 to GitHub, and sets the `oauth_state` cookie (HttpOnly, `path=/api/auth`, 10 min). Rate limit: 5/min per IP.
 
 ### `GET /api/auth/callback?code&state` (public)
-**Change in this plan:** with `insightshub.auth.redirect-to-frontend: true`, it 302s to **`${FRONTEND_URL}/dashboard#token=<jwt>`**, a fragment and not `?token=`. Login also runs `syncIfDue`; a failure there doesn't block login. Rate limit: 5/min per IP.
+**Change in this plan:** with `insightshub.auth.redirect-to-frontend: true`, it 302s to **`${FRONTEND_URL}/dashboard#token=<jwt>`**, a fragment and not `?token=`. Login also runs `syncIfDue`; a failure there doesn't block login. If GitHub fails during the code exchange, it returns 502 (since B2; was 500). Rate limit: 5/min per IP.
 
 ### `GET /api/auth/logout`
 302 to `FRONTEND_URL`. The web app just drops its token; it doesn't need to call this.
@@ -48,6 +55,7 @@ Synchronous: usually under 30 s, worst case about 90 s.
 |---|---|
 | 200 | Fresh `InsightsResponse` |
 | 429 + `Retry-After` | The per-user 10-minute cooldown, **including after a failed sync**, or the global cap is busy |
+| 404 | Rare: the sync wrote nothing → treat as "NEW GAME" |
 | 409 | `NEEDS_REAUTH` |
 | 502 | GitHub is down |
 
@@ -70,7 +78,7 @@ Returns 200 with `fixtures/hero.json`. Before the first sync, 404.
 | `base_mood` | enum | `HAPPY OKAY WEAK`, from lives only (what the sprite shows under an overlay) |
 | `tier` | enum | `CAMPFIRE` (1–4), `VILLAGE` (5–9), `KEEP` (10–14), `CITADEL` (15+) |
 | `today` | object | `{date, active, calendar_count, branch_commit_count, day_ends_at}`. `day_ends_at` is the next local midnight as an Instant, for the countdown |
-| `week` | array[7] | Monday→Sunday of the current local week: `{date, status}`, where status is `active` `missed` `rest` `today` `future` |
+| `week` | array[7] | Monday→Sunday of the current local week: `{date, status}`, where status is `active` `missed` `rest` `today` `future`. Days before today are `active`, `missed` or (rest days only) `rest`. Today is `today`, or `rest` when today is a rest day. Later days are `future`, or `rest` for rest days. The UI highlights today by matching `today.date`, not by status |
 | `timezone` | string | IANA |
 | `rest_days` | array | Weekday enums, at most 2 |
 | `class` | object | `{chosen: CLASS\|null, current: CLASS, scored: CLASS, qualified: CLASS[], can_switch_at: Instant\|null}`. `current = chosen ?? scored`. `can_switch_at` is null when switching is allowed now |
