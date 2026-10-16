@@ -2,7 +2,7 @@
 // system states (plan §4) can switch on `status` and count down from `retryAfter`.
 
 import type { ProblemDetail } from "./api/types.tmp";
-import { clearToken, getToken } from "./auth";
+import { getToken } from "./auth";
 import { mockFetch, servedByMock } from "./mock";
 
 /** `status` for a request that never got an HTTP response (offline, DNS, CORS, abort). */
@@ -79,8 +79,8 @@ export async function api<T>(path: string, { method = "GET", body, signal }: Api
 
   if (!res.ok) {
     const problem = await readProblem(res);
-    // The session is over; the screen decides where to go (plan §4, Session ended).
-    if (res.status === 401) clearToken();
+    // A 401 doesn't clear the token here: the game shell shows "Session ended" first
+    // and clears it then (components/game/GameState.tsx).
     throw new ApiError(
       res.status,
       problem?.detail ?? problem?.title ?? `${method} ${path} failed with ${res.status}`,

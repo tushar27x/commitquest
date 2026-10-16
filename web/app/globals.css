@@ -1,6 +1,17 @@
 @import "tailwindcss";
 @import "./theme.css";
 
+/* Extras the generated theme doesn't carry. */
+@theme {
+  /* sprites.json basePalette.k: dark text on gold buttons. */
+  --color-ink: #1A1410;
+  /* Small buttons and chips: 3 px ring + 3 px drop (docs/design/source). */
+  --shadow-btn: 0 0 0 3px var(--color-outline), 3px 3px 0 3px var(--color-outline);
+  --shadow-btn-flat: 0 0 0 3px var(--color-outline);
+  --shadow-bar-down: 0 4px 0 var(--color-outline);
+  --shadow-bar-up: 0 -4px 0 var(--color-outline);
+}
+
 /* Fonts come from next/font (app/layout.tsx), which sets these variables on <html>. */
 @theme inline {
   --font-display: var(--font-press-start-2p), monospace;

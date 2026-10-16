@@ -19,6 +19,7 @@ const MOCK_RETRY_AFTER_S = 451;
 
 const ERROR_TITLES: Record<number, string> = {
   400: "Bad Request",
+  500: "Internal Server Error",
   401: "Unauthorized",
   404: "Not Found",
   409: "Conflict",
@@ -99,12 +100,14 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-function problem(status: number, detail: string): Response {
+/** Same shape as the backend (B2): `type` is always about:blank, `instance` the request path. */
+function problem(status: number, detail: string, instance: string): Response {
   const body: ProblemDetail = {
     type: "about:blank",
     title: ERROR_TITLES[status] ?? "Error",
     status,
     detail: `[mock] ${detail}`,
+    instance,
   };
   const headers: Record<string, string> = { "Content-Type": "application/problem+json" };
   if (status === 429) headers["Retry-After"] = String(MOCK_RETRY_AFTER_S);
@@ -141,7 +144,7 @@ export async function mockFetch(path: string, init: RequestInit = {}): Promise<R
   }
 
   const forced = takeForcedError();
-  if (forced !== null) return problem(forced, `forced by ?mock_error=${forced}`);
+  if (forced !== null) return problem(forced, `forced by ?mock_error=${forced}`, pathname);
 
   switch (`${method} ${pathname}`) {
     case "GET /api/user/insights":
@@ -155,7 +158,7 @@ export async function mockFetch(path: string, init: RequestInit = {}): Promise<R
       const hero = withChosenClass(await mockHero());
       const archetype = readBody<{ archetype: Archetype | null }>(init)?.archetype ?? null;
       if (archetype !== null && !hero.class.qualified.includes(archetype)) {
-        return problem(409, `${archetype} is not qualified`);
+        return problem(409, `${archetype} is not qualified`, pathname);
       }
       chosenClass = { archetype };
       return json(withChosenClass(hero));
@@ -169,13 +172,13 @@ export async function mockFetch(path: string, init: RequestInit = {}): Promise<R
 
     case "PUT /api/user/preferences": {
       const body = readBody<Partial<Preferences>>(init);
-      if (!body) return problem(400, "body is not JSON");
+      if (!body) return problem(400, "body is not JSON", pathname);
       savedPreferences = { ...(await fixture<Preferences>("preferences")), ...body };
       return json(savedPreferences);
     }
 
     default:
-      return problem(404, `no fixture for ${method} ${pathname}`);
+      return problem(404, `no fixture for ${method} ${pathname}`, pathname);
   }
 }
 

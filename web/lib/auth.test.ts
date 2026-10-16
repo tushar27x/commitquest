@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clearToken, decodeJwt, getToken, isExpired, setToken, tokenFromFragment } from "./auth";
+import { clearToken, decodeJwt, getToken, hasSession, isExpired, setToken, tokenFromFragment } from "./auth";
 
 // Built at runtime: no token-shaped literals in tests (B31).
 const b64url = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
@@ -79,11 +79,23 @@ describe("token storage", () => {
     expect(storage.length).toBe(0);
   });
 
-  it("survives storage that throws", () => {
+  it("keeps the token in memory when storage throws", () => {
     vi.stubGlobal("window", { localStorage: fakeStorage(true) });
-    expect(setToken(jwt({ exp: inSeconds(3600) }))).toBe(false);
-    expect(getToken()).toBeNull();
+    const token = jwt({ exp: inSeconds(3600) });
+    expect(setToken(token)).toBe(false);
+    expect(getToken()).toBe(token);
+    expect(hasSession()).toBe(true);
     expect(() => clearToken()).not.toThrow();
+    expect(getToken()).toBeNull();
+    expect(hasSession()).toBe(false);
+  });
+
+  it("hasSession is false for an expired token and leaves it in place", () => {
+    const storage = fakeStorage();
+    vi.stubGlobal("window", { localStorage: storage });
+    setToken(jwt({ exp: inSeconds(-60) }));
+    expect(hasSession()).toBe(false);
+    expect(storage.length).toBe(1);
   });
 });
 
