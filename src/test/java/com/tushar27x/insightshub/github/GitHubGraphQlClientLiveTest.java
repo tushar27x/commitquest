@@ -24,6 +24,7 @@ class GitHubGraphQlClientLiveTest {
     private final GitHubGraphQlClient client = new GitHubGraphQlClient(
             new GitHubClientConfig().gitHubRestClient(RestClient.builder()),
             new ClassPathResource("graphql/user-insights.graphql"),
+            new ClassPathResource("graphql/branch-activity.graphql"),
             Clock.systemUTC());
 
     @Test

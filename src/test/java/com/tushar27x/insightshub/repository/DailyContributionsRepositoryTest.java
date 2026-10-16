@@ -6,7 +6,9 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -50,6 +52,28 @@ class DailyContributionsRepositoryTest {
     }
 
     @Test
+    void branchUpsertWritesOnlyTheBranchCountAndNeverLowersIt() {
+        assertThat(repository.upsertBranchSql)
+                .contains("INSERT INTO v2.daily_contributions AS d (user_id, date, branch_commit_count)")
+                .contains("SET branch_commit_count = GREATEST(d.branch_commit_count, EXCLUDED.branch_commit_count)")
+                .doesNotContain("calendar_count");
+    }
+
+    @Test
+    void branchUpsertBatchesOneRowPerScannedDay() {
+        Map<LocalDate, Integer> counts = new LinkedHashMap<>();
+        counts.put(OCT_13, 0);
+        counts.put(OCT_14, 4);
+
+        repository.upsertBranchCounts(ID, counts);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Object[]>> rows = ArgumentCaptor.forClass(List.class);
+        verify(jdbc).batchUpdate(eq(repository.upsertBranchSql), rows.capture());
+        assertThat(rows.getValue()).containsExactly(new Object[]{ID, OCT_13, 0}, new Object[]{ID, OCT_14, 4});
+    }
+
+    @Test
     void everyStatementNamesTheSchemaBecauseOnlyJpaHasADefaultOne() { // B36
         assertThat(repository.latestDateSql).isEqualTo("SELECT max(date) FROM v2.daily_contributions WHERE user_id = ?");
     }
@@ -63,6 +87,7 @@ class DailyContributionsRepositoryTest {
     @Test
     void emptyListSkipsTheDatabase() {
         repository.upsertCalendarCounts(ID, List.of());
+        repository.upsertBranchCounts(ID, Map.of());
 
         verify(jdbc, never()).batchUpdate(anyString(), anyList());
     }

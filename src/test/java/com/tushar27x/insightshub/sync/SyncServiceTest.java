@@ -64,6 +64,7 @@ class SyncServiceTest {
     private final AiInsightsService ai = mock(AiInsightsService.class);
     private final InsightsWriter writer = mock(InsightsWriter.class);
     private final ActivityWriter activityWriter = mock(ActivityWriter.class);
+    private final BranchScanner branchScanner = mock(BranchScanner.class);
     private final RateLimiter rateLimiter = mock(RateLimiter.class);
     private static final Policy GLOBAL = new Policy(30, Duration.ofMinutes(1));
     private final InsightsResult result = AiTestData.insights();
@@ -79,8 +80,8 @@ class SyncServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SyncService(usersRepository, cipher, gitHub, engine, ai, writer, activityWriter, JsonMapper.builder().build(),
-                Clock.fixed(NOW, ZoneOffset.UTC), new SyncProperties(COOLDOWN), rateLimiter,
+        service = new SyncService(usersRepository, cipher, gitHub, engine, ai, writer, activityWriter, branchScanner,
+                JsonMapper.builder().build(), Clock.fixed(NOW, ZoneOffset.UTC), new SyncProperties(COOLDOWN, 4, 2), rateLimiter,
                 new RateLimitProperties(true, Map.of(RateLimitProperties.SYNC_GLOBAL, GLOBAL)));
         when(rateLimiter.tryAcquire("sync:global", GLOBAL)).thenReturn(new Decision(true, 30, 29, Duration.ofSeconds(50)));
         user = new Users(ID, "octocat");
@@ -90,12 +91,13 @@ class SyncServiceTest {
         // Weeks out of order, to check the calendar is sorted before it's written
         ContributionCalendar calendar = new ContributionCalendar(4,
                 List.of(new Week(List.of(OCT_14)), new Week(List.of(OCT_12, OCT_13))));
-        GitHubUser gitHubUser = new GitHubUser("octocat", null, null, null, null, null, null, null, null,
+        GitHubUser gitHubUser = new GitHubUser("U_octocat", "octocat", null, null, null, null, null, null, null, null,
                 new ContributionsCollection(List.of(), calendar, 4, 0, 0, 0));
         UserInsightsData data = new UserInsightsData(null, gitHubUser);
         when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenReturn(data);
         when(engine.calculate(any())).thenReturn(result);
         when(ai.generate("octocat", result)).thenReturn(texts);
+        when(branchScanner.scan(any(), any(), any(), any())).thenReturn(Map.of());
     }
 
     @Test
@@ -117,6 +119,27 @@ class SyncServiceTest {
         order.verify(activityWriter).writeCalendar(ID, List.of(OCT_12, OCT_13, OCT_14));
         order.verify(ai).generate("octocat", result);
         order.verify(writer).save(eq(ID), any(), eq(result), eq(texts), eq(NOW));
+    }
+
+    @Test
+    void branchScanGetsTheNodeIdAndCalendarAndItsCountsAreWrittenBeforeAi() {
+        List<ContributionDay> calendar = List.of(OCT_12, OCT_13, OCT_14);
+        when(branchScanner.scan("gho_stored", "U_octocat", calendar, ZoneOffset.UTC))
+                .thenReturn(Map.of(OCT_12.date(), 2));
+
+        service.sync(ID);
+
+        var order = inOrder(activityWriter, ai);
+        order.verify(activityWriter).writeCalendar(ID, calendar);
+        order.verify(activityWriter).writeBranchCounts(ID, Map.of(OCT_12.date(), 2));
+        order.verify(ai).generate("octocat", result);
+    }
+
+    @Test
+    void nothingScannedMeansNoBranchWrite() {
+        service.sync(ID);
+
+        verify(activityWriter, never()).writeBranchCounts(anyLong(), any());
     }
 
     @Test
@@ -169,7 +192,7 @@ class SyncServiceTest {
         assertThat(service.sync(ID)).isEqualTo(SyncOutcome.NEEDS_REAUTH);
         verify(writer).markNeedsReauth(ID);
         verify(writer, never()).save(anyLong(), any(), any(), any(), any());
-        verifyNoInteractions(ai, activityWriter);
+        verifyNoInteractions(ai, activityWriter, branchScanner);
     }
 
     @Test
@@ -185,7 +208,24 @@ class SyncServiceTest {
         when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenThrow(new GitHubApiException("HTTP 502"));
 
         assertThatThrownBy(() -> service.sync(ID)).isInstanceOf(GitHubApiException.class);
-        verifyNoInteractions(writer, activityWriter);
+        verifyNoInteractions(writer, activityWriter, branchScanner);
+    }
+
+    @Test
+    void scheduledSyncClaimsTheCooldownWithoutTheGlobalCap() {
+        when(usersRepository.claimSync(ID, NOW, NOW.minus(COOLDOWN))).thenReturn(1);
+
+        assertThat(service.scheduledSync(ID)).isEqualTo(SyncOutcome.SYNCED);
+        verify(writer).save(eq(ID), any(), eq(result), eq(texts), eq(NOW));
+        verifyNoInteractions(rateLimiter);
+    }
+
+    @Test
+    void scheduledSyncSkipsAUserWhoJustSynced() {
+        when(usersRepository.claimSync(ID, NOW, NOW.minus(COOLDOWN))).thenReturn(0);
+
+        assertThat(service.scheduledSync(ID)).isEqualTo(SyncOutcome.COOLDOWN);
+        verifyNoInteractions(gitHub, ai, writer, activityWriter, branchScanner);
     }
 
     @Test

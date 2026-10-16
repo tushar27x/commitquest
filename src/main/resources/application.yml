@@ -71,6 +71,9 @@ insightshub:
       sync-global: { requests: 30, per: 1m }  # all users together: protects the shared Groq key; tune to the plan
   sync:
     min-interval: 10m  # per-user cooldown for login/refresh syncs (v1: 7 days, login only)
+    cron: "0 0 3 * * *"  # daily sync of every user, in UTC (Spring cron: sec min hour day month weekday; "-" = off)
+    concurrency: 4  # users synced at once by the daily sync (each makes ~5 LLM calls on the shared key)
+    branch-scan-days: 2  # today and yesterday: days the calendar shows as empty get a branch scan
   ai:
     fast-model: openai/gpt-oss-20b  # cheap model for repo summaries (v1: llama-3.1-8b-instant, retired)
     reasoning-effort: low  # gpt-oss reasons before answering; "low" keeps that short

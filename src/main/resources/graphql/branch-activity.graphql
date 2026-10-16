@@ -1,0 +1,33 @@
+# Branch scan (Phase 10): the user's commits on any branch of their 20 most recently pushed repos,
+# for one day. The contribution calendar only counts default-branch commits (and gh-pages), so this
+# catches feature branches, non-default deploy branches and forks.
+# - viewer: the token's owner, i.e. the user. Without the `repo` scope, private repos are invisible.
+# - refs: the 25 branches with the newest tip commit; history counts commits reachable from each tip,
+#   so a commit on several branches counts several times. Only > 0 matters.
+# - pushedAt: lets the client skip repos not pushed since the day started.
+query BranchActivity($userId: ID!, $since: GitTimestamp!, $until: GitTimestamp!) {
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+  viewer {
+    repositories(first: 20, ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER],
+                 orderBy: {field: PUSHED_AT, direction: DESC}) {
+      nodes {
+        pushedAt
+        refs(refPrefix: "refs/heads/", first: 25, orderBy: {field: TAG_COMMIT_DATE, direction: DESC}) {
+          nodes {
+            target {
+              ... on Commit {
+                history(since: $since, until: $until, author: {id: $userId}) {
+                  totalCount
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

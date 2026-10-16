@@ -11,7 +11,7 @@ import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** The atomic sync claim (Phase 7) needs a real database to test: PROGRESS.md left it for Phase 14. */
+/** The atomic sync claim (Phase 7) and the daily sync's user query (B3) against a real database. */
 @IntegrationTest
 class UsersRepositoryIT {
 
@@ -40,6 +40,19 @@ class UsersRepositoryIT {
 
         Instant later = now.plus(COOLDOWN).plusSeconds(1);
         assertThat(users.claimSync(USER, later, later.minus(COOLDOWN))).isEqualTo(1);
+    }
+
+    @Test
+    void scheduledSyncTakesOnlyUsersWithAUsableToken() { // B3
+        long noToken = USER + 10;
+        long rejected = USER + 11;
+        jdbc.update("DELETE FROM v2.users WHERE github_id IN (?, ?)", noToken, rejected);
+        jdbc.update("UPDATE v2.users SET encrypted_github_token = 'sealed' WHERE github_id = ?", USER);
+        jdbc.update("INSERT INTO v2.users (github_id, login) VALUES (?, 'it-no-token')", noToken);
+        jdbc.update("INSERT INTO v2.users (github_id, login, encrypted_github_token, needs_reauth) "
+                + "VALUES (?, 'it-rejected', 'sealed', true)", rejected);
+
+        assertThat(users.findIdsForScheduledSync()).contains(USER).doesNotContain(noToken, rejected);
     }
 
     @Test

@@ -6,6 +6,7 @@ import com.tushar27x.insightshub.entity.Users;
 import com.tushar27x.insightshub.github.GitHubAuthException;
 import com.tushar27x.insightshub.github.GitHubGraphQlClient;
 import com.tushar27x.insightshub.github.model.GitHubUser;
+import com.tushar27x.insightshub.github.model.GitHubUser.ContributionDay;
 import com.tushar27x.insightshub.github.model.UserInsightsData;
 import com.tushar27x.insightshub.insights.InsightsEngine;
 import com.tushar27x.insightshub.insights.InsightsResult;
@@ -22,12 +23,16 @@ import tools.jackson.databind.json.JsonMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 
 /**
- * One user's sync: GitHub → daily activity → stats and archetype → AI texts → database (v1: the body of
- * {@code callback()}).
- * Needs only a user id, so the login callback and the Phase 10 scheduler can both call it.
+ * One user's sync: GitHub → daily activity (calendar + branch scan) → stats and archetype → AI texts →
+ * database (v1: the body of {@code callback()}).
+ * Needs only a user id, so the login callback, refresh and the daily {@link ScheduledSync} can all call it.
  * <p>
  * The slow steps (GitHub, LLMs: seconds each) run outside any transaction; only the final write in
  * {@link ActivityWriter} and {@link InsightsWriter} hold a database connection.
@@ -39,6 +44,9 @@ public class SyncService {
     private static final TypeReference<Map<String, Object>> MAP = new TypeReference<>() {
     };
 
+    /** The days the branch scan checks. UTC until B4 adds {@code users.timezone}. */
+    static final ZoneId ACTIVITY_ZONE = ZoneOffset.UTC;
+
     private final UsersRepository usersRepository;
     private final TokenCipher tokenCipher;
     private final GitHubGraphQlClient gitHub;
@@ -46,6 +54,7 @@ public class SyncService {
     private final AiInsightsService ai;
     private final InsightsWriter writer;
     private final ActivityWriter activityWriter;
+    private final BranchScanner branchScanner;
     private final JsonMapper jsonMapper;
     private final Clock clock;
     private final SyncProperties properties;
@@ -54,7 +63,7 @@ public class SyncService {
 
     public SyncService(UsersRepository usersRepository, TokenCipher tokenCipher, GitHubGraphQlClient gitHub,
                        InsightsEngine engine, AiInsightsService ai, InsightsWriter writer,
-                       ActivityWriter activityWriter, JsonMapper jsonMapper,
+                       ActivityWriter activityWriter, BranchScanner branchScanner, JsonMapper jsonMapper,
                        Clock clock, SyncProperties properties, RateLimiter rateLimiter,
                        RateLimitProperties rateLimits) {
         this.usersRepository = usersRepository;
@@ -64,6 +73,7 @@ public class SyncService {
         this.ai = ai;
         this.writer = writer;
         this.activityWriter = activityWriter;
+        this.branchScanner = branchScanner;
         this.jsonMapper = jsonMapper;
         this.clock = clock;
         this.properties = properties;
@@ -112,7 +122,22 @@ public class SyncService {
     }
 
     /**
-     * Always syncs, without the cooldown (for the Phase 10 scheduler). Returns
+     * The daily sync's entry point. Claims the cooldown like a user's sync does, so a refresh can't
+     * run alongside it, and skips users who synced in the last {@code min-interval}. It doesn't take
+     * the global cap: {@link ScheduledSync} bounds its own concurrency, and user syncs keep the whole cap.
+     */
+    public SyncOutcome scheduledSync(long userId) {
+        Users user = load(userId);
+        Instant now = clock.instant();
+        if (usersRepository.claimSync(userId, now, now.minus(properties.minInterval())) == 0) {
+            log.info("Scheduled sync for '{}' skipped: synced less than {} ago", user.getLogin(), properties.minInterval());
+            return SyncOutcome.COOLDOWN;
+        }
+        return sync(user);
+    }
+
+    /**
+     * Always syncs, without the cooldown. Returns
      * {@link SyncOutcome#NEEDS_REAUTH} (and flags the user) when GitHub rejects the stored token;
      * any other failure is thrown, and nothing is written.
      */
@@ -139,20 +164,29 @@ public class SyncService {
         }
 
         // First, so the hero's activity is saved even if a later step fails
-        int days = activityWriter.writeCalendar(userId, InsightsEngine.sortedDays(contributions(data.user())));
+        List<ContributionDay> calendar = InsightsEngine.sortedDays(contributions(data.user()));
+        int days = activityWriter.writeCalendar(userId, calendar);
+        Map<LocalDate, Integer> branchCounts = branchScanner.scan(token, nodeId(data.user()), calendar, ACTIVITY_ZONE);
+        if (!branchCounts.isEmpty()) {
+            activityWriter.writeBranchCounts(userId, branchCounts);
+        }
 
         InsightsResult result = engine.calculate(data.user());
         AiInsights texts = ai.generate(user.getLogin(), result);
         Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP); // snake_case, v1's shape
 
         writer.save(userId, stats, result, texts, clock.instant());
-        log.info("Sync for '{}' done in {} ms: {}, {} activity days written", user.getLogin(),
-                (System.nanoTime() - start) / 1_000_000, result.archetype(), days);
+        log.info("Sync for '{}' done in {} ms: {}, {} activity days written, branch scan {}", user.getLogin(),
+                (System.nanoTime() - start) / 1_000_000, result.archetype(), days, branchCounts);
         return SyncOutcome.SYNCED;
     }
 
     private static GitHubUser.ContributionsCollection contributions(GitHubUser gitHubUser) {
         return gitHubUser == null ? null : gitHubUser.contributionsCollection();
+    }
+
+    private static String nodeId(GitHubUser gitHubUser) {
+        return gitHubUser == null ? null : gitHubUser.id();
     }
 
     private Users load(long userId) {

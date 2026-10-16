@@ -32,7 +32,7 @@ class HabitProfileTest {
 
     @Test
     void userWithNothingHasAllZeroSignals() {
-        GitHubUser ghost = new GitHubUser("ghost", null, null, null, null, null, null, null, null, null);
+        GitHubUser ghost = new GitHubUser(null, "ghost", null, null, null, null, null, null, null, null, null);
 
         assertThat(profile(ghost)).isEqualTo(new HabitProfile(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
     }

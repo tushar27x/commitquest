@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -28,10 +29,22 @@ public class DailyContributionsRepository {
             ON CONFLICT (user_id, date) DO UPDATE SET calendar_count = EXCLUDED.calendar_count
             """;
 
+    /**
+     * Only {@code branch_commit_count} is written, and it never goes down: commits seen once stay seen,
+     * even if their branch is deleted after a squash merge or rewritten by a force-push.
+     */
+    private static final String UPSERT_BRANCH_COUNT = """
+            INSERT INTO %s.daily_contributions AS d (user_id, date, branch_commit_count)
+            VALUES (?, ?, ?)
+            ON CONFLICT (user_id, date) DO UPDATE
+            SET branch_commit_count = GREATEST(d.branch_commit_count, EXCLUDED.branch_commit_count)
+            """;
+
     private static final String LATEST_DATE = "SELECT max(date) FROM %s.daily_contributions WHERE user_id = ?";
 
     private final JdbcTemplate jdbc;
     final String upsertSql;
+    final String upsertBranchSql;
     final String latestDateSql;
 
     /** @param schema Flyway's schema, the one JPA also uses ({@code v2}) */
@@ -41,6 +54,7 @@ public class DailyContributionsRepository {
         }
         this.jdbc = jdbc;
         this.upsertSql = UPSERT_CALENDAR_COUNT.formatted(schema);
+        this.upsertBranchSql = UPSERT_BRANCH_COUNT.formatted(schema);
         this.latestDateSql = LATEST_DATE.formatted(schema);
     }
 
@@ -52,6 +66,14 @@ public class DailyContributionsRepository {
         jdbc.batchUpdate(upsertSql, rows(userId, days));
     }
 
+    /** Raises {@code branch_commit_count} to each day's count (inserting the day if it's new); never lowers it. */
+    public void upsertBranchCounts(long userId, Map<LocalDate, Integer> counts) {
+        if (counts.isEmpty()) {
+            return;
+        }
+        jdbc.batchUpdate(upsertBranchSql, branchRows(userId, counts));
+    }
+
     /** The most recent stored day, or empty before the user's first sync. */
     public Optional<LocalDate> latestDate(long userId) {
         return Optional.ofNullable(jdbc.queryForObject(latestDateSql, LocalDate.class, userId));
@@ -60,6 +82,12 @@ public class DailyContributionsRepository {
     static List<Object[]> rows(long userId, List<ContributionDay> days) {
         return days.stream()
                 .map(day -> new Object[]{userId, day.date(), day.contributionCount()})
+                .toList();
+    }
+
+    static List<Object[]> branchRows(long userId, Map<LocalDate, Integer> counts) {
+        return counts.entrySet().stream()
+                .map(day -> new Object[]{userId, day.getKey(), day.getValue()})
                 .toList();
     }
 }

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
@@ -26,6 +27,13 @@ class ActivityWriterTest {
     private final List<ContributionDay> year = IntStream.rangeClosed(0, 365)
             .mapToObj(i -> new ContributionDay(TODAY.minusDays(365 - i), i % 3))
             .toList();
+
+    @Test
+    void branchCountsGoStraightToTheRepository() {
+        writer.writeBranchCounts(ID, Map.of(TODAY, 2));
+
+        verify(repository).upsertBranchCounts(ID, Map.of(TODAY, 2));
+    }
 
     @Test
     void firstSyncBackfillsTheWholeCalendar() {

@@ -6,6 +6,7 @@
       "resetAt": "2026-10-13T11:00:00Z"
     },
     "user": {
+      "id": "U_octocat",
       "login": "octocat",
       "name": "The Octocat",
       "avatarUrl": "https://avatars.githubusercontent.com/u/583231",

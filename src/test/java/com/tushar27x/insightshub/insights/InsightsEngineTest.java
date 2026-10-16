@@ -151,7 +151,7 @@ class InsightsEngineTest {
 
     @Test
     void handlesUserWithNoReposPullRequestsOrContributions() {
-        GitHubUser bare = new GitHubUser("ghost", null, null, null, null, null, null, null, null, null);
+        GitHubUser bare = new GitHubUser(null, "ghost", null, null, null, null, null, null, null, null, null);
 
         UserStats stats = stats(bare);
 

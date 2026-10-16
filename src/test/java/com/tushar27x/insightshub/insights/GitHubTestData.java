@@ -33,7 +33,7 @@ final class GitHubTestData {
     }
 
     static GitHubUser user(List<Repository> repos, List<PullRequest> prs, ContributionsCollection contributions) {
-        return new GitHubUser("octocat", "The Octocat", null, null, null,
+        return new GitHubUser("U_octocat", "octocat", "The Octocat", null, null, null,
                 new TotalCount(10), new TotalCount(2),
                 new Connection<>(repos), new Connection<>(prs), contributions);
     }
