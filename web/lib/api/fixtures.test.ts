@@ -98,6 +98,18 @@ function heroInvariants(h: Hero): string[] {
     const day = new Date(`${d.date}T00:00:00Z`).getUTCDay(); // 0 = Sunday
     check(day === (i + 1) % 7, `week[${i}] ${d.date} is not ${WEEKDAYS[i]}`);
   });
+  // Week strip: past days are settled, today is `today` (or `rest` on a rest day), later days are `future` or `rest`.
+  const todayIndex = h.week.findIndex((d) => d.date === h.today.date);
+  check(todayIndex >= 0, `today ${h.today.date} is not in the week`);
+  h.week.forEach((d, i) => {
+    const isRestDay = h.rest_days.includes(WEEKDAYS[i]);
+    const allowed =
+      i < todayIndex ? ["active", "missed", ...(isRestDay ? ["rest"] : [])]
+      : i === todayIndex ? [isRestDay ? "rest" : "today"]
+      : [isRestDay ? "rest" : "future"];
+    check(allowed.includes(d.status), `week[${i}] ${d.date} is ${d.status}, expected ${allowed.join("|")}`);
+  });
+  check(h.last_evaluated_on < h.today.date, "last_evaluated_on must be before today");
   check(h.class.current === (h.class.chosen ?? h.class.scored), "class.current != chosen ?? scored");
   check(h.class.qualified.includes(h.class.scored), "the scored class must be qualified");
   return errs;
