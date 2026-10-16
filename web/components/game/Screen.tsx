@@ -14,6 +14,8 @@ export interface ScreenProps {
   hideTitle?: boolean;
   /** Content runs edge to edge on phones (Home's scene); it pads itself. */
   flush?: boolean;
+  /** Desktop only: shown at the right of the title (CHANGE CLASS, a subtitle). */
+  actions?: ReactNode;
   children: ReactNode;
 }
 
@@ -22,7 +24,7 @@ export interface ScreenProps {
  * two shell queries (insights + hero) and is replaced by NEW GAME (404) or THE ROAD IS
  * BLOCKED (500 / 502 / network, or anything else unexpected) when they can't load.
  */
-export function Screen({ header, title, hideTitle = false, flush = false, children }: ScreenProps) {
+export function Screen({ header, title, hideTitle = false, flush = false, actions, children }: ScreenProps) {
   const { needsReauth, syncBlocked, syncNotFound, save, saving } = useGameState();
   const insights = useInsights();
   const hero = useHero();
@@ -62,15 +64,14 @@ export function Screen({ header, title, hideTitle = false, flush = false, childr
           flush ? "md:pb-14" : "px-3 pt-5"
         }`}
       >
-        <h1
-          className={
-            hideTitle
-              ? "sr-only"
-              : "hidden font-display text-[20px] leading-[1.3] text-bone [text-shadow:4px_4px_0_var(--color-outline)] md:block"
-          }
-        >
-          {title}
-        </h1>
+        {hideTitle ? (
+          <h1 className="sr-only">{title}</h1>
+        ) : (
+          <div className="hidden flex-wrap items-center justify-between gap-4 md:flex">
+            <h1 className="font-display text-[20px] leading-[1.3] text-bone [text-shadow:4px_4px_0_var(--color-outline)]">{title}</h1>
+            {actions}
+          </div>
+        )}
         {banners.length > 0 && <div className={`flex flex-col gap-5 ${flush ? "px-3 pt-5 md:p-0" : ""}`}>{banners}</div>}
         {flush && body !== children ? <div className={`${gutter} pt-5 md:pt-0`}>{body}</div> : body}
       </div>

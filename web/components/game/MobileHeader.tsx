@@ -1,10 +1,19 @@
 import type { ReactNode } from "react";
 
 /** The 56 px screen header on phones (each screen fills it differently). */
-export function MobileHeader({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function MobileHeader({
+  children,
+  className = "",
+  flat = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  /** No bottom edge: something sticky continues the header below it (Journal's tabs). */
+  flat?: boolean;
+}) {
   return (
     <header
-      className={`sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 bg-stone px-4 pt-[env(safe-area-inset-top)] shadow-bar-down md:hidden ${className}`}
+      className={`sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 bg-stone px-4 pt-[env(safe-area-inset-top)] md:hidden ${flat ? "" : "shadow-bar-down"} ${className}`}
     >
       {children}
     </header>
