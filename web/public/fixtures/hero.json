@@ -1,0 +1,66 @@
+{
+  "level": 7,
+  "xp": 140,
+  "xp_for_next": 350,
+  "lives": 2,
+  "max_lives": 3,
+  "streak": 1,
+  "streak_for_next_life": 3,
+  "mood": "HUNGRY",
+  "base_mood": "OKAY",
+  "tier": "VILLAGE",
+  "today": {
+    "date": "2026-10-16",
+    "active": false,
+    "calendar_count": 0,
+    "branch_commit_count": 0,
+    "day_ends_at": "2026-10-16T18:30:00Z"
+  },
+  "week": [
+    {
+      "date": "2026-10-12",
+      "status": "active"
+    },
+    {
+      "date": "2026-10-13",
+      "status": "active"
+    },
+    {
+      "date": "2026-10-14",
+      "status": "missed"
+    },
+    {
+      "date": "2026-10-15",
+      "status": "active"
+    },
+    {
+      "date": "2026-10-16",
+      "status": "today"
+    },
+    {
+      "date": "2026-10-17",
+      "status": "future"
+    },
+    {
+      "date": "2026-10-18",
+      "status": "rest"
+    }
+  ],
+  "timezone": "Asia/Kolkata",
+  "rest_days": [
+    "SUNDAY"
+  ],
+  "class": {
+    "chosen": null,
+    "current": "MONK",
+    "scored": "MONK",
+    "qualified": [
+      "MONK",
+      "ROGUE",
+      "PALADIN",
+      "BARBARIAN"
+    ],
+    "can_switch_at": null
+  },
+  "last_evaluated_on": "2026-10-15"
+}

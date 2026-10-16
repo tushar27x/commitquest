@@ -1,0 +1,45 @@
+{
+  "events": [
+    {
+      "type": "LIFE_GAINED",
+      "on_date": "2026-10-09",
+      "details": {
+        "lives": 3,
+        "streak": 3
+      }
+    },
+    {
+      "type": "LEVEL_UP",
+      "on_date": "2026-10-11",
+      "details": {
+        "from": 6,
+        "to": 7
+      }
+    },
+    {
+      "type": "LIFE_LOST",
+      "on_date": "2026-10-14",
+      "details": {
+        "lives": 2,
+        "reason": "NO_ACTIVITY"
+      }
+    }
+  ],
+  "xp_days": [
+    {
+      "on_date": "2026-10-12",
+      "xp": 10,
+      "streak": 1
+    },
+    {
+      "on_date": "2026-10-13",
+      "xp": 10,
+      "streak": 2
+    },
+    {
+      "on_date": "2026-10-15",
+      "xp": 10,
+      "streak": 1
+    }
+  ]
+}

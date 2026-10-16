@@ -1,0 +1,289 @@
+{
+  "_doc": "16x16 pixel sprites. '.' = transparent. Colour = basePalette overridden by the class palette. Render with integer scale and image-rendering: pixelated.",
+  "basePalette": {
+    "k": "#1A1410",
+    "s": "#F0C08A",
+    "w": "#F4ECD8",
+    "m": "#C9CED6",
+    "g": "#F2B632"
+  },
+  "classes": {
+    "PALADIN": {
+      "grid": [
+        "................",
+        "......kkkk......",
+        ".....kmmmmk.....",
+        "....kmmmmmmk....",
+        "....kmkkkkmk....",
+        "....kmmmmmmk....",
+        "....kmmggmmk....",
+        ".....kkkkkk.....",
+        ".kkk.kaaaak..m..",
+        "kbbbkaagaaak.m..",
+        "kbgbkaggggak.m..",
+        "kbbbkaagaaakkgk.",
+        ".kbk.kaaaak..k..",
+        "..k..kmkkmk.....",
+        ".....kmk.kmk....",
+        ".....kkk.kkk...."
+      ],
+      "palette": {
+        "a": "#3D6FC9",
+        "b": "#8A5A32"
+      },
+      "accent": "#6C9CF0"
+    },
+    "BARBARIAN": {
+      "grid": [
+        "....hhhhhhh.....",
+        "...hhhhhhhhh....",
+        "...hkssssskh..mm",
+        "...hksksskshmmmm",
+        "....kssssssk.mmm",
+        "....kslllssk..l.",
+        ".....kssssk...l.",
+        "...kksssssskk.l.",
+        "..ksssssssssskl.",
+        "..kskssssssksk..",
+        "..ks.kllllk.sk..",
+        ".....kgggk......",
+        ".....kllllk.....",
+        ".....ksk.ksk....",
+        ".....ksk.ksk....",
+        "....kkk...kkk..."
+      ],
+      "palette": {
+        "h": "#D2532A",
+        "l": "#6B4226"
+      },
+      "accent": "#EF7A52"
+    },
+    "WIZARD": {
+      "grid": [
+        ".......k........",
+        "......kak.......",
+        "......kagk......",
+        ".....kaaak......",
+        "....kaagaak...g.",
+        "..kkaaaaaaakk.k.",
+        "....kskssksk..l.",
+        "....kssssssk..l.",
+        "....kwwwwwwk..l.",
+        "...kawwwwwwak.l.",
+        "..kaaawwwwaaakl.",
+        "..kaaaawwaaaaks.",
+        "..kaaagaagaaak..",
+        "..kaaaaaaaaaak..",
+        "..kbbbbbbbbbbk..",
+        "...kkkkkkkkkk..."
+      ],
+      "palette": {
+        "a": "#6A4BC4",
+        "b": "#3F2C80",
+        "l": "#8A5A32"
+      },
+      "accent": "#A98CF0"
+    },
+    "ARTIFICER": {
+      "grid": [
+        "................",
+        ".....kkkkkk.....",
+        "....khhhhhhk....",
+        "...kmmkhhkmmk...",
+        "...kmgmkkmgmk...",
+        "....kssssssk....",
+        "....kskssksk....",
+        ".....kssssk.....",
+        "...kklllllkk.m..",
+        "..kalaaaaalak.m.",
+        "..kalaggaalakmmm",
+        "..ksklaaalksk.m.",
+        "....klllllk.....",
+        "....kbbkbbk.....",
+        "....kbk.kbk.....",
+        "...kkk...kkk...."
+      ],
+      "palette": {
+        "h": "#5A3A22",
+        "m": "#9AA7B4",
+        "g": "#7FD4E6",
+        "l": "#8A5A32",
+        "a": "#B5652A",
+        "b": "#3D3A4F"
+      },
+      "accent": "#E3A15A"
+    },
+    "CLERIC": {
+      "grid": [
+        "....gggggggg....",
+        "...g........g...",
+        "...kkkkkkkkkk...",
+        "..kwwwwwwwwwwk..",
+        "..kwwaaaaaawwk..",
+        "..kwksssssskwk..",
+        "..kwksksskskwk..",
+        "..kwksssssskwk..",
+        "...kwkkkkkkwk...",
+        "..kwwwaggawwwk..",
+        ".kswwaggggawwsk.",
+        "..kwwwaggawwwk..",
+        "..kwwwaaaawwwk..",
+        "...kwwwwwwwwk...",
+        "..kaaaaaaaaaak..",
+        "....kkkkkkkk...."
+      ],
+      "palette": {
+        "a": "#2FA39A"
+      },
+      "accent": "#4FCFC1"
+    },
+    "BARD": {
+      "grid": [
+        ".........xx.....",
+        "......kkkxk.....",
+        ".....kaaaakk....",
+        "....kaaaaaaak...",
+        "....khssssshk...",
+        "....kskssksk....",
+        "....kssssssk....",
+        ".....kssssk.....",
+        "...kkaawwaakk...",
+        "..kbaawwwwaabk..",
+        ".kllllkwwaaabk..",
+        "kllgglk.aaabk...",
+        "klgggllkaaabk...",
+        ".kllllk.kbbk....",
+        "..kkkk..kbkbk...",
+        ".......kkk.kkk.."
+      ],
+      "palette": {
+        "a": "#C43C62",
+        "b": "#7A1F3D",
+        "h": "#7A4A2A",
+        "l": "#B07A3C",
+        "g": "#E6C27A",
+        "x": "#F2B632"
+      },
+      "accent": "#EF7099"
+    },
+    "MONK": {
+      "grid": [
+        "................",
+        ".....kkkkkk.....",
+        "....kssssssk....",
+        "....kssssssk....",
+        "....kskssksk....",
+        "....kssssssk....",
+        ".....kskksk.....",
+        "......kssk......",
+        "...kkaaaabbkk...",
+        "..kaaaaabbaaak..",
+        "..kaasskbaaaak..",
+        "..kaasskbaaaak..",
+        "...kaaabbaaak...",
+        "...kaaaaaaaak...",
+        "....kaaaaaak....",
+        "....kkk..kkk...."
+      ],
+      "palette": {
+        "a": "#E0812F",
+        "b": "#8A3B1A"
+      },
+      "accent": "#F5C04A"
+    },
+    "ROGUE": {
+      "grid": [
+        "......kkkk......",
+        ".....kaaaak.....",
+        "....kaaaaaak....",
+        "...kaabbbbaak...",
+        "...kabkkkkbak...",
+        "...kabgkkgbak...",
+        "...kabbbbbbak...",
+        "....kaabbaak....",
+        "...kkaaaaaakk...",
+        "..kaaabbbbaaak..",
+        ".mkaaabbbbaaakm.",
+        "m.ksaabbbbaask.m",
+        "...kaaabbaaak...",
+        "...kbbkkkkbbk...",
+        "...kbk....kbk...",
+        "..kkk......kkk.."
+      ],
+      "palette": {
+        "a": "#3B4A3F",
+        "b": "#1F2622",
+        "g": "#E8D25A"
+      },
+      "accent": "#9FC39F"
+    }
+  },
+  "variants": {
+    "sleepingEyesRow": {
+      "_doc": "Replace row 4 of a class grid when SLEEPING (written for MONK; adjust per class so eyes read as closed).",
+      "MONK": "....kkksskkk...."
+    }
+  },
+  "icons": {
+    "heart": {
+      "grid": [
+        ".hh.hh.",
+        "hwhhhhh",
+        "hhhhhhh",
+        ".hhhhh.",
+        "..hhh..",
+        "...h..."
+      ],
+      "full": {
+        "h": "#E0503A",
+        "w": "#F6A08A"
+      },
+      "empty": {
+        "h": "#4A4466",
+        "w": "#4A4466"
+      }
+    },
+    "tree": {
+      "grid": [
+        "...gg...",
+        "..gggg..",
+        ".gggGgg.",
+        "gggggGgg",
+        ".gggggg.",
+        "..gGgg..",
+        "...tt...",
+        "...tt..."
+      ],
+      "palette": {
+        "g": "#2F6B3A",
+        "G": "#5EA85A",
+        "t": "#6B4226"
+      }
+    },
+    "sparkle": {
+      "grid": [
+        "..g..",
+        "..g..",
+        "ggwgg",
+        "..g..",
+        "..g.."
+      ],
+      "palette": {
+        "g": "#F2B632",
+        "w": "#FFF6D8"
+      }
+    },
+    "sweat": {
+      "grid": [
+        ".b.",
+        "bbb",
+        "bwb",
+        ".b."
+      ],
+      "palette": {
+        "b": "#5D9AD6",
+        "w": "#CFE4F7"
+      }
+    }
+  }
+}
