@@ -1,0 +1,33 @@
+{
+  "data": {
+    "rateLimit": { "cost": 1, "remaining": 4990, "resetAt": "2026-10-15T13:00:00Z" },
+    "viewer": {
+      "repositories": {
+        "nodes": [
+          {
+            "pushedAt": "2026-10-15T09:00:00Z",
+            "refs": {
+              "nodes": [
+                { "target": { "history": { "totalCount": 2 } } },
+                { "target": { "history": { "totalCount": 1 } } },
+                { "target": { "history": { "totalCount": 0 } } }
+              ]
+            }
+          },
+          {
+            "pushedAt": "2026-10-15T00:00:00Z",
+            "refs": { "nodes": [ { "target": { } }, { "target": null } ] }
+          },
+          {
+            "pushedAt": "2026-10-14T23:59:59Z",
+            "refs": { "nodes": [ { "target": { "history": { "totalCount": 5 } } } ] }
+          },
+          {
+            "pushedAt": null,
+            "refs": { "nodes": [] }
+          }
+        ]
+      }
+    }
+  }
+}

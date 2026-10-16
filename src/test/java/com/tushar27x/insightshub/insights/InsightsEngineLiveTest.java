@@ -21,6 +21,7 @@ class InsightsEngineLiveTest {
     private final GitHubGraphQlClient client = new GitHubGraphQlClient(
             RestClient.builder().baseUrl("https://api.github.com").defaultHeader("User-Agent", "insightshub").build(),
             new ClassPathResource("graphql/user-insights.graphql"),
+            new ClassPathResource("graphql/branch-activity.graphql"),
             Clock.systemUTC());
 
     @Test

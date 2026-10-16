@@ -9,10 +9,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** B1's upsert against a real Postgres: what the mocked unit tests can't show (backend's B1 FYI). */
+/** B1's and B3's upserts against a real Postgres: what the mocked unit tests can't show (backend's B1 FYI). */
 @IntegrationTest
 class DailyContributionsRepositoryIT {
 
@@ -49,11 +50,30 @@ class DailyContributionsRepositoryIT {
 
         repository.upsertCalendarCounts(USER, List.of(new ContributionDay(MON, 1)));
 
-        Integer branch = jdbc.queryForObject(
-                "SELECT branch_commit_count FROM v2.daily_contributions WHERE user_id = ? AND date = ?",
-                Integer.class, USER, MON);
-        assertThat(branch).isEqualTo(3);
+        assertThat(branchCount(MON)).isEqualTo(3);
         assertThat(calendarCount(MON)).isEqualTo(1);
+    }
+
+    @Test
+    void branchUpsertAddsADayTheCalendarDoesntHaveYet() { // B3: today, before GitHub's calendar shows it
+        repository.upsertBranchCounts(USER, Map.of(TUE, 2));
+
+        assertThat(branchCount(TUE)).isEqualTo(2);
+        assertThat(calendarCount(TUE)).isZero();
+    }
+
+    @Test
+    void branchUpsertNeverLowersTheCountAndLeavesTheCalendarAlone() { // B3
+        repository.upsertCalendarCounts(USER, List.of(new ContributionDay(MON, 0)));
+        repository.upsertBranchCounts(USER, Map.of(MON, 3));
+
+        repository.upsertBranchCounts(USER, Map.of(MON, 1)); // e.g. the branch was deleted after a squash merge
+        assertThat(branchCount(MON)).isEqualTo(3);
+
+        repository.upsertBranchCounts(USER, Map.of(MON, 5));
+        assertThat(branchCount(MON)).isEqualTo(5);
+        assertThat(calendarCount(MON)).isZero();
+        assertThat(rows()).isEqualTo(1);
     }
 
     @Test
@@ -68,6 +88,12 @@ class DailyContributionsRepositoryIT {
     private int calendarCount(LocalDate date) {
         return jdbc.queryForObject(
                 "SELECT calendar_count FROM v2.daily_contributions WHERE user_id = ? AND date = ?",
+                Integer.class, USER, date);
+    }
+
+    private int branchCount(LocalDate date) {
+        return jdbc.queryForObject(
+                "SELECT branch_commit_count FROM v2.daily_contributions WHERE user_id = ? AND date = ?",
                 Integer.class, USER, date);
     }
 }

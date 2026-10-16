@@ -8,8 +8,10 @@ import java.util.List;
  * The {@code user} part of graphql/user-insights.graphql, mapped field-for-field.
  * GitHub returns {@code null} for missing objects (empty repo, no README, no default branch),
  * so nested records may be null; interpreting the data is the insights engine's job (Phase 4).
+ * {@code id} is the GraphQL node id, the branch scan's {@code author} filter.
  */
 public record GitHubUser(
+        String id,
         String login,
         String name,
         String avatarUrl,

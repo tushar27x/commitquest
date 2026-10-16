@@ -7,10 +7,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
- * Writes the contribution calendar into {@code daily_contributions}. A separate bean for the same
+ * Writes the contribution calendar and the branch scan into {@code daily_contributions}. A separate bean for the same
  * reason as {@link InsightsWriter}: {@code @Transactional} only applies through the Spring proxy.
  */
 @Component
@@ -42,6 +43,12 @@ public class ActivityWriter {
         List<ContributionDay> window = recentWindow(days, repository.latestDate(userId));
         repository.upsertCalendarCounts(userId, window);
         return window.size();
+    }
+
+    /** Raises {@code branch_commit_count} for the days the branch scan checked. */
+    @Transactional
+    public void writeBranchCounts(long userId, Map<LocalDate, Integer> counts) {
+        repository.upsertBranchCounts(userId, counts);
     }
 
     static List<ContributionDay> recentWindow(List<ContributionDay> days, Optional<LocalDate> latestStored) {

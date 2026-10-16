@@ -47,6 +47,7 @@ class GitHubGraphQlClientTest {
         RestClient restClient = new GitHubClientConfig().gitHubRestClient(builder);
         client = new GitHubGraphQlClient(restClient,
                 new ClassPathResource("graphql/user-insights.graphql"),
+                new ClassPathResource("graphql/branch-activity.graphql"),
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -62,6 +63,7 @@ class GitHubGraphQlClientTest {
         assertThat(data.rateLimit().remaining()).isEqualTo(4999);
 
         GitHubUser user = data.user();
+        assertThat(user.id()).isEqualTo("U_octocat");
         assertThat(user.login()).isEqualTo("octocat");
         assertThat(user.bio()).isNull();
         assertThat(user.followers().totalCount()).isEqualTo(120);
@@ -203,6 +205,67 @@ class GitHubGraphQlClientTest {
                 NOW.minus(GitHubGraphQlClient.MAX_RANGE).minusSeconds(1), NOW))
                 .isInstanceOf(IllegalArgumentException.class);
 
+        github.verify();
+    }
+
+    // Branch scan
+
+    private static final Instant SINCE = Instant.parse("2026-10-15T00:00:00Z");
+    private static final Instant UNTIL = Instant.parse("2026-10-15T23:59:59Z");
+
+    @Test
+    void branchScanSumsBranchesOfReposPushedInsideTheWindow() {
+        github.expect(requestTo(GRAPHQL_URL))
+                .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer test-token"))
+                .andExpect(jsonPath("$.query", containsString("history(since: $since, until: $until, author: {id: $userId})")))
+                .andExpect(jsonPath("$.variables.userId").value("U_octocat"))
+                .andExpect(jsonPath("$.variables.since").value("2026-10-15T00:00:00Z"))
+                .andExpect(jsonPath("$.variables.until").value("2026-10-15T23:59:59Z"))
+                .andRespond(withSuccess(new ClassPathResource("github/branch-activity-response.json"),
+                        MediaType.APPLICATION_JSON));
+
+        // 2 + 1 + 0 from the first repo; the second has no commit targets; the third was last pushed
+        // a second before the window (its 5 are skipped); the fourth was never pushed
+        assertThat(client.countBranchCommits("test-token", "U_octocat", SINCE, UNTIL)).isEqualTo(3);
+        github.verify();
+    }
+
+    @Test
+    void branchScanWithNoReposCountsZero() {
+        github.expect(requestTo(GRAPHQL_URL)).andRespond(withSuccess("""
+                { "data": { "viewer": { "repositories": { "nodes": [] } } } }
+                """, MediaType.APPLICATION_JSON));
+
+        assertThat(client.countBranchCommits("test-token", "U_octocat", SINCE, UNTIL)).isZero();
+    }
+
+    @Test
+    void branchScanGraphQlErrorsBecomeApiException() {
+        github.expect(requestTo(GRAPHQL_URL)).andRespond(withSuccess("""
+                { "data": null, "errors": [ { "type": "NOT_FOUND", "message": "Could not resolve to a node" } ] }
+                """, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.countBranchCommits("test-token", "U_octocat", SINCE, UNTIL))
+                .isExactlyInstanceOf(GitHubApiException.class)
+                .hasMessageContaining("branch scan")
+                .hasMessageContaining("Could not resolve to a node");
+    }
+
+    @Test
+    void branchScanRejectedTokenBecomesAuthException() {
+        github.expect(requestTo(GRAPHQL_URL)).andRespond(withStatus(HttpStatus.UNAUTHORIZED));
+
+        assertThatThrownBy(() -> client.countBranchCommits("revoked-token", "U_octocat", SINCE, UNTIL))
+                .isInstanceOf(GitHubAuthException.class)
+                .hasMessageNotContaining("revoked-token");
+    }
+
+    @Test
+    void branchScanRejectsAnEmptyWindowWithoutCallingGitHub() {
+        github.expect(never(), requestTo(GRAPHQL_URL));
+
+        assertThatThrownBy(() -> client.countBranchCommits("t", "U_octocat", SINCE, SINCE))
+                .isInstanceOf(IllegalArgumentException.class);
         github.verify();
     }
 }

@@ -25,6 +25,17 @@ public interface UsersRepository extends JpaRepository<Users, Long> {
     List<Users> findDueForSync(@Param("cutoff") Instant cutoff);
 
     /**
+     * Everyone the daily sync can sync: a stored token that GitHub hasn't rejected. Ids only, because
+     * each user is loaded again on the virtual thread that syncs them.
+     */
+    @Query("""
+            select u.githubId from Users u
+            where u.needsReauth = false and u.encryptedGithubToken is not null
+            order by u.githubId
+            """)
+    List<Long> findIdsForScheduledSync();
+
+    /**
      * Claims a sync for this user if none was started since {@code cutoff}. One UPDATE, so two
      * concurrent requests can't both win: Postgres locks the row, and the second one re-checks the
      * condition after the first commits.

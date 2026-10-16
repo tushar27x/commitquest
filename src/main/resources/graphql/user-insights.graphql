@@ -2,6 +2,7 @@
 # - rateLimit: logged on every call to watch the 5,000 points/hour budget
 # - commit oid / committedDate / author: needed to store commits and detect habits
 # - contributionsCollection(from, to): lets scheduled syncs fetch a narrower window (max 1 year)
+# - user id: the GraphQL node id, the branch scan's author filter
 query UserInsights($login: String!, $from: DateTime!, $to: DateTime!) {
   rateLimit {
     cost
@@ -9,6 +10,7 @@ query UserInsights($login: String!, $from: DateTime!, $to: DateTime!) {
     resetAt
   }
   user(login: $login) {
+    id
     login
     name
     avatarUrl
