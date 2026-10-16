@@ -8,6 +8,11 @@ import com.tushar27x.insightshub.entity.Users;
 import com.tushar27x.insightshub.github.GitHubApiException;
 import com.tushar27x.insightshub.github.GitHubAuthException;
 import com.tushar27x.insightshub.github.GitHubGraphQlClient;
+import com.tushar27x.insightshub.github.model.GitHubUser;
+import com.tushar27x.insightshub.github.model.GitHubUser.ContributionCalendar;
+import com.tushar27x.insightshub.github.model.GitHubUser.ContributionDay;
+import com.tushar27x.insightshub.github.model.GitHubUser.ContributionsCollection;
+import com.tushar27x.insightshub.github.model.GitHubUser.Week;
 import com.tushar27x.insightshub.github.model.UserInsightsData;
 import com.tushar27x.insightshub.insights.InsightsEngine;
 import com.tushar27x.insightshub.insights.InsightsResult;
@@ -28,7 +33,9 @@ import tools.jackson.databind.json.JsonMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -37,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -55,18 +63,23 @@ class SyncServiceTest {
     private final InsightsEngine engine = mock(InsightsEngine.class);
     private final AiInsightsService ai = mock(AiInsightsService.class);
     private final InsightsWriter writer = mock(InsightsWriter.class);
+    private final ActivityWriter activityWriter = mock(ActivityWriter.class);
     private final RateLimiter rateLimiter = mock(RateLimiter.class);
     private static final Policy GLOBAL = new Policy(30, Duration.ofMinutes(1));
     private final InsightsResult result = AiTestData.insights();
     private final AiInsights texts = new AiInsights("year", "week", "craft", Map.of("app", "An app."),
             new CharacterSheet("octocat the Monk", "Calm."));
 
+    private static final ContributionDay OCT_12 = new ContributionDay(LocalDate.parse("2026-10-12"), 0);
+    private static final ContributionDay OCT_13 = new ContributionDay(LocalDate.parse("2026-10-13"), 3);
+    private static final ContributionDay OCT_14 = new ContributionDay(LocalDate.parse("2026-10-14"), 1);
+
     private SyncService service;
     private Users user;
 
     @BeforeEach
     void setUp() {
-        service = new SyncService(usersRepository, cipher, gitHub, engine, ai, writer, JsonMapper.builder().build(),
+        service = new SyncService(usersRepository, cipher, gitHub, engine, ai, writer, activityWriter, JsonMapper.builder().build(),
                 Clock.fixed(NOW, ZoneOffset.UTC), new SyncProperties(COOLDOWN), rateLimiter,
                 new RateLimitProperties(true, Map.of(RateLimitProperties.SYNC_GLOBAL, GLOBAL)));
         when(rateLimiter.tryAcquire("sync:global", GLOBAL)).thenReturn(new Decision(true, 30, 29, Duration.ofSeconds(50)));
@@ -74,7 +87,12 @@ class SyncServiceTest {
         user.setEncryptedGithubToken(cipher.encrypt("gho_stored", ID));
         when(usersRepository.findById(ID)).thenReturn(Optional.of(user));
 
-        UserInsightsData data = new UserInsightsData(null, null);
+        // Weeks out of order, to check the calendar is sorted before it's written
+        ContributionCalendar calendar = new ContributionCalendar(4,
+                List.of(new Week(List.of(OCT_14)), new Week(List.of(OCT_12, OCT_13))));
+        GitHubUser gitHubUser = new GitHubUser("octocat", null, null, null, null, null, null, null, null,
+                new ContributionsCollection(List.of(), calendar, 4, 0, 0, 0));
+        UserInsightsData data = new UserInsightsData(null, gitHubUser);
         when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenReturn(data);
         when(engine.calculate(any())).thenReturn(result);
         when(ai.generate("octocat", result)).thenReturn(texts);
@@ -92,6 +110,24 @@ class SyncServiceTest {
     }
 
     @Test
+    void writesTheSortedCalendarBeforeTheSlowAiStep() {
+        service.sync(ID);
+
+        var order = inOrder(activityWriter, ai, writer);
+        order.verify(activityWriter).writeCalendar(ID, List.of(OCT_12, OCT_13, OCT_14));
+        order.verify(ai).generate("octocat", result);
+        order.verify(writer).save(eq(ID), any(), eq(result), eq(texts), eq(NOW));
+    }
+
+    @Test
+    void responseWithoutAUserWritesNoDays() {
+        when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenReturn(new UserInsightsData(null, null));
+
+        assertThat(service.sync(ID)).isEqualTo(SyncOutcome.SYNCED);
+        verify(activityWriter).writeCalendar(ID, List.of());
+    }
+
+    @Test
     void dueSyncPassesAllGatesAndRuns() {
         user.setSyncRequestedAt(NOW.minus(Duration.ofMinutes(20)));
         when(usersRepository.claimSync(ID, NOW, NOW.minus(COOLDOWN))).thenReturn(1);
@@ -105,7 +141,7 @@ class SyncServiceTest {
         user.setSyncRequestedAt(NOW.minus(Duration.ofMinutes(4)));
 
         assertThat(service.syncIfDue(ID)).isEqualTo(new SyncResult(SyncOutcome.COOLDOWN, Duration.ofMinutes(6)));
-        verifyNoInteractions(rateLimiter, gitHub, ai, writer);
+        verifyNoInteractions(rateLimiter, gitHub, ai, writer, activityWriter);
         verify(usersRepository, never()).claimSync(anyLong(), any(), any());
     }
 
@@ -115,7 +151,7 @@ class SyncServiceTest {
 
         assertThat(service.syncIfDue(ID)).isEqualTo(new SyncResult(SyncOutcome.BUSY, Duration.ofSeconds(17)));
         verify(usersRepository, never()).claimSync(anyLong(), any(), any()); // the user can retry once capacity frees up
-        verifyNoInteractions(gitHub, ai, writer);
+        verifyNoInteractions(gitHub, ai, writer, activityWriter);
     }
 
     @Test
@@ -123,7 +159,7 @@ class SyncServiceTest {
         when(usersRepository.claimSync(ID, NOW, NOW.minus(COOLDOWN))).thenReturn(0);
 
         assertThat(service.syncIfDue(ID)).isEqualTo(new SyncResult(SyncOutcome.COOLDOWN, COOLDOWN));
-        verifyNoInteractions(gitHub, ai, writer);
+        verifyNoInteractions(gitHub, ai, writer, activityWriter);
     }
 
     @Test
@@ -133,7 +169,7 @@ class SyncServiceTest {
         assertThat(service.sync(ID)).isEqualTo(SyncOutcome.NEEDS_REAUTH);
         verify(writer).markNeedsReauth(ID);
         verify(writer, never()).save(anyLong(), any(), any(), any(), any());
-        verifyNoInteractions(ai);
+        verifyNoInteractions(ai, activityWriter);
     }
 
     @Test
@@ -149,7 +185,7 @@ class SyncServiceTest {
         when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenThrow(new GitHubApiException("HTTP 502"));
 
         assertThatThrownBy(() -> service.sync(ID)).isInstanceOf(GitHubApiException.class);
-        verifyNoInteractions(writer);
+        verifyNoInteractions(writer, activityWriter);
     }
 
     @Test

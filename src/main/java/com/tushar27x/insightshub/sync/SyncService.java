@@ -5,6 +5,7 @@ import com.tushar27x.insightshub.ai.AiInsightsService;
 import com.tushar27x.insightshub.entity.Users;
 import com.tushar27x.insightshub.github.GitHubAuthException;
 import com.tushar27x.insightshub.github.GitHubGraphQlClient;
+import com.tushar27x.insightshub.github.model.GitHubUser;
 import com.tushar27x.insightshub.github.model.UserInsightsData;
 import com.tushar27x.insightshub.insights.InsightsEngine;
 import com.tushar27x.insightshub.insights.InsightsResult;
@@ -24,11 +25,12 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * One user's sync: GitHub → stats and archetype → AI texts → database (v1: the body of {@code callback()}).
+ * One user's sync: GitHub → daily activity → stats and archetype → AI texts → database (v1: the body of
+ * {@code callback()}).
  * Needs only a user id, so the login callback and the Phase 10 scheduler can both call it.
  * <p>
  * The slow steps (GitHub, LLMs: seconds each) run outside any transaction; only the final write in
- * {@link InsightsWriter} holds a database connection.
+ * {@link ActivityWriter} and {@link InsightsWriter} hold a database connection.
  */
 @Slf4j
 @Service
@@ -43,6 +45,7 @@ public class SyncService {
     private final InsightsEngine engine;
     private final AiInsightsService ai;
     private final InsightsWriter writer;
+    private final ActivityWriter activityWriter;
     private final JsonMapper jsonMapper;
     private final Clock clock;
     private final SyncProperties properties;
@@ -50,7 +53,8 @@ public class SyncService {
     private final RateLimitProperties rateLimits;
 
     public SyncService(UsersRepository usersRepository, TokenCipher tokenCipher, GitHubGraphQlClient gitHub,
-                       InsightsEngine engine, AiInsightsService ai, InsightsWriter writer, JsonMapper jsonMapper,
+                       InsightsEngine engine, AiInsightsService ai, InsightsWriter writer,
+                       ActivityWriter activityWriter, JsonMapper jsonMapper,
                        Clock clock, SyncProperties properties, RateLimiter rateLimiter,
                        RateLimitProperties rateLimits) {
         this.usersRepository = usersRepository;
@@ -59,6 +63,7 @@ public class SyncService {
         this.engine = engine;
         this.ai = ai;
         this.writer = writer;
+        this.activityWriter = activityWriter;
         this.jsonMapper = jsonMapper;
         this.clock = clock;
         this.properties = properties;
@@ -133,14 +138,21 @@ public class SyncService {
             return SyncOutcome.NEEDS_REAUTH;
         }
 
+        // First, so the hero's activity is saved even if a later step fails
+        int days = activityWriter.writeCalendar(userId, InsightsEngine.sortedDays(contributions(data.user())));
+
         InsightsResult result = engine.calculate(data.user());
         AiInsights texts = ai.generate(user.getLogin(), result);
         Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP); // snake_case, v1's shape
 
         writer.save(userId, stats, result, texts, clock.instant());
-        log.info("Sync for '{}' done in {} ms: {}", user.getLogin(), (System.nanoTime() - start) / 1_000_000,
-                result.archetype());
+        log.info("Sync for '{}' done in {} ms: {}, {} activity days written", user.getLogin(),
+                (System.nanoTime() - start) / 1_000_000, result.archetype(), days);
         return SyncOutcome.SYNCED;
+    }
+
+    private static GitHubUser.ContributionsCollection contributions(GitHubUser gitHubUser) {
+        return gitHubUser == null ? null : gitHubUser.contributionsCollection();
     }
 
     private Users load(long userId) {
