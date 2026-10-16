@@ -220,8 +220,18 @@
   },
   "variants": {
     "sleepingEyesRow": {
-      "_doc": "Replace row 4 of a class grid when SLEEPING (written for MONK; adjust per class so eyes read as closed).",
+      "_doc": "Deprecated, use sleepingEyes. Kept until web/lib/sprites.ts switches, then removed.",
       "MONK": "....kkksskkk...."
+    },
+    "sleepingEyes": {
+      "_doc": "When SLEEPING, replace grid[row] with value so the eyes read as closed. The eyes sit on a different row per class. No entry = no eye change (PALADIN's visor already hides the eyes; the Z z overlay shows SLEEPING).",
+      "BARBARIAN": { "row": 3, "value": "...hkkksskkhmmmm" },
+      "WIZARD": { "row": 6, "value": "....kkksskkk..l." },
+      "ARTIFICER": { "row": 6, "value": "....kkksskkk...." },
+      "CLERIC": { "row": 6, "value": "..kwkkksskkkwk.." },
+      "BARD": { "row": 5, "value": "....kkksskkk...." },
+      "MONK": { "row": 4, "value": "....kkksskkk...." },
+      "ROGUE": { "row": 5, "value": "...kabkkkkbak..." }
     }
   },
   "icons": {
