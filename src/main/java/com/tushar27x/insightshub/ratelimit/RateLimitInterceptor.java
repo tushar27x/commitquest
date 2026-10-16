@@ -1,12 +1,12 @@
 package com.tushar27x.insightshub.ratelimit;
 
+import com.tushar27x.insightshub.error.ProblemDetails;
 import com.tushar27x.insightshub.ratelimit.RateLimit.KeyType;
 import com.tushar27x.insightshub.ratelimit.RateLimiter.Decision;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,8 +23,8 @@ import java.io.IOException;
  * request with a bad JWT is rejected (401) before it counts, and the user is already known.
  * <p>
  * Over the limit: 429 with {@code Retry-After} and a {@link ProblemDetail} body (RFC 9457, the
- * format Phase 9 uses for every error). Every limited response carries {@code X-RateLimit-Limit}
- * and {@code X-RateLimit-Remaining}.
+ * format of every error, see {@link ProblemDetails}). Every limited response carries
+ * {@code X-RateLimit-Limit} and {@code X-RateLimit-Remaining}.
  */
 @Component
 public class RateLimitInterceptor implements HandlerInterceptor {
@@ -60,13 +60,10 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        long seconds = Math.max(1, (decision.retryAfter().toMillis() + 999) / 1000); // round up
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS,
-                "Rate limit exceeded; try again in " + seconds + " s");
-        response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+        long seconds = ProblemDetails.retryAfterSeconds(decision.retryAfter());
         response.setHeader(HttpHeaders.RETRY_AFTER, Long.toString(seconds));
-        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        jsonMapper.writeValue(response.getOutputStream(), problem);
+        ProblemDetails.write(response, ProblemDetails.of(HttpStatus.TOO_MANY_REQUESTS,
+                "Rate limit exceeded; try again in " + seconds + " s", request), jsonMapper);
         return false;
     }
 

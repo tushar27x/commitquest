@@ -5,6 +5,8 @@ import com.tushar27x.insightshub.auth.GitHubOAuthClient.OAuthCodeRejectedExcepti
 import com.tushar27x.insightshub.config.InsightsHubProperties;
 import com.tushar27x.insightshub.ratelimit.RateLimit;
 import com.tushar27x.insightshub.ratelimit.RateLimit.KeyType;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -40,6 +42,7 @@ public class AuthController {
     static final String CALLBACK_PATH = "/api/auth/callback";
     private static final Duration STATE_TTL = Duration.ofMinutes(10);
     private static final int STATE_BYTES = 32;
+    private static final int MAX_PARAM = 256;
 
     private final AuthService authService;
     private final AuthProperties authProperties;
@@ -64,12 +67,17 @@ public class AuthController {
                 .build();
     }
 
-    /** GitHub sends {@code code} on success, or {@code error} (e.g. {@code access_denied}) when the user cancels. */
+    /**
+     * GitHub sends {@code code} on success, or {@code error} (e.g. {@code access_denied}) when the user cancels.
+     * The size limits only bound what we accept; {@code error} is echoed in the 400, so it must be a plain code.
+     */
     @RateLimit(policy = "callback", key = KeyType.IP) // each callback costs 3 GitHub calls and may sync
     @GetMapping("/callback")
-    public ResponseEntity<LoginResponse> callback(@RequestParam(required = false) String code,
-                                                  @RequestParam(required = false) String state,
-                                                  @RequestParam(required = false) String error,
+    public ResponseEntity<LoginResponse> callback(@RequestParam(required = false) @Size(max = MAX_PARAM) String code,
+                                                  @RequestParam(required = false) @Size(max = MAX_PARAM) String state,
+                                                  @RequestParam(required = false) @Size(max = MAX_PARAM)
+                                                  @Pattern(regexp = "[a-z_]+", message = "must be a GitHub error code")
+                                                  String error,
                                                   @CookieValue(name = STATE_COOKIE, required = false) String expectedState) {
         if (!sameState(expectedState, state)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired OAuth state; start again at /api/auth/login");
