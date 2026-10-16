@@ -55,6 +55,38 @@
   shape-rendering: crispEdges;
 }
 
+/* Pixel animations: two hard frames each (steps, never tweens). */
+@keyframes px-bob {
+  0%, 49.9% { translate: 0 0; }
+  50%, 100% { translate: 0 var(--bob, -4px); }
+}
+@keyframes px-twinkle {
+  0%, 49.9% { opacity: 1; }
+  50%, 100% { opacity: 0.25; }
+}
+@keyframes px-turn {
+  0%, 49.9% { rotate: 0deg; }
+  50%, 100% { rotate: 15deg; }
+}
+@keyframes px-flicker {
+  0%, 49.9% { scale: 1 1; }
+  50%, 100% { scale: 1 0.8; }
+}
+
+@utility anim-bob {
+  animation: px-bob 1.2s linear infinite;
+}
+@utility anim-twinkle {
+  animation: px-twinkle 0.9s linear infinite;
+}
+@utility anim-turn {
+  animation: px-turn 0.8s linear infinite;
+}
+@utility anim-flicker {
+  animation: px-flicker 0.5s linear infinite;
+  transform-origin: bottom;
+}
+
 /* Every animation is off for users who ask for less motion. */
 @media (prefers-reduced-motion: reduce) {
   *,

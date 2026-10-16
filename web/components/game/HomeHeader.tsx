@@ -13,7 +13,6 @@ export function HomeHeader() {
   const hero = useHero().data;
   return (
     <MobileHeader className="px-3">
-      <h1 className="sr-only">Home</h1>
       {hero && (
         <>
           <span className="font-display text-[10px]" style={{ color: classAccent(hero.class.current) }}>
