@@ -111,16 +111,17 @@ export default function SpritesPage() {
         </ul>
       </Section>
 
-      <Section title="VARIANTS" note="Sleeping eyes row (only MONK has one in the kit)">
-        <ul className="flex flex-wrap gap-8 bg-stone p-6 shadow-px">
-          <li className="flex flex-col items-center gap-3">
-            <PixelSprite {...monk} scale={6} label="Monk, awake" />
-            <Tag>AWAKE</Tag>
-          </li>
-          <li className="flex flex-col items-center gap-3">
-            <PixelSprite {...classSprite("MONK", { sleeping: true })} scale={6} label="Monk, sleeping" />
-            <Tag>SLEEPING</Tag>
-          </li>
+      <Section title="SLEEPING" note="Closed-eyes rows from the kit; classes without one keep their face">
+        <ul className="grid grid-cols-2 gap-6 sm:grid-cols-4 lg:grid-cols-8">
+          {CLASS_ORDER.map((archetype) => (
+            <li key={archetype} className="flex flex-col items-center gap-3 bg-stone p-4 shadow-px">
+              <div className="flex gap-2">
+                <PixelSprite {...classSprite(archetype)} scale={4} label={`${archetype}, awake`} />
+                <PixelSprite {...classSprite(archetype, { sleeping: true })} scale={4} label={`${archetype}, sleeping`} />
+              </div>
+              <Tag>{archetype}</Tag>
+            </li>
+          ))}
         </ul>
       </Section>
     </main>

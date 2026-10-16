@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { SegmentBar } from "@/components/ui/SegmentBar";
 import { StateCard } from "@/components/ui/StateCard";
 import { buttonClass } from "@/components/ui/pixel-button";
-import type { Archetype } from "@/lib/api/types.tmp";
+import type { Archetype } from "@/lib/api/types";
 import { CLASS_INFO } from "@/lib/classes";
 import { CLASS_ORDER } from "@/lib/sprites";
 import { useHero } from "@/lib/queries";

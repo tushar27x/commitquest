@@ -1,6 +1,6 @@
 // Class copy from the roster board (docs/design/source/character-Roster.dc.html).
 
-import type { Archetype } from "./api/types.tmp";
+import type { Archetype } from "./api/types";
 
 export interface ClassInfo {
   /** The one-line habit shown under the class name. */

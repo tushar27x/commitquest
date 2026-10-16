@@ -4,7 +4,7 @@
 
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, api } from "./api";
-import type { Hero, HeroEvents, Insights, Preferences } from "./api/types.tmp";
+import type { Hero, HeroEvents, Insights, Preferences } from "./api/types";
 
 const STALE_TIME_MS = 10 * 60_000;
 const GC_TIME_MS = 30 * 60_000;

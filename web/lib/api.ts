@@ -1,7 +1,7 @@
 // A small `fetch` wrapper for the backend API. Every failure becomes an `ApiError`, so the
 // system states (plan §4) can switch on `status` and count down from `retryAfter`.
 
-import type { ProblemDetail } from "./api/types.tmp";
+import type { ProblemDetail } from "./api/types";
 import { getToken } from "./auth";
 import { mockFetch, servedByMock } from "./mock";
 

@@ -6,7 +6,7 @@
 // - `?mock=<variant>` merges that entry of hero-variants.json over hero.json.
 // - `?mock_error=<status>` forces that status on the next call (once per page load).
 
-import type { Archetype, Hero, Preferences, ProblemDetail } from "./api/types.tmp";
+import type { Archetype, Hero, Preferences, ProblemDetail } from "./api/types";
 
 export const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK === "1";
 const HERO_API_LIVE = process.env.NEXT_PUBLIC_HERO_API === "1";

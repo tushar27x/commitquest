@@ -1,5 +1,5 @@
 import { PixelSprite } from "@/components/PixelSprite";
-import type { Archetype } from "@/lib/api/types.tmp";
+import type { Archetype } from "@/lib/api/types";
 import { classSprite } from "@/lib/sprites";
 import { StartButton } from "./start-button";
 
