@@ -6,14 +6,14 @@ Product spec: `docs/v2-hero-plan.md` (wins over this file and `PROGRESS.md` wher
 
 ## Project index
 
-_Last indexed: 2026-10-14, after Phase 8 (commit `a51a427`). Updated 2026-10-16 for the hero-pet plan (I0), I2 and B3 (Phase 10, `74aa41a`)._
+_Last indexed: 2026-10-14, after Phase 8 (commit `a51a427`). Updated 2026-10-16 for the hero-pet plan (I0), I2, B3 (Phase 10) and B4 (`23ed3e2`)._
 
 ### What it is
 
 Hero-pet habit tracker for GitHub activity: the user's scored D&D class character has 3 hearts, XP and levels,
 and loses a heart for each day without GitHub activity (rules: `docs/v2-hero-plan.md` §2).
 Backend: `com.tushar27x:insightshub:0.0.1-SNAPSHOT`, Java 21, Spring Boot 4.1.1, Spring AI 2.0.0 (BOM), Maven wrapper,
-virtual threads on. Web: Next.js 16 + React 19 + TypeScript + Tailwind 4 + TanStack Query in `web/` (Home screen built; Journal, Hero, Settings and Arena next).
+virtual threads on. Web: Next.js 16 + React 19 + TypeScript + Tailwind 4 + TanStack Query in `web/` (Home, Journal and Hero sheet built; Settings and Arena next).
 Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13, Part D). HTTP surface today:
 `/api/auth/{login,callback,logout}` (public), `GET /api/user/insights` and `POST /api/user/sync` (JWT), `/actuator/health`.
 Planned: `/api/user/hero`, `/hero/events`, `/hero/class`, `/preferences` (shapes in `docs/api/contract.md`).
@@ -23,8 +23,8 @@ Planned: `/api/user/hero`, `/hero/events`, `/hero/class`, `/preferences` (shapes
 - **Done:** Phases 0–8 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
   insights engine + D&D archetype scoring, AI layer, GitHub OAuth + JWT, sync + Redis cache, rate limiting). PRs #2–#8 merged to `main`.
 - **Open v1 issue:** B26 — v1 production still calls Groq models that were retired.
-- **Done in Part D:** I0 (#9), B1 (#10), U1 (#11), B2 / Phase 9 (#12), I1 (#13), U2 (#14), I2 Testcontainers + CI (#15), B36 fix (#16, #17), U3 Home (#18), closed-eye sprites (#19), B3 / Phase 10 daily sync (#20).
-- **Next up:** backend **B4** (`V5__hero.sql` + `HeroRules`) · ui **U4** · integration **I4** (wiring) and **I3** (contract tests), both after B5. Full order: `docs/agents/WORKFLOW.md`.
+- **Done in Part D:** I0 (#9), B1 (#10), U1 (#11), B2 / Phase 9 (#12), I1 (#13), U2 (#14), I2 Testcontainers + CI (#15), B36 fix (#16, #17), U3 Home (#18), closed-eye sprites (#19), B3 / Phase 10 daily sync (#20), B4 hero schema + rules (#22), U4 Journal + Hero sheet (#23).
+- **Next up:** backend **B5** (hourly hero job + `GET /hero`, `/hero/events`, `/preferences`, `#token` redirect) · ui **U5** · integration **I3** (contract tests) and **I4** (wiring), both after B5. Full order: `docs/agents/WORKFLOW.md`.
 - **Open items:** see the latest "End of session" entry at the bottom of `PROGRESS.md`.
 - Working agreement & phase details: `PROGRESS.md` (status table at the top, learning log at the bottom).
 
@@ -66,6 +66,7 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 | `entity/` | `Users`, `Insights` (`@MapsId`; stats, scores, AI texts, character sheet), enum `Archetype` (8 D&D classes) |
 | `github/` | `GitHubGraphQlClient` (RestClient + `graphql/user-insights.graphql`, per-call token, rate-limit logging; `countBranchCommits` runs `graphql/branch-activity.graphql` for one day's window), `GitHubClientConfig`, `GitHubApiException`, `GitHubAuthException` (401 → Phase 10 `needs_reauth`) |
 | `github/model/` | Typed records for the GraphQL responses: `GitHubUser` (incl. `id`, the node id the branch scan filters on), `UserInsightsData`, `BranchActivityData`, `GraphQlResponse` |
+| `hero/` | `HeroRules` (the game rules of plan §2 as pure static functions: `evaluateDay`, `evaluateDays` catch-up, `dueDays` with the 6 h grace, `seed` for first login; no clock, DB or Spring), records `HeroState`, `HeroDay`, `HeroEvent`, enum `HeroEventType`, `RestDays` (weekday bitmask, bit 0 = Monday; a change applies from the next day). The hourly job and endpoints come in B5 |
 | `insights/` | `InsightsEngine` (pure logic: `GitHubUser` → `InsightsResult`), `UserStats` (snake_case via `@JsonNaming`, parity with v1), `HabitProfile` (15 habit signals, user's own commits only), `ScoringArchetypeClassifier` (0–100 per class, `ALGO_VERSION = 1`, ties → declaration order, all-zero → Rogue), `ArchetypeScores`, `ArchetypeClassifier` (interface) |
 | `security/` | `SecurityConfig` (stateless, CSRF off, `/api/auth/**` + health public), `JwtConfig` (HS256 Nimbus encoder/decoder, issuer `insightshub`), `JwtService` (`sub`=GitHub id, `name`=login), `TokenCipher` (AES-256-GCM, GitHub id as AAD) |
 | `sync/` | `SyncService` (`syncIfDue`: atomic 10-min per-user cooldown via `UsersRepository.claimSync`, used by login + refresh; `scheduledSync`: claims the same cooldown, for the daily job; `sync`: no cooldown; token → GitHub → calendar + branch scan → engine → AI → write), `ScheduledSync` (`@Scheduled` daily sync at `insightshub.sync.cron`, 03:00 UTC; one virtual thread per user, a `Semaphore` caps it at `concurrency`; per-user isolation, run summary logged), `BranchScanner` (for recent days the calendar shows as 0, counts the user's commits on any branch; `branch-scan-days`, default 2), `DayWindow` (one local day as `since`/`until` instants, DST-safe), `ActivityWriter` (contribution calendar → `daily_contributions`, first sync backfills, later syncs rewrite a 7-day overlap; branch counts), `InsightsWriter` (separate bean: `@Transactional` + `@CacheEvict` need the proxy), `SyncProperties` (`insightshub.sync.min-interval`, `concurrency`, `branch-scan-days`; `cron` read by `@Scheduled`) |
@@ -78,8 +79,8 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 
 - `application.yml` — all config; secrets via `.env` (`spring.config.import`), git-ignored.
 - `db/migration/` — Flyway owns the `v2` schema: `V1__users_and_insights.sql`, `V2__archetype_classes.sql`,
-  `V3__insights_sync_columns.sql`, `V4__activity.sql` (`daily_contributions` with `calendar_count` + `branch_commit_count`; `commits` deferred).
-  Next: **`V5__hero.sql`** (`hero_state`, `hero_events` replacing the planned `habit_alerts`, user timezone/rest days/chosen class).
+  `V3__insights_sync_columns.sql`, `V4__activity.sql` (`daily_contributions` with `calendar_count` + `branch_commit_count`; `commits` deferred),
+  `V5__hero.sql` (`users.timezone`, `rest_days` + `rest_days_previous`/`rest_days_from`, `chosen_archetype`, `archetype_changed_at`; `hero_state`, `hero_events` replacing the planned `habit_alerts`, `hero_days` for `xp_days`).
 - `graphql/user-insights.graphql` — v1's query + `rateLimit`, commit `oid`/`committedDate`, `from`/`to` window, the user's node `id`.
 - `graphql/branch-activity.graphql` — the branch scan: the user's commits (`history(since, until, author)`, filtered on committer date) on the 25 newest branches of their 20 most recently pushed repos.
 - `prompts/*.st` — `persona.st` (supportive senior engineer, no roast) + one template per generator.
@@ -89,14 +90,14 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 - Pure unit tests (always run): `InsightsEngineTest`, `HabitProfileTest`, `ScoringArchetypeClassifierTest`,
   `LlmChainTest`, `AiReviewerTest`, `AiInsightsServiceTest` (with `FakeChatModel`), `GitHubGraphQlClientTest` (`MockRestServiceServer`),
   `TokenCipherTest`, `JwtServiceTest`, `GitHubOAuthClientTest`, `AuthServiceTest`, `SyncServiceTest`, `InsightsWriterTest`, `CacheConfigTest`,
-  `ActivityWriterTest`, `DailyContributionsRepositoryTest`, `ScheduledSyncTest`, `BranchScannerTest`, `DayWindowTest`.
+  `ActivityWriterTest`, `DailyContributionsRepositoryTest`, `ScheduledSyncTest`, `BranchScannerTest`, `DayWindowTest`, `HeroRulesTest`, `DueDaysTest`, `RestDaysTest`.
 - `InsightsCacheTest` — the real caching annotations through Spring proxies, with an in-memory cache instead of Redis.
 - `AuthApiTest` — `@WebMvcTest` slice with the real security chain (GitHub + repositories mocked, no DB).
   Config for slices goes on a nested `@TestConfiguration`, not the test class (B29).
 - `RateLimitApiTest` — the interceptor behind the real security chain with `InMemoryRateLimiter`; slice tests that include controllers need `RateLimitProperties` + a limiter bean.
 - `InsightsEngineParityTest` — golden JSON against v1: `insights/v1-expected-insights.json` + `v1-parity-user.json`.
 - Opt-in live tests (need env: `GITHUB_TOKEN`, `GROQ_API_KEY`): `GitHubGraphQlClientLiveTest`, `InsightsEngineLiveTest`, `AiLiveTest`, `BranchActivityLiveTest` (`GITHUB_TOKEN`: checks what `history()` filters on).
-- **Integration tests** (`it/`, classes named `*IT`, run by Failsafe in `./mvnw verify`; Docker needed): `@IntegrationTest` = `@SpringBootTest` + `TestcontainersConfig` (Postgres 17 + Redis 7 via `@ServiceConnection`, test secrets generated at runtime, LLM base URL on a closed local port, the daily-sync cron off). All ITs share one context. `ApplicationContextIT` (the old `contextLoads`: Flyway migrates an empty DB, `ddl-auto: validate` passes, nothing in `public`), `UsersRepositoryIT` (atomic `claimSync`, `findIdsForScheduledSync`), `DailyContributionsRepositoryIT` (both upserts: idempotent, calendar and branch counts independent, `GREATEST`).
+- **Integration tests** (`it/`, classes named `*IT`, run by Failsafe in `./mvnw verify`; Docker needed): `@IntegrationTest` = `@SpringBootTest` + `TestcontainersConfig` (Postgres 17 + Redis 7 via `@ServiceConnection`, test secrets generated at runtime, LLM base URL on a closed local port, the daily-sync cron off). All ITs share one context. `ApplicationContextIT` (the old `contextLoads`: Flyway migrates an empty DB, `ddl-auto: validate` passes, nothing in `public`), `UsersRepositoryIT` (atomic `claimSync`, `findIdsForScheduledSync`), `DailyContributionsRepositoryIT` (both upserts: idempotent, calendar and branch counts independent, `GREATEST`), `HeroSchemaIT` (V5's CHECKs and keys accept exactly what the rules allow). Each IT class owns a block of 100 test user ids (see `IntegrationTest`).
 - B23 is fixed: Surefire and Failsafe point the datasource and Redis at unresolvable `*.invalid` hosts, so a test that boots the app without `TestcontainersConfig` fails to connect instead of reaching Neon. New context-booting tests go in `it/` with `@IntegrationTest`.
 
 ### Infrastructure & config facts

@@ -89,6 +89,18 @@ Returns 200 with `fixtures/hero-events.json`: `{ events: [{type, on_date, detail
 
 - Event types: `LIFE_LOST LIFE_GAINED LEVEL_UP LEVEL_DOWN FAINTED RESTED CLASS_CHANGED`.
 - `days` is between 1 and 90, default 30.
+- `xp_days` has **one row per settled day** in the window, oldest first, up to `last_evaluated_on`. `xp` is the XP that day gave (10 or 0), and `streak` is the streak after it. Inactive days have `xp: 0, streak: 0`; rest days have `xp: 0` and keep the paused streak. Days before sign-up (seeded on first login) have no rows.
+- `events` are newest last. Each 0-XP day has a `RESTED` or `LIFE_LOST` event. On one day the order is `LEVEL_UP` before `LIFE_GAINED`, and `LIFE_LOST` before `LEVEL_DOWN` or `FAINTED`.
+
+| Event | `details` |
+|---|---|
+| `LIFE_LOST` | `{lives, reason: "NO_ACTIVITY"}`. `lives` is what was left: 0 on the last heart, followed on the same date by `LEVEL_DOWN` or `FAINTED`, which refill the hearts. So never show it as the current state; that comes from `GET /hero` |
+| `LIFE_GAINED` | `{lives, streak}` |
+| `LEVEL_UP`, `LEVEL_DOWN` | `{from, to}` |
+| `FAINTED`, `RESTED` | `{}` |
+| `CLASS_CHANGED` | Defined in B6 |
+
+- The fixture is a 30-day story (`2026-09-16` to `2026-10-15`) that ends exactly in `hero.json`'s state; `lib/api/fixtures.test.ts` checks it against the rules above.
 
 ### `PUT /api/user/hero/class` (JWT)
 Body: `{ "archetype": "ROGUE" }`, or `{ "archetype": null }` to go back to following the top score.

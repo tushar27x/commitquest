@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @IntegrationTest
 class DailyContributionsRepositoryIT {
 
-    static final long USER = 9_000_001L;
+    static final long USER = 9_000_001L; // block 9_000_0xx, see IntegrationTest
     static final LocalDate MON = LocalDate.of(2026, 10, 12);
     static final LocalDate TUE = MON.plusDays(1);
 

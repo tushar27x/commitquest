@@ -1,20 +1,43 @@
 {
   "events": [
     {
+      "type": "RESTED",
+      "on_date": "2026-09-20",
+      "details": {}
+    },
+    {
+      "type": "RESTED",
+      "on_date": "2026-09-27",
+      "details": {}
+    },
+    {
+      "type": "LEVEL_UP",
+      "on_date": "2026-09-28",
+      "details": {
+        "from": 6,
+        "to": 7
+      }
+    },
+    {
+      "type": "LIFE_LOST",
+      "on_date": "2026-09-30",
+      "details": {
+        "lives": 2,
+        "reason": "NO_ACTIVITY"
+      }
+    },
+    {
       "type": "LIFE_GAINED",
-      "on_date": "2026-10-09",
+      "on_date": "2026-10-03",
       "details": {
         "lives": 3,
         "streak": 3
       }
     },
     {
-      "type": "LEVEL_UP",
+      "type": "RESTED",
       "on_date": "2026-10-11",
-      "details": {
-        "from": 6,
-        "to": 7
-      }
+      "details": {}
     },
     {
       "type": "LIFE_LOST",
@@ -27,14 +50,149 @@
   ],
   "xp_days": [
     {
-      "on_date": "2026-10-12",
+      "on_date": "2026-09-16",
       "xp": 10,
       "streak": 1
     },
     {
-      "on_date": "2026-10-13",
+      "on_date": "2026-09-17",
       "xp": 10,
       "streak": 2
+    },
+    {
+      "on_date": "2026-09-18",
+      "xp": 10,
+      "streak": 3
+    },
+    {
+      "on_date": "2026-09-19",
+      "xp": 10,
+      "streak": 4
+    },
+    {
+      "on_date": "2026-09-20",
+      "xp": 0,
+      "streak": 4
+    },
+    {
+      "on_date": "2026-09-21",
+      "xp": 10,
+      "streak": 5
+    },
+    {
+      "on_date": "2026-09-22",
+      "xp": 10,
+      "streak": 6
+    },
+    {
+      "on_date": "2026-09-23",
+      "xp": 10,
+      "streak": 7
+    },
+    {
+      "on_date": "2026-09-24",
+      "xp": 10,
+      "streak": 8
+    },
+    {
+      "on_date": "2026-09-25",
+      "xp": 10,
+      "streak": 9
+    },
+    {
+      "on_date": "2026-09-26",
+      "xp": 10,
+      "streak": 10
+    },
+    {
+      "on_date": "2026-09-27",
+      "xp": 0,
+      "streak": 10
+    },
+    {
+      "on_date": "2026-09-28",
+      "xp": 10,
+      "streak": 11
+    },
+    {
+      "on_date": "2026-09-29",
+      "xp": 10,
+      "streak": 12
+    },
+    {
+      "on_date": "2026-09-30",
+      "xp": 0,
+      "streak": 0
+    },
+    {
+      "on_date": "2026-10-01",
+      "xp": 10,
+      "streak": 1
+    },
+    {
+      "on_date": "2026-10-02",
+      "xp": 10,
+      "streak": 2
+    },
+    {
+      "on_date": "2026-10-03",
+      "xp": 10,
+      "streak": 3
+    },
+    {
+      "on_date": "2026-10-04",
+      "xp": 10,
+      "streak": 4
+    },
+    {
+      "on_date": "2026-10-05",
+      "xp": 10,
+      "streak": 5
+    },
+    {
+      "on_date": "2026-10-06",
+      "xp": 10,
+      "streak": 6
+    },
+    {
+      "on_date": "2026-10-07",
+      "xp": 10,
+      "streak": 7
+    },
+    {
+      "on_date": "2026-10-08",
+      "xp": 10,
+      "streak": 8
+    },
+    {
+      "on_date": "2026-10-09",
+      "xp": 10,
+      "streak": 9
+    },
+    {
+      "on_date": "2026-10-10",
+      "xp": 10,
+      "streak": 10
+    },
+    {
+      "on_date": "2026-10-11",
+      "xp": 0,
+      "streak": 10
+    },
+    {
+      "on_date": "2026-10-12",
+      "xp": 10,
+      "streak": 11
+    },
+    {
+      "on_date": "2026-10-13",
+      "xp": 10,
+      "streak": 12
+    },
+    {
+      "on_date": "2026-10-14",
+      "xp": 0,
+      "streak": 0
     },
     {
       "on_date": "2026-10-15",

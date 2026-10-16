@@ -135,6 +135,39 @@ describe("fixtures", () => {
     expect(heroInvariants(load("hero.json"))).toEqual([]);
   });
 
+  it("hero-events.json tells the same story as hero.json", () => {
+    const h = load("hero.json") as Hero;
+    const { events, xp_days } = load("hero-events.json") as HeroEvents;
+    const errs: string[] = [];
+    const check = (cond: boolean, msg: string) => cond || errs.push(msg);
+    const nextDay = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+
+    // xp_days: every settled day, oldest first, up to last_evaluated_on.
+    xp_days.forEach((x, i) => i > 0 && check(x.on_date === nextDay(xp_days[i - 1].on_date), `xp_days gap before ${x.on_date}`));
+    const last = xp_days.at(-1)!;
+    check(last.on_date === h.last_evaluated_on, `xp_days ends ${last.on_date}, last_evaluated_on is ${h.last_evaluated_on}`);
+    check(last.streak === h.streak, `xp_days' last streak ${last.streak} != hero streak ${h.streak}`);
+
+    // Events: newest last, inside the window, and each 0-XP day explained by exactly one RESTED or LIFE_LOST.
+    events.forEach((e, i) => i > 0 && check(e.on_date >= events[i - 1].on_date, `events out of order at ${e.on_date}`));
+    const byDay = new Map(xp_days.map((x) => [x.on_date, events.filter((e) => e.on_date === x.on_date).map((e) => e.type)]));
+    events.forEach((e) => check(byDay.has(e.on_date), `event ${e.type} on ${e.on_date} is outside xp_days`));
+    xp_days.forEach((x, i) => {
+      const types = byDay.get(x.on_date)!;
+      const prev = xp_days[i - 1]?.streak;
+      check(x.xp === 0 || x.xp === 10, `${x.on_date}: xp ${x.xp} is not 0 or 10`);
+      if (x.xp > 0) {
+        check(prev === undefined || x.streak === prev + 1, `${x.on_date}: active day must add 1 to the streak`);
+        check(!types.includes("RESTED") && !types.includes("LIFE_LOST"), `${x.on_date}: active day with RESTED/LIFE_LOST`);
+      } else if (types.includes("RESTED")) {
+        check(prev === undefined || x.streak === prev, `${x.on_date}: a rest day pauses the streak`);
+      } else {
+        check(types.includes("LIFE_LOST") && x.streak === 0, `${x.on_date}: 0 XP needs RESTED or LIFE_LOST (streak 0)`);
+      }
+    });
+    expect(errs).toEqual([]);
+  });
+
   const variants = Object.entries(load("hero-variants.json") as Record<string, object>).filter(([k]) => k !== "_doc");
 
   it.each(variants)("variant %s, merged over hero.json, is a valid hero", (name, override) => {

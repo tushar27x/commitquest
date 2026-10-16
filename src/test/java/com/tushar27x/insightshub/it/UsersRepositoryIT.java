@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @IntegrationTest
 class UsersRepositoryIT {
 
-    static final long USER = 9_000_002L;
+    static final long USER = 9_000_101L; // block 9_000_1xx, see IntegrationTest
     static final Duration COOLDOWN = Duration.ofMinutes(10);
 
     @Autowired
