@@ -219,10 +219,6 @@
     }
   },
   "variants": {
-    "sleepingEyesRow": {
-      "_doc": "Deprecated, use sleepingEyes. Kept until web/lib/sprites.ts switches, then removed.",
-      "MONK": "....kkksskkk...."
-    },
     "sleepingEyes": {
       "_doc": "When SLEEPING, replace grid[row] with value so the eyes read as closed. The eyes sit on a different row per class. No entry = no eye change (PALADIN's visor already hides the eyes; the Z z overlay shows SLEEPING).",
       "BARBARIAN": { "row": 3, "value": "...hkkksskkhmmmm" },

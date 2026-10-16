@@ -52,6 +52,8 @@ public class TestcontainersConfig {
             registry.add("insightshub.encryption-key", () -> randomBase64(32));
             registry.add("insightshub.auth.github-client-id", () -> "test-client");
             registry.add("insightshub.auth.github-client-secret", () -> randomBase64(24));
+            // The daily sync (B3) is off: its 03:00 UTC cron must not fire in the middle of a test run.
+            registry.add("insightshub.sync.cron", () -> "-");
         };
     }
 
