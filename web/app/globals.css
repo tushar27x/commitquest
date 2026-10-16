@@ -1,0 +1,57 @@
+@import "tailwindcss";
+@import "./theme.css";
+
+/* Fonts come from next/font (app/layout.tsx), which sets these variables on <html>. */
+@theme inline {
+  --font-display: var(--font-press-start-2p), monospace;
+  --font-body: var(--font-vt323), monospace;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-night);
+    color-scheme: dark;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--color-night);
+    background-image: radial-gradient(var(--color-night-dot) 1px, transparent 1px);
+    background-size: 8px 8px;
+    color: var(--color-bone);
+    font-family: var(--font-body);
+    /* VT323 is never smaller than 20px. */
+    font-size: 20px;
+    line-height: 1.15;
+    -webkit-font-smoothing: none;
+  }
+
+  :focus-visible {
+    outline: 4px solid var(--color-gold);
+    outline-offset: 4px;
+  }
+}
+
+/* Parchment is for AI-written text only. */
+@utility parchment {
+  background-color: var(--color-parchment);
+  color: var(--color-parchment-ink);
+  box-shadow: var(--shadow-px-parchment);
+}
+
+@utility pixelated {
+  image-rendering: pixelated;
+  shape-rendering: crispEdges;
+}
+
+/* Every animation is off for users who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
