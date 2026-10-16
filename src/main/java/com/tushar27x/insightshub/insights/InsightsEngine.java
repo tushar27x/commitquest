@@ -85,7 +85,7 @@ public class InsightsEngine {
     }
 
     /** All calendar days with a date, oldest first. */
-    static List<ContributionDay> sortedDays(ContributionsCollection contributions) {
+    public static List<ContributionDay> sortedDays(ContributionsCollection contributions) {
         if (contributions == null || contributions.contributionCalendar() == null
                 || contributions.contributionCalendar().weeks() == null) {
             return List.of();
