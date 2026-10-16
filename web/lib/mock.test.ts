@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import heroFixture from "../public/fixtures/hero.json";
 import variantsFixture from "../public/fixtures/hero-variants.json";
-import type { Hero } from "./api/types.tmp";
+import type { Hero } from "./api/types";
 import { applyVariant, servedByMock } from "./mock";
 
 const hero = heroFixture as Hero;

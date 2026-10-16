@@ -1,7 +1,7 @@
 // Typed access to the sprite kit. `design/sprites.json` is a copy of docs/design/sprites.json
 // made by scripts/sync-design.mjs: never edit grids or colours by hand.
 
-import type { Archetype } from "./api/types.tmp";
+import type { Archetype } from "./api/types";
 import kit from "./design/sprites.json";
 
 export type Palette = Readonly<Record<string, string>>;
