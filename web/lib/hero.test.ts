@@ -72,8 +72,8 @@ describe("recentLog", () => {
     expect(log.map((e) => [e.day, e.text, e.tone])).toEqual([
       ["THU", "+10 XP. Streak 1.", "bone"],
       ["WED", "No contributions. Lost a heart.", "ember"],
-      ["TUE", "+10 XP. Streak 2.", "bone"],
-      ["MON", "+10 XP. Streak 1.", "bone"],
+      ["TUE", "+10 XP. Streak 12.", "bone"],
+      ["MON", "+10 XP. Streak 11.", "bone"],
     ]);
   });
 

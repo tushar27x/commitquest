@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @IntegrationTest
 class HeroSchemaIT {
 
-    static final long USER = 9_000_030L; // clear of the other ITs' users and their +1..+11 neighbours
+    static final long USER = 9_000_201L; // block 9_000_2xx, see IntegrationTest
 
     @Autowired
     JdbcTemplate jdbc;
