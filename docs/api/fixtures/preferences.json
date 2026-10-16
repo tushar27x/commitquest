@@ -1,0 +1,8 @@
+{
+  "timezone": "Asia/Kolkata",
+  "rest_days": [
+    "SUNDAY"
+  ],
+  "alerts_enabled": true,
+  "public_profile": false
+}

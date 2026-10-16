@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>System states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1440px; height: 600px; box-sizing: border-box; padding: 40px 48px; background: #0e0c16; font-family: 'VT323', monospace; color: #f4ecd8; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px">
+  <sc-for list="{{states}}" as="s" hint-placeholder-count="6">
+    <article style="background: #221e33; box-shadow: 0 0 0 4px #0a0910, 6px 6px 0 4px #0a0910; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+        <span style="font-family: 'Press Start 2P', monospace; font-size: 8px; color: #13111c; background: {{s.tagBg}}; padding: 6px 8px">{{s.trigger}}</span>
+        <span style="font-size: 18px; color: #a69dbd">{{s.where}}</span>
+      </div>
+      <h2 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 14px; line-height: 1.5; color: {{s.titleInk}}">{{s.title}}</h2>
+      <sc-if value="{{s.showBar}}" hint-placeholder-val="{{ false }}">
+        <div role="img" aria-label="Saving, about 60 percent" style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; height: 14px">
+          <sc-for list="{{s.segs}}" as="g"><span style="background: {{g.fill}}"></span></sc-for>
+        </div>
+      </sc-if>
+      <p style="margin: 0; font-size: 21px; line-height: 1.08; color: #c9c0dc; flex: 1">{{s.copy}}</p>
+      <button type="button" disabled="{{s.disabled}}" style="align-self: flex-start; font-family: 'Press Start 2P', monospace; font-size: 10px; color: {{s.btnInk}}; background: {{s.btnBg}}; border: 0; padding: 12px 16px; box-shadow: {{s.btnRing}}">{{s.action}}</button>
+    </article>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":600}}'>
+var LIVE = { btnBg: '#f2b632', btnInk: '#1a1410', btnRing: '0 0 0 3px #0a0910, 3px 3px 0 3px #0a0910', disabled: false };
+var OFF = { btnBg: '#2e2945', btnInk: '#8d84a6', btnRing: '0 0 0 3px #0a0910', disabled: true };
+var STATES = [
+  { trigger: 'POST /SYNC · 10–90 S', where: 'full-screen overlay', title: 'SAVING YOUR QUEST…', titleInk: '#f2b632', tagBg: '#f2b632', showBar: true,
+    copy: 'Reading GitHub, scoring your class, writing your lore. Tip: Monks score on small PRs.', action: 'SAVING', btn: OFF },
+  { trigger: '429 + RETRY-AFTER', where: 'SAVE and NEW GAME', title: 'RESTING 7:31', titleInk: '#f4ecd8', tagBg: '#e3c88f', showBar: false,
+    copy: 'One save every 10 minutes. The timer counts down from Retry-After; a failed save still starts it.', action: 'RESTING 7:31', btn: OFF },
+  { trigger: '404 ON INSIGHTS', where: 'first visit', title: 'NEW GAME', titleInk: '#f2b632', tagBg: '#f2b632', showBar: false,
+    copy: 'No character yet. Rolling one runs your first save. If the login save already ran, this shows the rest timer instead.', action: 'ROLL CHARACTER', btn: LIVE },
+  { trigger: '409 NEEDS_REAUTH', where: 'banner, data stays', title: 'YOUR GITHUB SEAL BROKE', titleInk: '#efa07a', tagBg: '#efa07a', showBar: false,
+    copy: 'GitHub no longer accepts the stored token. Your session is fine: reconnect GitHub to keep saving.', action: 'RECONNECT GITHUB', btn: LIVE },
+  { trigger: '401 · EXPIRED JWT', where: 'back to title', title: 'SESSION ENDED', titleInk: '#f4ecd8', tagBg: '#c9c0dc', showBar: false,
+    copy: 'Your 24-hour pass ran out. Offline, the cached world stays readable until you press SAVE.', action: 'BACK TO TITLE', btn: LIVE },
+  { trigger: '502 · NETWORK', where: 'inline card', title: 'THE ROAD IS BLOCKED', titleInk: '#efa07a', tagBg: '#efa07a', showBar: false,
+    copy: 'GitHub or the server is not answering. Your last save is safe and still on screen.', action: 'RETRY', btn: LIVE }
+];
+class Component extends DCLogic {
+  renderVals() {
+    var segs = [];
+    for (var i = 0; i < 12; i++) segs.push({ fill: i < 7 ? '#f2b632' : '#2e2945' });
+    return {
+      segs: segs,
+      states: STATES.map(function (s) {
+        return Object.assign({}, s, s.btn, { segs: segs });
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Class roster</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f2b632}a:hover{color:#ffd36b}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1000px; box-sizing: border-box; padding: 56px 64px; background-color: #13111c; background-image: radial-gradient(#1d1a2b 1px, transparent 1px); background-size: 8px 8px; font-family: 'VT323', monospace; color: #f4ecd8; display: flex; flex-direction: column; gap: 32px">
+  <header style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <h1 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 24px; line-height: 1.3; color: #f2b632; text-shadow: 4px 4px 0 #0a0910">CHOOSE YOUR CLASS</h1>
+      <p style="margin: 0; font-size: 26px; color: #c9c0dc">The backend scores all 8 from your GitHub habits. The highest score is your class.</p>
+    </div>
+    <p style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 10px; color: #8d84a6; letter-spacing: 1px">ALGO v1 · 16×16 SPRITES</p>
+  </header>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px">
+    <sc-for list="{{classes}}" as="c" hint-placeholder-count="8">
+      <article style="background: #221e33; box-shadow: 0 0 0 4px #0a0910, 6px 6px 0 4px #0a0910; display: flex; flex-direction: column">
+        <div style="height: 10px; background: {{c.accent}}"></div>
+        <div style="height: 176px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 14px; background: linear-gradient(#2a2540, #2a2540 70%, #1a1727 70%); position: relative">
+          <div style="display: flex; flex-direction: column; align-items: center">
+            <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(16, 8px); grid-auto-rows: 8px">
+              <sc-for list="{{c.px}}" as="p"><div style="background: {{p.fill}}"></div></sc-for>
+            </div>
+            <div aria-hidden="true" style="width: 112px; height: 12px; background: #4a4466; box-shadow: 0 4px 0 #0a0910; margin-top: 2px"></div>
+          </div>
+          <span style="position: absolute; top: 14px; right: 14px; font-family: 'Press Start 2P', monospace; font-size: 9px; color: #8d84a6">{{c.num}}</span>
+        </div>
+        <div style="padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 10px">
+          <h2 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 14px; color: {{c.accent}}">{{c.name}}</h2>
+          <p style="margin: 0; font-size: 22px; line-height: 1.05; color: #f4ecd8; min-height: 46px">{{c.habit}}</p>
+          <p style="margin: 0; font-size: 19px; line-height: 1.1; color: #a69dbd">SCORED ON · {{c.signals}}</p>
+        </div>
+      </article>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+var SPRITES = {
+  PALADIN: [
+    "................",
+    "......kkkk......",
+    ".....kmmmmk.....",
+    "....kmmmmmmk....",
+    "....kmkkkkmk....",
+    "....kmmmmmmk....",
+    "....kmmggmmk....",
+    ".....kkkkkk.....",
+    ".kkk.kaaaak..m..",
+    "kbbbkaagaaak.m..",
+    "kbgbkaggggak.m..",
+    "kbbbkaagaaakkgk.",
+    ".kbk.kaaaak..k..",
+    "..k..kmkkmk.....",
+    ".....kmk.kmk....",
+    ".....kkk.kkk...."
+  ],
+  BARBARIAN: [
+    "....hhhhhhh.....",
+    "...hhhhhhhhh....",
+    "...hkssssskh..mm",
+    "...hksksskshmmmm",
+    "....kssssssk.mmm",
+    "....kslllssk..l.",
+    ".....kssssk...l.",
+    "...kksssssskk.l.",
+    "..ksssssssssskl.",
+    "..kskssssssksk..",
+    "..ks.kllllk.sk..",
+    ".....kgggk......",
+    ".....kllllk.....",
+    ".....ksk.ksk....",
+    ".....ksk.ksk....",
+    "....kkk...kkk..."
+  ],
+  WIZARD: [
+    ".......k........",
+    "......kak.......",
+    "......kagk......",
+    ".....kaaak......",
+    "....kaagaak...g.",
+    "..kkaaaaaaakk.k.",
+    "....kskssksk..l.",
+    "....kssssssk..l.",
+    "....kwwwwwwk..l.",
+    "...kawwwwwwak.l.",
+    "..kaaawwwwaaakl.",
+    "..kaaaawwaaaaks.",
+    "..kaaagaagaaak..",
+    "..kaaaaaaaaaak..",
+    "..kbbbbbbbbbbk..",
+    "...kkkkkkkkkk..."
+  ],
+  ARTIFICER: [
+    "................",
+    ".....kkkkkk.....",
+    "....khhhhhhk....",
+    "...kmmkhhkmmk...",
+    "...kmgmkkmgmk...",
+    "....kssssssk....",
+    "....kskssksk....",
+    ".....kssssk.....",
+    "...kklllllkk.m..",
+    "..kalaaaaalak.m.",
+    "..kalaggaalakmmm",
+    "..ksklaaalksk.m.",
+    "....klllllk.....",
+    "....kbbkbbk.....",
+    "....kbk.kbk.....",
+    "...kkk...kkk...."
+  ],
+  CLERIC: [
+    "....gggggggg....",
+    "...g........g...",
+    "...kkkkkkkkkk...",
+    "..kwwwwwwwwwwk..",
+    "..kwwaaaaaawwk..",
+    "..kwksssssskwk..",
+    "..kwksksskskwk..",
+    "..kwksssssskwk..",
+    "...kwkkkkkkwk...",
+    "..kwwwaggawwwk..",
+    ".kswwaggggawwsk.",
+    "..kwwwaggawwwk..",
+    "..kwwwaaaawwwk..",
+    "...kwwwwwwwwk...",
+    "..kaaaaaaaaaak..",
+    "....kkkkkkkk...."
+  ],
+  BARD: [
+    ".........xx.....",
+    "......kkkxk.....",
+    ".....kaaaakk....",
+    "....kaaaaaaak...",
+    "....khssssshk...",
+    "....kskssksk....",
+    "....kssssssk....",
+    ".....kssssk.....",
+    "...kkaawwaakk...",
+    "..kbaawwwwaabk..",
+    ".kllllkwwaaabk..",
+    "kllgglk.aaabk...",
+    "klgggllkaaabk...",
+    ".kllllk.kbbk....",
+    "..kkkk..kbkbk...",
+    ".......kkk.kkk.."
+  ],
+  MONK: [
+    "................",
+    ".....kkkkkk.....",
+    "....kssssssk....",
+    "....kssssssk....",
+    "....kskssksk....",
+    "....kssssssk....",
+    ".....kskksk.....",
+    "......kssk......",
+    "...kkaaaabbkk...",
+    "..kaaaaabbaaak..",
+    "..kaasskbaaaak..",
+    "..kaasskbaaaak..",
+    "...kaaabbaaak...",
+    "...kaaaaaaaak...",
+    "....kaaaaaak....",
+    "....kkk..kkk...."
+  ],
+  ROGUE: [
+    "......kkkk......",
+    ".....kaaaak.....",
+    "....kaaaaaak....",
+    "...kaabbbbaak...",
+    "...kabkkkkbak...",
+    "...kabgkkgbak...",
+    "...kabbbbbbak...",
+    "....kaabbaak....",
+    "...kkaaaaaakk...",
+    "..kaaabbbbaaak..",
+    ".mkaaabbbbaaakm.",
+    "m.ksaabbbbaask.m",
+    "...kaaabbaaak...",
+    "...kbbkkkkbbk...",
+    "...kbk....kbk...",
+    "..kkk......kkk.."
+  ]
+};
+var BASE = { k: '#1a1410', s: '#f0c08a', w: '#f4ecd8', m: '#c9ced6', g: '#f2b632' };
+var PAL = {
+  PALADIN: { a: '#3d6fc9', b: '#8a5a32' },
+  BARBARIAN: { h: '#d2532a', l: '#6b4226' },
+  WIZARD: { a: '#6a4bc4', b: '#3f2c80', l: '#8a5a32' },
+  ARTIFICER: { h: '#5a3a22', m: '#9aa7b4', g: '#7fd4e6', l: '#8a5a32', a: '#b5652a', b: '#3d3a4f' },
+  CLERIC: { a: '#2fa39a' },
+  BARD: { a: '#c43c62', b: '#7a1f3d', h: '#7a4a2a', l: '#b07a3c', g: '#e6c27a', x: '#f2b632' },
+  MONK: { a: '#e0812f', b: '#8a3b1a' },
+  ROGUE: { a: '#3b4a3f', b: '#1f2622', g: '#e8d25a' }
+};
+function pixels(name) {
+  var pal = Object.assign({}, BASE, PAL[name]);
+  var out = [];
+  SPRITES[name].forEach(function (r) {
+    var row = (r + '................').slice(0, 16);
+    for (var x = 0; x < 16; x++) {
+      var c = row[x];
+      out.push({ fill: pal[c] || 'transparent' });
+    }
+  });
+  return out;
+}
+var CLASSES = [
+  { id: 'PALADIN', accent: '#6c9cf0', habit: 'Keeps an oath of daily commits: consistent, unbroken streaks', signals: 'streaks, active days' },
+  { id: 'BARBARIAN', accent: '#ef7a52', habit: 'Charges in with huge pull requests and bursts of activity', signals: 'PR size, bursts' },
+  { id: 'WIZARD', accent: '#a98cf0', habit: 'Masters many languages across their projects', signals: 'languages used' },
+  { id: 'ARTIFICER', accent: '#e3a15a', habit: 'Builds the machinery: Docker, CI, infrastructure as code', signals: 'infra files in repos' },
+  { id: 'CLERIC', accent: '#4fcfc1', habit: 'Heals codebases: reports issues and lands fixes', signals: 'issues, fix commits' },
+  { id: 'BARD', accent: '#ef7099', habit: 'Works through pull requests, documents well and draws an audience', signals: 'PRs, stars, READMEs' },
+  { id: 'MONK', accent: '#f5c04a', habit: 'Disciplined: small pull requests and descriptive commit messages', signals: 'small PRs, message quality' },
+  { id: 'ROGUE', accent: '#9fc39f', habit: 'Strikes from the shadows, doing much of their work on weekends', signals: 'weekend share' }
+];
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      classes: CLASSES.map(function (c, i) {
+        return { name: c.id, num: 'NO.' + (i + 1), accent: c.accent, habit: c.habit, signals: c.signals, px: pixels(c.id) };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

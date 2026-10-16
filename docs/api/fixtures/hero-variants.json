@@ -1,0 +1,89 @@
+{
+  "_doc": "Partial overrides of hero.json for mock mode, one per mood/tier. Merge over hero.json.",
+  "happy": {
+    "lives": 3,
+    "mood": "HAPPY",
+    "base_mood": "HAPPY",
+    "today": {
+      "date": "2026-10-16",
+      "active": true,
+      "calendar_count": 4,
+      "branch_commit_count": 0,
+      "day_ends_at": "2026-10-16T18:30:00Z"
+    }
+  },
+  "okay": {
+    "lives": 2,
+    "mood": "OKAY",
+    "base_mood": "OKAY",
+    "today": {
+      "date": "2026-10-16",
+      "active": true,
+      "calendar_count": 0,
+      "branch_commit_count": 2,
+      "day_ends_at": "2026-10-16T18:30:00Z"
+    }
+  },
+  "weak": {
+    "lives": 1,
+    "mood": "WEAK",
+    "base_mood": "WEAK"
+  },
+  "sleeping": {
+    "mood": "SLEEPING",
+    "base_mood": "OKAY",
+    "today": {
+      "date": "2026-10-18",
+      "active": false,
+      "calendar_count": 0,
+      "branch_commit_count": 0,
+      "day_ends_at": "2026-10-18T18:30:00Z"
+    }
+  },
+  "level_up": {
+    "level": 8,
+    "xp": 0,
+    "xp_for_next": 400,
+    "lives": 3,
+    "mood": "LEVEL_UP",
+    "base_mood": "HAPPY"
+  },
+  "fainted": {
+    "level": 1,
+    "xp": 0,
+    "xp_for_next": 50,
+    "lives": 3,
+    "mood": "FAINTED",
+    "base_mood": "HAPPY",
+    "tier": "CAMPFIRE"
+  },
+  "tier_campfire": {
+    "level": 3,
+    "xp_for_next": 150,
+    "tier": "CAMPFIRE"
+  },
+  "tier_keep": {
+    "level": 11,
+    "xp_for_next": 550,
+    "tier": "KEEP"
+  },
+  "tier_citadel": {
+    "level": 16,
+    "xp_for_next": 800,
+    "tier": "CITADEL"
+  },
+  "class_cooldown": {
+    "class": {
+      "chosen": "ROGUE",
+      "current": "ROGUE",
+      "scored": "MONK",
+      "qualified": [
+        "MONK",
+        "ROGUE",
+        "PALADIN",
+        "BARBARIAN"
+      ],
+      "can_switch_at": "2026-10-21T09:00:00Z"
+    }
+  }
+}

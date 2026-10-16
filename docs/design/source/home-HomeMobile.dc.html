@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home, phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f2b632}a:hover{color:#ffd36b}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #13111c; font-family: 'VT323', monospace; color: #f4ecd8; overflow: hidden">
+  <header style="height: 56px; flex-shrink: 0; position: relative; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 0 12px; background: #221e33; box-shadow: 0 4px 0 #0a0910">
+    <span style="font-family: 'Press Start 2P', monospace; font-size: 10px; color: #f5c04a">LV 7</span>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+      <div role="img" aria-label="140 of 350 XP" style="display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 2px; height: 10px">
+        <sc-for list="{{xp}}" as="s"><span style="background: {{s.fill}}"></span></sc-for>
+      </div>
+      <span style="font-size: 16px; line-height: 1; color: #a69dbd">140 / 350 XP</span>
+    </div>
+    <button type="button" style="font-family: 'Press Start 2P', monospace; font-size: 9px; color: #1a1410; background: #f2b632; border: 0; padding: 0 12px; height: 36px; box-shadow: 0 0 0 3px #0a0910, 3px 3px 0 3px #0a0910; cursor: pointer">SAVE</button>
+  </header>
+  <section aria-label="Your hero" style="position: relative; height: 292px; flex-shrink: 0; overflow: hidden; background: linear-gradient(#241e40 0, #241e40 26%, #3a2f5c 26%, #3a2f5c 48%, #6b4a6e 48%, #6b4a6e 62%, #c8705a 62%, #c8705a 70%, #e8a86a 70%)">
+    <div aria-hidden="true" style="position: absolute; right: 14%; bottom: 34%; width: 28px; height: 28px; background: #f2b632"></div>
+    <div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 24%; height: 56px; background: #2e2945; clip-path: polygon(0 100%, 0 50%, 14% 50%, 14% 25%, 32% 25%, 32% 55%, 50% 55%, 50% 15%, 68% 15%, 68% 45%, 86% 45%, 86% 30%, 100% 30%, 100% 100%)"></div>
+    <div aria-hidden="true" style="position: absolute; left: 14px; bottom: 24%; width: 84px; height: 92px">
+      <div style="position: absolute; left: -6px; top: 0; width: 96px; height: 36px; background: #a8442e; clip-path: polygon(50% 0, 100% 100%, 0 100%)"></div>
+      <div style="position: absolute; left: 0; top: 36px; width: 84px; height: 56px; background: #8a6a4a; box-shadow: inset 0 4px 0 #6b4f36"></div>
+      <div style="position: absolute; left: 12px; top: 50px; width: 16px; height: 14px; background: #f2b632; box-shadow: 0 0 0 2px #4a3420"></div>
+      <div style="position: absolute; left: 50px; top: 58px; width: 20px; height: 34px; background: #4a3420"></div>
+    </div>
+    <div aria-hidden="true" style="position: absolute; right: 12px; bottom: 24%; width: 72px; height: 80px">
+      <div style="position: absolute; left: -6px; top: 0; width: 84px; height: 32px; background: #5a4a8a; clip-path: polygon(50% 0, 100% 100%, 0 100%)"></div>
+      <div style="position: absolute; left: 0; top: 32px; width: 72px; height: 48px; background: #9a7a56; box-shadow: inset 0 4px 0 #7a5e40"></div>
+      <div style="position: absolute; left: 12px; top: 44px; width: 14px; height: 12px; background: #f2b632; box-shadow: 0 0 0 2px #4a3420"></div>
+      <div style="position: absolute; left: 44px; top: 44px; width: 14px; height: 12px; background: #f2b632; box-shadow: 0 0 0 2px #4a3420"></div>
+    </div>
+    <div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 24%; background-color: #3f7a3c; background-image: conic-gradient(#468a43 90deg, #3f7a3c 90deg 180deg, #468a43 180deg 270deg, #3f7a3c 270deg); background-size: 24px 24px; box-shadow: inset 0 5px 0 #5e9e4e"></div>
+    <div aria-hidden="true" style="position: absolute; left: 50%; bottom: 0; width: 84px; height: 24%; margin-left: -42px; background: #c9a46a; box-shadow: inset 5px 0 0 #a8844e, inset -5px 0 0 #a8844e"></div>
+    <div style="position: absolute; left: 50%; bottom: 16%; margin-left: -48px; display: flex; flex-direction: column; align-items: center">
+      <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(16, 6px); grid-auto-rows: 6px">
+        <sc-for list="{{hero}}" as="p"><span style="background: {{p.fill}}"></span></sc-for>
+      </div>
+      <div aria-hidden="true" style="width: 72px; height: 8px; background: rgba(10, 9, 16, 0.4)"></div>
+    </div>
+    <div style="position: absolute; left: 50%; bottom: calc(16% + 92px); margin-left: 36px; background: #f4ecd8; color: #1a1410; padding: 6px 9px; box-shadow: 0 0 0 3px #0a0910; display: flex; align-items: center; gap: 6px">
+      <span style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #c8452a">!</span>
+      <span style="font-size: 18px; line-height: 1">Hungry</span>
+    </div>
+    <div style="position: absolute; left: 12px; top: 12px; display: flex; align-items: center; gap: 8px; background: rgba(19, 17, 28, 0.78); padding: 8px 10px; box-shadow: 0 0 0 3px #0a0910">
+      <div role="img" aria-label="2 of 3 hearts" style="display: flex; gap: 6px">
+        <sc-for list="{{hearts}}" as="h">
+          <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(7, 3px); grid-auto-rows: 3px">
+            <sc-for list="{{h.px}}" as="p"><span style="background: {{p.fill}}"></span></sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="position: absolute; right: 12px; top: 12px; background: rgba(19, 17, 28, 0.78); padding: 9px 10px; box-shadow: 0 0 0 3px #0a0910; font-family: 'Press Start 2P', monospace; font-size: 8px">STREAK <span style="color: #f2b632">1</span></div>
+  </section>
+  <div style="flex: 1; padding: 16px 12px 12px; display: flex; flex-direction: column; gap: 14px; overflow: hidden">
+    <section style="background: #221e33; box-shadow: 0 0 0 4px #0a0910, inset 0 0 0 3px #efa07a; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <h2 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 10px; color: #efa07a">NOT FED YET</h2>
+        <span style="font-family: 'Press Start 2P', monospace; font-size: 9px">5:40 LEFT</span>
+      </div>
+      <p style="margin: 0; font-size: 20px; line-height: 1.05; color: #c9c0dc">Any contribution before midnight keeps both hearts.</p>
+    </section>
+    <section style="background: #221e33; box-shadow: 0 0 0 4px #0a0910; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+      <ol aria-label="This week" style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px">
+        <sc-for list="{{week}}" as="d" hint-placeholder-count="7">
+          <li style="display: flex; flex-direction: column; align-items: center; gap: 5px">
+            <span style="font-family: 'Press Start 2P', monospace; font-size: 7px; color: #a69dbd">{{d.day}}</span>
+            <span aria-label="{{d.aria}}" style="width: 100%; height: 30px; display: flex; align-items: center; justify-content: center; font-family: 'Press Start 2P', monospace; font-size: 7px; color: {{d.ink}}; background: {{d.bg}}; box-shadow: {{d.ring}}">{{d.mark}}</span>
+          </li>
+        </sc-for>
+      </ol>
+      <span style="font-size: 19px; line-height: 1; color: #c9c0dc">2 more active days wins a heart back.</span>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 6px; padding: 0 2px">
+      <h2 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 8px; color: #a69dbd">RECENTLY</h2>
+      <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px">
+        <sc-for list="{{events}}" as="e" hint-placeholder-count="3">
+          <li style="display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; font-size: 19px; line-height: 1">
+            <span style="font-family: 'Press Start 2P', monospace; font-size: 7px; color: #a69dbd; padding-top: 3px">{{e.day}}</span>
+            <span style="color: {{e.ink}}">{{e.text}}</span>
+          </li>
+        </sc-for>
+      </ul>
+    </section>
+  </div>
+  <nav aria-label="Main" style="height: 64px; flex-shrink: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: #221e33; box-shadow: 0 -4px 0 #0a0910">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+      <a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; text-decoration: none; color: {{t.color}}; background: {{t.bg}}; font-family: 'Press Start 2P', monospace; font-size: 7px">
+        <span aria-hidden="true" style="width: 14px; height: 14px; background: {{t.color}}; box-shadow: 0 0 0 2px #0a0910"></span>
+        {{t.label}}
+      </a>
+    </sc-for>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+var MONK = ["................",".....kkkkkk.....","....kssssssk....","....kssssssk....","....kskssksk....","....kssssssk....",".....kskksk.....","......kssk......","...kkaaaabbkk...","..kaaaaabbaaak..","..kaasskbaaaak..","..kaasskbaaaak..","...kaaabbaaak...","...kaaaaaaaak...","....kaaaaaak....","....kkk..kkk...."];
+var PAL = { k: '#1a1410', s: '#f0c08a', a: '#e0812f', b: '#8a3b1a' };
+var HEART = [".hh.hh.","hwhhhhh","hhhhhhh",".hhhhh.","..hhh..","...h..."];
+function grid(rows, pal, w) {
+  var out = [];
+  rows.forEach(function (r) {
+    var row = (r + '................').slice(0, w);
+    for (var x = 0; x < w; x++) out.push({ fill: pal[row[x]] || 'transparent' });
+  });
+  return out;
+}
+var FULL = grid(HEART, { h: '#e0503a', w: '#f6a08a' }, 7);
+var EMPTY = grid(HEART, { h: '#4a4466', w: '#4a4466' }, 7);
+var WEEK = [
+  { day: 'M', s: 'active' }, { day: 'T', s: 'active' }, { day: 'W', s: 'missed' }, { day: 'T', s: 'active' },
+  { day: 'F', s: 'today' }, { day: 'S', s: 'future' }, { day: 'S', s: 'rest' }
+];
+var DAY_STYLE = {
+  active: { mark: '+10', bg: '#f2b632', ink: '#1a1410', ring: '0 0 0 2px #0a0910', aria: 'active, plus 10 XP' },
+  missed: { mark: '-1', bg: '#7a2e22', ink: '#f6c0b0', ring: '0 0 0 2px #0a0910', aria: 'missed, lost a heart' },
+  today: { mark: '?', bg: '#13111c', ink: '#f2b632', ring: '0 0 0 2px #0a0910, inset 0 0 0 3px #f2b632', aria: 'today, not yet active' },
+  future: { mark: '', bg: '#2e2945', ink: '#a69dbd', ring: '0 0 0 2px #0a0910', aria: 'upcoming' },
+  rest: { mark: 'Z', bg: '#3a3460', ink: '#c9c0dc', ring: '0 0 0 2px #0a0910', aria: 'rest day' }
+};
+class Component extends DCLogic {
+  renderVals() {
+    var xp = [];
+    var filled = Math.round(140 / 350 * 14);
+    for (var i = 0; i < 14; i++) xp.push({ fill: i < filled ? '#f2b632' : '#2e2945' });
+    return {
+      hero: grid(MONK, PAL, 16),
+      hearts: [{ px: FULL }, { px: FULL }, { px: EMPTY }],
+      xp: xp,
+      week: WEEK.map(function (d) { return Object.assign({ day: d.day }, DAY_STYLE[d.s]); }),
+      events: [
+        { day: 'THU', text: '+10 XP. Streak 1.', ink: '#f4ecd8' },
+        { day: 'WED', text: 'No contributions. Lost a heart.', ink: '#efa07a' },
+        { day: 'TUE', text: '+10 XP. Streak 2.', ink: '#f4ecd8' }
+      ],
+      tabs: [
+        { label: 'HOME', color: '#f2b632', bg: '#2e2945' },
+        { label: 'JOURNAL', color: '#a69dbd', bg: 'transparent' },
+        { label: 'HERO', color: '#a69dbd', bg: 'transparent' },
+        { label: 'ARENA', color: '#a69dbd', bg: 'transparent' },
+        { label: 'SETTINGS', color: '#a69dbd', bg: 'transparent' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
