@@ -83,3 +83,11 @@ management:
   endpoint:
     health:
       show-details: when-authorized  # anonymous callers get only UP/DOWN; a valid JWT sees DB/Redis details
+logging:
+  level:
+    com.tushar27x.insightshub: INFO  # the app's own logs carry no tokens or secrets at any level (B30)
+    # These log secrets at DEBUG/TRACE, so they stay at WARN even if root is raised while debugging:
+    org.hibernate.orm.jdbc.bind: WARN  # SQL parameter values: encrypted GitHub tokens, emails
+    org.springframework.web.HttpLogging: WARN  # message bodies: the OAuth form (client secret) and token response
+    org.springframework.web.client: WARN  # request details of the GitHub and LLM calls
+    org.springframework.security.oauth2: WARN  # token validation details

@@ -109,7 +109,10 @@ class RateLimitApiTest {
                 .andExpect(header().string(RateLimitInterceptor.REMAINING_HEADER, "0"))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(429))
-                .andExpect(jsonPath("$.detail").value("Rate limit exceeded; try again in 60 s"));
+                .andExpect(jsonPath("$.detail").value("Rate limit exceeded; try again in 60 s"))
+                .andExpect(jsonPath("$.type").value("about:blank"))
+                .andExpect(jsonPath("$.title").value("Too Many Requests"))
+                .andExpect(jsonPath("$.instance").value("/api/auth/login"));
     }
 
     @Test

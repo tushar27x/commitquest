@@ -31,6 +31,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -47,6 +48,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -56,6 +58,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -111,13 +114,22 @@ class AuthApiTest {
     void insightsWithoutTokenIs401() throws Exception {
         mvc.perform(get("/api/user/insights"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, startsWith("Bearer")));
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, startsWith("Bearer")))
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("about:blank"))
+                .andExpect(jsonPath("$.title").value("Unauthorized"))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.detail").value("Missing, invalid or expired token; log in again"))
+                .andExpect(jsonPath("$.instance").value("/api/user/insights"));
     }
 
     @Test
     void insightsWithGarbageTokenIs401() throws Exception {
         mvc.perform(get("/api/user/insights").header(HttpHeaders.AUTHORIZATION, "Bearer not.a.jwt"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, containsString("invalid_token")))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(content().string(not(containsString("not.a.jwt")))); // never echo the token
     }
 
     @Test
@@ -150,7 +162,10 @@ class AuthApiTest {
         when(insightsQueryService.getInsights(GITHUB_ID)).thenReturn(Optional.empty());
 
         mvc.perform(get("/api/user/insights").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("No insights yet for this user"))
+                .andExpect(jsonPath("$.instance").value("/api/user/insights"));
     }
 
     // --- POST /api/user/sync: refresh, at most every 10 minutes ---
@@ -178,6 +193,10 @@ class AuthApiTest {
 
         String retryAfter = mvc.perform(post("/api/user/sync").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
                 .andExpect(status().isTooManyRequests())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.detail").value("You synced recently; try again later"))
+                .andExpect(jsonPath("$.instance").value("/api/user/sync"))
                 .andReturn().getResponse().getHeader(HttpHeaders.RETRY_AFTER);
 
         assertThat(retryAfter).isEqualTo("360"); // 359.4 s, rounded up
@@ -189,7 +208,8 @@ class AuthApiTest {
 
         mvc.perform(post("/api/user/sync").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
                 .andExpect(status().isTooManyRequests())
-                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "17"));
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "17"))
+                .andExpect(jsonPath("$.detail").value("Too many syncs right now; try again shortly"));
     }
 
     @Test
@@ -197,15 +217,20 @@ class AuthApiTest {
         when(syncService.syncIfDue(GITHUB_ID)).thenReturn(new SyncResult(SyncOutcome.NEEDS_REAUTH, Duration.ZERO));
 
         mvc.perform(post("/api/user/sync").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("GitHub no longer accepts your token; log in again at /api/auth/login"));
     }
 
     @Test
     void refreshWhileGitHubIsDownIs502() throws Exception {
-        when(syncService.syncIfDue(GITHUB_ID)).thenThrow(new GitHubApiException("HTTP 503"));
+        when(syncService.syncIfDue(GITHUB_ID)).thenThrow(new GitHubApiException("GitHub GraphQL errors for 'octocat'"));
 
         mvc.perform(post("/api/user/sync").header(HttpHeaders.AUTHORIZATION, bearer(GITHUB_ID)))
-                .andExpect(status().isBadGateway());
+                .andExpect(status().isBadGateway())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("GitHub is unavailable; try again later"))
+                .andExpect(jsonPath("$.instance").value("/api/user/sync"));
     }
 
     // --- login round trip ---
@@ -275,7 +300,29 @@ class AuthApiTest {
     void cancelledLoginIs400() throws Exception {
         mvc.perform(get("/api/auth/callback").param("error", "access_denied").param("state", "s")
                         .cookie(new Cookie(AuthController.STATE_COOKIE, "s")))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("GitHub login did not complete: access_denied"))
+                .andExpect(jsonPath("$.instance").value("/api/auth/callback")); // path only, no query
+    }
+
+    @Test
+    void callbackErrorThatIsNotAGitHubCodeIsRejectedBeforeItIsEchoed() throws Exception {
+        mvc.perform(get("/api/auth/callback").param("error", "<script>").param("state", "s")
+                        .cookie(new Cookie(AuthController.STATE_COOKIE, "s")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("error"))
+                .andExpect(jsonPath("$.errors[0].message").value("must be a GitHub error code"))
+                .andExpect(content().string(not(containsString("<script>"))));
+    }
+
+    @Test
+    void oversizedCallbackParamIs400() throws Exception {
+        mvc.perform(get("/api/auth/callback").param("code", "c".repeat(257)).param("state", "s")
+                        .cookie(new Cookie(AuthController.STATE_COOKIE, "s")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("code"));
+        verifyNoInteractions(gitHub);
     }
 
     @Test
