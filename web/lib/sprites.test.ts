@@ -20,6 +20,14 @@ describe("sprite kit", () => {
     for (const row of grid) for (const key of row) if (key !== ".") expect(palette[key]).toBeDefined();
   });
 
+  it.each(CLASS_ORDER)("%s stays 16×16 when sleeping and only changes one row", (archetype) => {
+    const awake = classSprite(archetype).grid;
+    const asleep = classSprite(archetype, { sleeping: true }).grid;
+    expect(asleep).toHaveLength(16);
+    for (const row of asleep) expect(row).toHaveLength(16);
+    expect(asleep.filter((row, y) => row !== awake[y]).length).toBeLessThanOrEqual(1);
+  });
+
   it("closes the monk's eyes when sleeping", () => {
     expect(classSprite("MONK", { sleeping: true }).grid[4]).toBe("....kkksskkk....");
     expect(classSprite("MONK").grid[4]).not.toBe("....kkksskkk....");
