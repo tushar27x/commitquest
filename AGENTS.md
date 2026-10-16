@@ -23,7 +23,8 @@ Planned: `/api/user/hero`, `/hero/events`, `/hero/class`, `/preferences` (shapes
 - **Done:** Phases 0–8 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
   insights engine + D&D archetype scoring, AI layer, GitHub OAuth + JWT, sync + Redis cache, rate limiting). PRs #2–#8 merged to `main`.
 - **Open v1 issue:** B26 — v1 production still calls Groq models that were retired.
-- **Next up:** merge I0 (docs) first. Then in parallel: backend **B1** (`V4__activity.sql` + `calendar_count` writes) · ui **U1** (`web/` scaffold on fixtures) · integration **I1** (shared types, after U1) and **I2** (Testcontainers + CI, after B1). Full order: `docs/agents/WORKFLOW.md`.
+- **Done in Part D:** I0 (#9), B1 (#10), U1 (#11), B2 / Phase 9 (#12), I1 (#13), U2 (#14); I2 (Testcontainers + CI) in review.
+- **Next up:** backend fixes **B36** (B1's activity SQL misses the `v2` schema, so syncs fail), then **B3** · ui **U3** (Home) · integration **I3** (contract tests, after B5) and **I4**. Full order: `docs/agents/WORKFLOW.md`.
 - **Open items:** see the latest "End of session" entry at the bottom of `PROGRESS.md`.
 - Working agreement & phase details: `PROGRESS.md` (status table at the top, learning log at the bottom).
 
@@ -38,7 +39,8 @@ Planned: `/api/user/hero`, `/hero/events`, `/hero/class`, `/preferences` (shapes
 | `docs/design/` | `README.md` (index), `png/` (13 mockup screens), `tokens.json`, `sprites.json`, `source/*.dc.html` (board markup, reference only) |
 | `docs/agents/` | `WORKFLOW.md` (lanes, worktrees, step order) and `HANDOFF.md` (message board between the agents) |
 | `.claude/agents/` | Agent definitions: `backend-engineer.md`, `ui-engineer.md`, `integration-qa.md` |
-| `e2e/`, `.github/workflows/` | Playwright e2e and CI (integration lane, from I2/I5) |
+| `.github/workflows/ci.yml` | CI on every PR and push to `main`: backend `./mvnw verify` (Testcontainers), web design check + lint + test + build. No secrets |
+| `e2e/` | Playwright e2e (integration lane, from I5) |
 
 ### Agent lanes
 
@@ -66,10 +68,11 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 | `github/model/` | Typed records for the GraphQL response: `GitHubUser`, `UserInsightsData`, `GraphQlResponse` |
 | `insights/` | `InsightsEngine` (pure logic: `GitHubUser` → `InsightsResult`), `UserStats` (snake_case via `@JsonNaming`, parity with v1), `HabitProfile` (15 habit signals, user's own commits only), `ScoringArchetypeClassifier` (0–100 per class, `ALGO_VERSION = 1`, ties → declaration order, all-zero → Rogue), `ArchetypeScores`, `ArchetypeClassifier` (interface) |
 | `security/` | `SecurityConfig` (stateless, CSRF off, `/api/auth/**` + health public), `JwtConfig` (HS256 Nimbus encoder/decoder, issuer `insightshub`), `JwtService` (`sub`=GitHub id, `name`=login), `TokenCipher` (AES-256-GCM, GitHub id as AAD) |
-| `sync/` | `SyncService` (`syncIfDue`: atomic 10-min per-user cooldown via `UsersRepository.claimSync`, used by login + refresh; `sync`: no cooldown, for Phase 10; token → GitHub → engine → AI → write), `InsightsWriter` (separate bean: `@Transactional` + `@CacheEvict` need the proxy), `SyncProperties` (`insightshub.sync.min-interval`) |
+| `sync/` | `SyncService` (`syncIfDue`: atomic 10-min per-user cooldown via `UsersRepository.claimSync`, used by login + refresh; `sync`: no cooldown, for Phase 10; token → GitHub → activity → engine → AI → write), `ActivityWriter` (contribution calendar → `daily_contributions`, first sync backfills, later syncs rewrite a 7-day overlap), `InsightsWriter` (separate bean: `@Transactional` + `@CacheEvict` need the proxy), `SyncProperties` (`insightshub.sync.min-interval`) |
 | `user/` | `UserController` (`GET /api/user/insights`, `POST /api/user/sync` → 200 / 429 + `Retry-After` / 409 / 502; user from JWT `sub` only), `InsightsQueryService` (`@Cacheable`), `InsightsResponse` (snake_case DTO, also the cached value) |
 | `ratelimit/` | `@RateLimit(policy, key = IP\|USER)`, `RateLimitInterceptor` (after Spring Security; 429 + `Retry-After` + `ProblemDetail`), `RedisRateLimiter` (Lua `INCR`+`PEXPIRE`, keys `v2:rl:*`, fails open), `RateLimitConfig` (registers it; startup check that every policy exists), `RateLimitProperties` (`insightshub.rate-limit.policies`, incl. `sync-global`) |
-| `repository/` | `UsersRepository` (`findByAlertsEnabledTrue`, `findDueForSync`), `InsightsRepository` (`@EntityGraph`) |
+| `repository/` | `UsersRepository` (`findByAlertsEnabledTrue`, `findDueForSync`, `claimSync`), `InsightsRepository` (`@EntityGraph`), `DailyContributionsRepository` (JdbcTemplate `INSERT … ON CONFLICT` upsert of `calendar_count`; ⚠️ B36 open) |
+| `error/` | `ApiExceptionHandler` (`@RestControllerAdvice`: every error as `application/problem+json`, `type: about:blank`, `instance` = path, validation 400s with snake_case `errors[]`, 500 without exception text), `ProblemDetails` (shared body builder), `ProblemErrorController` (replaces Boot's `/error`), `TooManyRequestsException` (429 + `Retry-After`) |
 
 ### Resources
 
@@ -91,8 +94,8 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 - `RateLimitApiTest` — the interceptor behind the real security chain with `InMemoryRateLimiter`; slice tests that include controllers need `RateLimitProperties` + a limiter bean.
 - `InsightsEngineParityTest` — golden JSON against v1: `insights/v1-expected-insights.json` + `v1-parity-user.json`.
 - Opt-in live tests (need env: `GITHUB_TOKEN`, `GROQ_API_KEY`): `GitHubGraphQlClientLiveTest`, `InsightsEngineLiveTest`, `AiLiveTest`.
-- `InsightshubApplicationTests` boots the full context — needs DB/Redis/Groq; Testcontainers arrives in step I2.
-- ⚠️ B23: running the suite applies Flyway migrations to the **live Neon DB**. Until I2 lands, run targeted tests only (`./mvnw test -Dtest=…`) and never boot the app without the developer's OK.
+- **Integration tests** (`it/`, classes named `*IT`, run by Failsafe in `./mvnw verify`; Docker needed): `@IntegrationTest` = `@SpringBootTest` + `TestcontainersConfig` (Postgres 17 + Redis 7 via `@ServiceConnection`, test secrets generated at runtime, LLM base URL on a closed local port). All ITs share one context. `ApplicationContextIT` (the old `contextLoads`: Flyway migrates an empty DB, `ddl-auto: validate` passes, nothing in `public`), `UsersRepositoryIT` (atomic `claimSync`), `DailyContributionsRepositoryIT` (`@Disabled` until B36 is fixed).
+- B23 is fixed: Surefire and Failsafe point the datasource and Redis at unresolvable `*.invalid` hosts, so a test that boots the app without `TestcontainersConfig` fails to connect instead of reaching Neon. New context-booting tests go in `it/` with `@IntegrationTest`.
 
 ### Infrastructure & config facts
 
@@ -108,7 +111,7 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 
 - One PR per step (B1–B8, U1–U6, I0–I6): three agents implement everything, including Phases 2.6 and 10–13; the developer reviews and merges (see Agent lanes).
 - No AI-agent attribution in commits or PR descriptions (no co-author lines, no "generated with" footers).
-- Bugs go to `BUGS.md` with the next `B` number (currently B1–B33); PR descriptions list the phase's bugs.
+- Bugs go to `BUGS.md` with the next `B` number (currently B1–B36); PR descriptions list the phase's bugs.
 - No key- or token-shaped literals in code or tests, even fake ones: build test keys at runtime (B31).
 - DTOs only from controllers (never entities); no secrets in logs; AI output always has a static fallback;
   the LLM never decides the archetype (code scores it, the LLM adds flavour).
@@ -120,9 +123,9 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 
 ### Commands
 
-- `./mvnw spring-boot:run` — start (requires `.env`: Neon, Redis, `GROQ_API_KEY`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`).
-- `./mvnw test -Dtest=…` — targeted unit tests. Not the full `./mvnw test` until I2 (B23 warning above).
-- `./mvnw verify` — not green yet (Testcontainers + CI arrive in I2).
+- `./mvnw spring-boot:run` — start (requires `.env`: Neon, Redis, `GROQ_API_KEY`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`). It uses the live Neon DB: only with the developer's OK.
+- `./mvnw test` — all unit tests, offline (no DB, Redis, GitHub or LLM); `-Dtest=…` for one class.
+- `./mvnw verify` — unit tests, then the `*IT` integration tests on Testcontainers. Needs Docker; never touches Neon. CI runs the same.
 - `web/`: `npm run dev`, `npm run lint`, `npm run build` (from U1); `NEXT_PUBLIC_MOCK=1` serves fixtures for everything.
 
 <!-- Remaining sections to be added as directed by the user. -->
