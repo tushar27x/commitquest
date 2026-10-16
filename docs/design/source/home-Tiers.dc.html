@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home backdrop by level tier</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1440px; height: 460px; box-sizing: border-box; padding: 40px 48px; background: #0e0c16; font-family: 'VT323', monospace; color: #f4ecd8; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px">
+  <article style="background: #221e33; box-shadow: 0 0 0 4px #0a0910, 6px 6px 0 4px #0a0910; display: flex; flex-direction: column">
+    <div aria-hidden="true" style="position: relative; height: 250px; overflow: hidden; background: linear-gradient(#0e0c16 0, #0e0c16 55%, #1a1630 55%)">
+      <div style="position: absolute; left: 30px; top: 30px; width: 3px; height: 3px; background: #f4ecd8"></div>
+      <div style="position: absolute; left: 120px; top: 54px; width: 3px; height: 3px; background: #f4ecd8"></div>
+      <div style="position: absolute; left: 210px; top: 24px; width: 4px; height: 4px; background: #f4ecd8"></div>
+      <div style="position: absolute; left: 270px; top: 80px; width: 3px; height: 3px; background: #f4ecd8"></div>
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: #2a5a2e; box-shadow: inset 0 5px 0 #3f7a3c"></div>
+      <div style="position: absolute; left: 22px; bottom: 56px; width: 110px; height: 80px; background: #7a4f28; clip-path: polygon(50% 0, 100% 100%, 0 100%)"></div>
+      <div style="position: absolute; left: 66px; bottom: 56px; width: 22px; height: 36px; background: #2a1d12; clip-path: polygon(50% 0, 100% 100%, 0 100%)"></div>
+      <div style="position: absolute; right: 54px; bottom: 50px; width: 44px; height: 10px; background: #6b4226; box-shadow: 0 -4px 0 #4a2e18"></div>
+      <div style="position: absolute; right: 66px; bottom: 60px; width: 20px; height: 26px; background: #e0603a"></div>
+      <div style="position: absolute; right: 70px; bottom: 64px; width: 12px; height: 16px; background: #f2b632"></div>
+      <div style="position: absolute; right: 74px; bottom: 86px; width: 4px; height: 6px; background: #e0603a"></div>
+      <div style="position: absolute; left: 150px; bottom: 50px; display: grid; grid-template-columns: repeat(16, 4px); grid-auto-rows: 4px">
+        <sc-for list="{{hero}}" as="p"><span style="background: {{p.fill}}"></span></sc-for>
+      </div>
+    </div>
+    <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 6px">
+      <span style="font-family: 'Press Start 2P', monospace; font-size: 12px; color: #f2b632">CAMPFIRE</span>
+      <span style="font-size: 21px; color: #c9c0dc">LV 1–4 · a tent and a fire</span>
+    </div>
+  </article>
+  <article style="background: #221e33; box-shadow: 0 0 0 4px #0a0910, 6px 6px 0 4px #0a0910; display: flex; flex-direction: column">
+    <div aria-hidden="true" style="position: relative; height: 250px; overflow: hidden; background: linear-gradient(#241e40 0, #241e40 26%, #3a2f5c 26%, #3a2f5c 48%, #6b4a6e 48%, #6b4a6e 62%, #c8705a 62%, #c8705a 72%, #e8a86a 72%)">
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: #3f7a3c; box-shadow: inset 0 5px 0 #5e9e4e"></div>
+      <div style="position: absolute; left: 16px; bottom: 56px; width: 84px; height: 92px">
+        <div style="position: absolute; left: -6px; top: 0; width: 96px; height: 36px; background: #a8442e; clip-path: polygon(50% 0, 100% 100%, 0 100%)"></div>
+        <div style="position: absolute; left: 0; top: 36px; width: 84px; height: 56px; background: #8a6a4a"></div>
+        <div style="position: absolute; left: 12px; top: 50px; width: 16px; height: 14px; background: #f2b632"></div>
+        <div style="position: absolute; left: 50px; top: 58px; width: 20px; height: 34px; background: #4a3420"></div>
+      </div>
+      <div style="position: absolute; right: 16px; bottom: 56px; width: 72px; height: 80px">
+        <div style="position: absolute; left: -6px; top: 0; width: 84px; height: 32px; background: #5a4a8a; clip-path: polygon(50% 0, 100% 100%, 0 100%)"></div>
+        <div style="position: absolute; left: 0; top: 32px; width: 72px; height: 48px; background: #9a7a56"></div>
+        <div style="position: absolute; left: 12px; top: 44px; width: 14px; height: 12px; background: #f2b632"></div>
+        <div style="position: absolute; left: 44px; top: 44px; width: 14px; height: 12px; background: #f2b632"></div>
+      </div>
+      <div style="position: absolute; left: 50%; bottom: 50px; margin-left: -32px; display: grid; grid-template-columns: repeat(16, 4px); grid-auto-rows: 4px">
+        <sc-for list="{{hero}}" as="p"><span style="background: {{p.fill}}"></span></sc-for>
+      </div>
+    </div>
+    <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 6px">
+      <span style="font-family: 'Press Start 2P', monospace; font-size: 12px; color: #f2b632">VILLAGE</span>
+      <span style="font-size: 21px; color: #c9c0dc">LV 5–9 · houses with lit windows</span>
+    </div>
+  </article>
+  <article style="background: #221e33; box-shadow: 0 0 0 4px #0a0910, 6px 6px 0 4px #0a0910; display: flex; flex-direction: column">
+    <div aria-hidden="true" style="position: relative; height: 250px; overflow: hidden; background: linear-gradient(#4a6aa8 0, #4a6aa8 40%, #6f8fc8 40%, #6f8fc8 70%, #9ab4e0 70%)">
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: #3f7a3c; box-shadow: inset 0 5px 0 #5e9e4e"></div>
+      <div style="position: absolute; left: 20px; bottom: 56px; width: 220px; height: 70px; background: #8a84a3; box-shadow: inset 0 6px 0 #a29cbb"></div>
+      <div style="position: absolute; left: 20px; bottom: 126px; width: 220px; height: 12px; background: repeating-linear-gradient(90deg, #8a84a3 0 16px, transparent 16px 26px)"></div>
+      <div style="position: absolute; left: 92px; bottom: 56px; width: 76px; height: 140px; background: #6d6a80; box-shadow: inset 6px 0 0 #8a84a3"></div>
+      <div style="position: absolute; left: 92px; bottom: 196px; width: 76px; height: 12px; background: repeating-linear-gradient(90deg, #6d6a80 0 14px, transparent 14px 22px)"></div>
+      <div style="position: absolute; left: 120px; bottom: 140px; width: 20px; height: 24px; background: #13111c"></div>
+      <div style="position: absolute; left: 128px; bottom: 208px; width: 4px; height: 30px; background: #4a3420"></div>
+      <div style="position: absolute; left: 132px; bottom: 222px; width: 24px; height: 14px; background: #f2b632"></div>
+      <div style="position: absolute; left: 112px; bottom: 56px; width: 36px; height: 44px; background: #4a3420"></div>
+      <div style="position: absolute; right: 22px; bottom: 50px; display: grid; grid-template-columns: repeat(16, 4px); grid-auto-rows: 4px">
+        <sc-for list="{{hero}}" as="p"><span style="background: {{p.fill}}"></span></sc-for>
+      </div>
+    </div>
+    <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 6px">
+      <span style="font-family: 'Press Start 2P', monospace; font-size: 12px; color: #f2b632">KEEP</span>
+      <span style="font-size: 21px; color: #c9c0dc">LV 10–14 · your own stone keep</span>
+    </div>
+  </article>
+  <article style="background: #221e33; box-shadow: 0 0 0 4px #0a0910, 6px 6px 0 4px #0a0910; display: flex; flex-direction: column">
+    <div aria-hidden="true" style="position: relative; height: 250px; overflow: hidden; background: linear-gradient(#e08a5a 0, #e08a5a 35%, #eda56a 35%, #eda56a 65%, #f6c87e 65%)">
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: #4f8a3e; box-shadow: inset 0 5px 0 #6fb35a"></div>
+      <div style="position: absolute; left: 14px; bottom: 56px; width: 250px; height: 60px; background: #c9c0dc; box-shadow: inset 0 6px 0 #e8e4f0"></div>
+      <div style="position: absolute; left: 24px; bottom: 116px; width: 44px; height: 90px; background: #b3aac8; box-shadow: inset 5px 0 0 #d2cbe2"></div>
+      <div style="position: absolute; left: 18px; bottom: 206px; width: 56px; height: 34px; background: #5a4a8a; clip-path: polygon(50% 0, 100% 100%, 0 100%)"></div>
+      <div style="position: absolute; left: 112px; bottom: 116px; width: 54px; height: 120px; background: #b3aac8; box-shadow: inset 5px 0 0 #d2cbe2"></div>
+      <div style="position: absolute; left: 105px; bottom: 236px; width: 68px; height: 14px; background: #5a4a8a"></div>
+      <div style="position: absolute; left: 210px; bottom: 116px; width: 44px; height: 90px; background: #b3aac8; box-shadow: inset 5px 0 0 #d2cbe2"></div>
+      <div style="position: absolute; left: 204px; bottom: 206px; width: 56px; height: 34px; background: #5a4a8a; clip-path: polygon(50% 0, 100% 100%, 0 100%)"></div>
+      <div style="position: absolute; left: 128px; bottom: 150px; width: 22px; height: 30px; background: #f2b632"></div>
+      <div style="position: absolute; left: 36px; bottom: 150px; width: 18px; height: 26px; background: #f2b632"></div>
+      <div style="position: absolute; left: 222px; bottom: 150px; width: 18px; height: 26px; background: #f2b632"></div>
+      <div style="position: absolute; right: 18px; bottom: 50px; display: grid; grid-template-columns: repeat(16, 4px); grid-auto-rows: 4px">
+        <sc-for list="{{hero}}" as="p"><span style="background: {{p.fill}}"></span></sc-for>
+      </div>
+    </div>
+    <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 6px">
+      <span style="font-family: 'Press Start 2P', monospace; font-size: 12px; color: #f2b632">CITADEL</span>
+      <span style="font-size: 21px; color: #c9c0dc">LV 15+ · towers and golden banners</span>
+    </div>
+  </article>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":460}}'>
+var MONK = ["................",".....kkkkkk.....","....kssssssk....","....kssssssk....","....kskssksk....","....kssssssk....",".....kskksk.....","......kssk......","...kkaaaabbkk...","..kaaaaabbaaak..","..kaasskbaaaak..","..kaasskbaaaak..","...kaaabbaaak...","...kaaaaaaaak...","....kaaaaaak....","....kkk..kkk...."];
+var PAL = { k: '#1a1410', s: '#f0c08a', a: '#e0812f', b: '#8a3b1a' };
+function grid(rows, pal, w) {
+  var out = [];
+  rows.forEach(function (r) {
+    var row = (r + '................').slice(0, w);
+    for (var x = 0; x < w; x++) out.push({ fill: pal[row[x]] || 'transparent' });
+  });
+  return out;
+}
+class Component extends DCLogic {
+  renderVals() {
+    return { hero: grid(MONK, PAL, 16) };
+  }
+}
+</script>
+</body>
+</html>

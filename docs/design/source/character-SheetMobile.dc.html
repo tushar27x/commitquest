@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Character sheet, phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f2b632}a:hover{color:#ffd36b}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #13111c; font-family: 'VT323', monospace; color: #f4ecd8; display: flex; flex-direction: column; overflow: hidden">
+  <header style="height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: #221e33; box-shadow: 0 4px 0 #0a0910">
+    <span style="font-family: 'Press Start 2P', monospace; font-size: 9px; color: #a69dbd">LV 7</span>
+    <h1 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 11px; color: #f4ecd8">HERO</h1>
+    <a href="#" style="font-family: 'Press Start 2P', monospace; font-size: 8px; text-decoration: none; padding: 12px 0">CHANGE ▶</a>
+  </header>
+  <main style="flex: 1; overflow-y: auto; padding: 20px 16px 24px; display: flex; flex-direction: column; gap: 20px">
+    <section style="display: flex; flex-direction: column; align-items: center; gap: 10px">
+      <div style="position: relative; width: 100%; display: flex; justify-content: center; padding-top: 6px">
+        <div style="display: flex; flex-direction: column; align-items: center">
+          <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(16, 8px); grid-auto-rows: 8px">
+            <sc-for list="{{hero.px}}" as="p"><div style="background: {{p.fill}}"></div></sc-for>
+          </div>
+          <div aria-hidden="true" style="width: 150px; height: 14px; background: #4a4466; box-shadow: 0 4px 0 #0a0910, inset 0 4px 0 #5c5580"></div>
+        </div>
+      </div>
+      <p style="margin: 6px 0 0; font-family: 'Press Start 2P', monospace; font-size: 18px; color: #f5c04a; text-shadow: 3px 3px 0 #0a0910">MONK</p>
+      <p style="margin: 0; font-size: 22px; line-height: 1.05; color: #c9c0dc; text-align: center; max-width: 300px">Disciplined: small pull requests and descriptive commit messages</p>
+    </section>
+    <section aria-label="Character lore" style="background: #efe0bb; color: #2a1d12; padding: 16px 16px 18px; box-shadow: 0 0 0 4px #0a0910, inset 0 0 0 4px #c9b48a; display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 10px; line-height: 1.6; color: #6b3d16">THE PATIENT COMMITTER</h2>
+      <p style="margin: 0; font-size: 21px; line-height: 1.08">[AI lore, 2–3 sentences. Sample:] Trained in the quiet halls of small diffs, this monk writes each commit like a vow. Their next trial: carry the same calm into larger quests.</p>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <h2 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 10px; color: #f4ecd8">CLASS SCORES</h2>
+        <span style="font-size: 18px; color: #a69dbd">0–100 · ALGO v1</span>
+      </div>
+      <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+        <sc-for list="{{scores}}" as="r" hint-placeholder-count="8">
+          <li style="display: grid; grid-template-columns: 32px 92px minmax(0, 1fr) 32px; align-items: center; gap: 8px; padding: 4px 6px; background: {{r.rowBg}}; box-shadow: {{r.rowRing}}">
+            <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(16, 2px); grid-auto-rows: 2px">
+              <sc-for list="{{r.px}}" as="p"><div style="background: {{p.fill}}"></div></sc-for>
+            </div>
+            <span style="font-family: 'Press Start 2P', monospace; font-size: 8px; color: {{r.accent}}">{{r.name}}</span>
+            <div role="img" aria-label="{{r.name}} {{r.score}} out of 100" style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 2px; height: 12px">
+              <sc-for list="{{r.segs}}" as="s"><div style="background: {{s.fill}}"></div></sc-for>
+            </div>
+            <span style="font-size: 20px; text-align: right">{{r.score}}</span>
+          </li>
+        </sc-for>
+      </ol>
+    </section>
+  </main>
+  <nav aria-label="Main" style="height: 64px; flex-shrink: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: #221e33; box-shadow: 0 -4px 0 #0a0910">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+      <a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; text-decoration: none; color: {{t.color}}; background: {{t.bg}}; font-family: 'Press Start 2P', monospace; font-size: 7px">
+        <span aria-hidden="true" style="width: 16px; height: 16px; background: {{t.color}}; box-shadow: 0 0 0 2px #0a0910"></span>
+        {{t.label}}
+      </a>
+    </sc-for>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+var SPRITES = {
+  PALADIN: ["................","......kkkk......",".....kmmmmk.....","....kmmmmmmk....","....kmkkkkmk....","....kmmmmmmk....","....kmmggmmk....",".....kkkkkk.....",".kkk.kaaaak..m..","kbbbkaagaaak.m..","kbgbkaggggak.m..","kbbbkaagaaakkgk.",".kbk.kaaaak..k..","..k..kmkkmk.....",".....kmk.kmk....",".....kkk.kkk...."],
+  BARBARIAN: ["....hhhhhhh.....","...hhhhhhhhh....","...hkssssskh..mm","...hksksskshmmmm","....kssssssk.mmm","....kslllssk..l.",".....kssssk...l.","...kksssssskk.l.","..ksssssssssskl.","..kskssssssksk..","..ks.kllllk.sk..",".....kgggk......",".....kllllk.....",".....ksk.ksk....",".....ksk.ksk....","....kkk...kkk..."],
+  WIZARD: [".......k........","......kak.......","......kagk......",".....kaaak......","....kaagaak...g.","..kkaaaaaaakk.k.","....kskssksk..l.","....kssssssk..l.","....kwwwwwwk..l.","...kawwwwwwak.l.","..kaaawwwwaaakl.","..kaaaawwaaaaks.","..kaaagaagaaak..","..kaaaaaaaaaak..","..kbbbbbbbbbbk..","...kkkkkkkkkk..."],
+  ARTIFICER: ["................",".....kkkkkk.....","....khhhhhhk....","...kmmkhhkmmk...","...kmgmkkmgmk...","....kssssssk....","....kskssksk....",".....kssssk.....","...kklllllkk.m..","..kalaaaaalak.m.","..kalaggaalakmmm","..ksklaaalksk.m.","....klllllk.....","....kbbkbbk.....","....kbk.kbk.....","...kkk...kkk...."],
+  CLERIC: ["....gggggggg....","...g........g...","...kkkkkkkkkk...","..kwwwwwwwwwwk..","..kwwaaaaaawwk..","..kwksssssskwk..","..kwksksskskwk..","..kwksssssskwk..","...kwkkkkkkwk...","..kwwwaggawwwk..",".kswwaggggawwsk.","..kwwwaggawwwk..","..kwwwaaaawwwk..","...kwwwwwwwwk...","..kaaaaaaaaaak..","....kkkkkkkk...."],
+  BARD: [".........xx.....","......kkkxk.....",".....kaaaakk....","....kaaaaaaak...","....khssssshk...","....kskssksk....","....kssssssk....",".....kssssk.....","...kkaawwaakk...","..kbaawwwwaabk..",".kllllkwwaaabk..","kllgglk.aaabk...","klgggllkaaabk...",".kllllk.kbbk....","..kkkk..kbkbk...",".......kkk.kkk.."],
+  MONK: ["................",".....kkkkkk.....","....kssssssk....","....kssssssk....","....kskssksk....","....kssssssk....",".....kskksk.....","......kssk......","...kkaaaabbkk...","..kaaaaabbaaak..","..kaasskbaaaak..","..kaasskbaaaak..","...kaaabbaaak...","...kaaaaaaaak...","....kaaaaaak....","....kkk..kkk...."],
+  ROGUE: ["......kkkk......",".....kaaaak.....","....kaaaaaak....","...kaabbbbaak...","...kabkkkkbak...","...kabgkkgbak...","...kabbbbbbak...","....kaabbaak....","...kkaaaaaakk...","..kaaabbbbaaak..",".mkaaabbbbaaakm.","m.ksaabbbbaask.m","...kaaabbaaak...","...kbbkkkkbbk...","...kbk....kbk...","..kkk......kkk.."]
+};
+var BASE = { k: '#1a1410', s: '#f0c08a', w: '#f4ecd8', m: '#c9ced6', g: '#f2b632' };
+var PAL = {
+  PALADIN: { a: '#3d6fc9', b: '#8a5a32' },
+  BARBARIAN: { h: '#d2532a', l: '#6b4226' },
+  WIZARD: { a: '#6a4bc4', b: '#3f2c80', l: '#8a5a32' },
+  ARTIFICER: { h: '#5a3a22', m: '#9aa7b4', g: '#7fd4e6', l: '#8a5a32', a: '#b5652a', b: '#3d3a4f' },
+  CLERIC: { a: '#2fa39a' },
+  BARD: { a: '#c43c62', b: '#7a1f3d', h: '#7a4a2a', l: '#b07a3c', g: '#e6c27a', x: '#f2b632' },
+  MONK: { a: '#e0812f', b: '#8a3b1a' },
+  ROGUE: { a: '#3b4a3f', b: '#1f2622', g: '#e8d25a' }
+};
+var ACCENT = { PALADIN: '#6c9cf0', BARBARIAN: '#ef7a52', WIZARD: '#a98cf0', ARTIFICER: '#e3a15a', CLERIC: '#4fcfc1', BARD: '#ef7099', MONK: '#f5c04a', ROGUE: '#9fc39f' };
+function pixels(name) {
+  var pal = Object.assign({}, BASE, PAL[name]);
+  var out = [];
+  SPRITES[name].forEach(function (r) {
+    var row = (r + '................').slice(0, 16);
+    for (var x = 0; x < 16; x++) out.push({ fill: pal[row[x]] || 'transparent' });
+  });
+  return out;
+}
+// tushar27x, Phase 4 calibration (PROGRESS.md)
+var SCORES = { MONK: 52, ROGUE: 47, PALADIN: 44, BARBARIAN: 44, WIZARD: 33, ARTIFICER: 33, BARD: 10, CLERIC: 0 };
+var ORDER = ['PALADIN','BARBARIAN','WIZARD','ARTIFICER','CLERIC','BARD','MONK','ROGUE'];
+class Component extends DCLogic {
+  renderVals() {
+    var sorted = ORDER.slice().sort(function (a, b) { return (SCORES[b] - SCORES[a]) || (ORDER.indexOf(a) - ORDER.indexOf(b)); });
+    var top = sorted[0];
+    return {
+      hero: { px: pixels(top) },
+      scores: sorted.map(function (n) {
+        var filled = Math.round(SCORES[n] / 10);
+        var segs = [];
+        for (var i = 0; i < 10; i++) segs.push({ fill: i < filled ? ACCENT[n] : '#2e2945' });
+        var isTop = n === top;
+        return { name: n, score: SCORES[n], accent: ACCENT[n], px: pixels(n), segs: segs,
+          rowBg: isTop ? '#2e2945' : 'transparent', rowRing: isTop ? '0 0 0 2px #f2b632' : 'none' };
+      }),
+      tabs: [
+        { label: 'HOME', color: '#a69dbd', bg: 'transparent' },
+        { label: 'JOURNAL', color: '#a69dbd', bg: 'transparent' },
+        { label: 'HERO', color: '#f2b632', bg: '#2e2945' },
+        { label: 'ARENA', color: '#a69dbd', bg: 'transparent' },
+        { label: 'SETTINGS', color: '#a69dbd', bg: 'transparent' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

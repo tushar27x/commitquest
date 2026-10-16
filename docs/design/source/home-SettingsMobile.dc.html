@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings, phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f2b632}a:hover{color:#ffd36b}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #13111c; font-family: 'VT323', monospace; color: #f4ecd8; overflow: hidden">
+  <header style="height: 56px; flex-shrink: 0; position: relative; z-index: 2; display: flex; align-items: center; padding: 0 16px; background: #221e33; box-shadow: 0 4px 0 #0a0910">
+    <h1 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 12px">SETTINGS</h1>
+  </header>
+  <main style="flex: 1; overflow: hidden; padding: 20px 12px 12px; display: flex; flex-direction: column; gap: 16px">
+    <section style="background: #221e33; box-shadow: 0 0 0 3px #0a0910; padding: 14px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <h2 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 9px">REST DAYS</h2>
+        <span style="font-size: 18px; color: #a69dbd">{{restCount}} of 2 picked</span>
+      </div>
+      <div role="group" aria-label="Rest days, pick up to two" style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px">
+        <sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+          <button type="button" aria-pressed="{{d.pressed}}" aria-label="{{d.full}}" disabled="{{d.disabled}}" onClick="{{d.toggle}}" style="height: 44px; border: 0; font-family: 'Press Start 2P', monospace; font-size: 9px; color: {{d.ink}}; background: {{d.bg}}; box-shadow: {{d.ring}}; opacity: {{d.opacity}}; cursor: pointer">{{d.label}}</button>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 19px; line-height: 1.05; color: #c9c0dc">Missing a rest day costs no heart and doesn't break your streak. Changes apply from tomorrow.</p>
+    </section>
+    <section style="background: #221e33; box-shadow: 0 0 0 3px #0a0910; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 9px">YOUR DAY ENDS AT MIDNIGHT IN</h2>
+      <button type="button" style="height: 44px; border: 0; padding: 0 12px; display: flex; justify-content: space-between; align-items: center; font-family: inherit; font-size: 21px; color: #f4ecd8; background: #2e2945; box-shadow: 0 0 0 2px #0a0910; cursor: pointer">
+        <span>Asia/Kolkata</span>
+        <span style="font-family: 'Press Start 2P', monospace; font-size: 7px; color: #9fc39f">DETECTED ▼</span>
+      </button>
+    </section>
+    <section style="background: #221e33; box-shadow: 0 0 0 3px #0a0910; padding: 6px 14px">
+      <sc-for list="{{toggles}}" as="t" hint-placeholder-count="2">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; box-shadow: {{t.divider}}">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <span style="font-family: 'Press Start 2P', monospace; font-size: 8px">{{t.title}}</span>
+            <span style="font-size: 18px; line-height: 1; color: #a69dbd">{{t.help}}</span>
+          </div>
+          <button type="button" role="switch" aria-checked="{{t.checked}}" aria-label="{{t.title}}" onClick="{{t.toggle}}" style="flex-shrink: 0; width: 56px; height: 28px; border: 0; padding: 4px; display: flex; justify-content: {{t.justify}}; background: {{t.track}}; box-shadow: 0 0 0 2px #0a0910; cursor: pointer">
+            <span style="width: 20px; height: 20px; background: #f4ecd8; box-shadow: 0 0 0 2px #0a0910; display: block"></span>
+          </button>
+        </div>
+      </sc-for>
+    </section>
+    <p style="margin: 0; padding: 0 4px; font-size: 18px; line-height: 1.05; color: #a69dbd">Insight Hub reads public data. Private work counts only if your GitHub profile shows private contributions.</p>
+    <div style="flex: 1"></div>
+    <button type="button" style="height: 48px; border: 0; font-family: 'Press Start 2P', monospace; font-size: 10px; color: #efa07a; background: transparent; box-shadow: 0 0 0 3px #efa07a; cursor: pointer">LOG OUT</button>
+  </main>
+  <nav aria-label="Main" style="height: 64px; flex-shrink: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: #221e33; box-shadow: 0 -4px 0 #0a0910">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+      <a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; text-decoration: none; color: {{t.color}}; background: {{t.bg}}; font-family: 'Press Start 2P', monospace; font-size: 7px">
+        <span aria-hidden="true" style="width: 14px; height: 14px; background: {{t.color}}; box-shadow: 0 0 0 2px #0a0910"></span>
+        {{t.label}}
+      </a>
+    </sc-for>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+var DAYS = [['M','Monday'],['T','Tuesday'],['W','Wednesday'],['T','Thursday'],['F','Friday'],['S','Saturday'],['S','Sunday']];
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { rest: [6], alerts: true, pub: false }; }
+  renderVals() {
+    var self = this;
+    var rest = this.state.rest;
+    var full = rest.length >= 2;
+    return {
+      restCount: rest.length,
+      days: DAYS.map(function (d, i) {
+        var on = rest.indexOf(i) !== -1;
+        var off = !on && full;
+        return {
+          label: d[0], full: d[1] + (on ? ', rest day' : ''), pressed: on ? 'true' : 'false', disabled: off,
+          bg: on ? '#3a3460' : '#2e2945', ink: on ? '#f2b632' : '#c9c0dc', opacity: off ? '0.45' : '1',
+          ring: on ? '0 0 0 2px #0a0910, inset 0 0 0 3px #f2b632' : '0 0 0 2px #0a0910',
+          toggle: function () {
+            var next = on ? rest.filter(function (x) { return x !== i; }) : (full ? rest : rest.concat([i]));
+            self.setState({ rest: next });
+          }
+        };
+      }),
+      toggles: [
+        { title: 'EMAIL ALERTS', help: 'Low on hearts, level changes', checked: this.state.alerts ? 'true' : 'false',
+          track: this.state.alerts ? '#f2b632' : '#4a4466', justify: this.state.alerts ? 'flex-end' : 'flex-start', divider: '0 2px 0 #2e2945',
+          toggle: function () { self.setState({ alerts: !self.state.alerts }); } },
+        { title: 'SHOW ME IN THE ARENA', help: 'Public leaderboard, by class', checked: this.state.pub ? 'true' : 'false',
+          track: this.state.pub ? '#f2b632' : '#4a4466', justify: this.state.pub ? 'flex-end' : 'flex-start', divider: 'none',
+          toggle: function () { self.setState({ pub: !self.state.pub }); } }
+      ],
+      tabs: [
+        { label: 'HOME', color: '#a69dbd', bg: 'transparent' },
+        { label: 'JOURNAL', color: '#a69dbd', bg: 'transparent' },
+        { label: 'HERO', color: '#a69dbd', bg: 'transparent' },
+        { label: 'ARENA', color: '#a69dbd', bg: 'transparent' },
+        { label: 'SETTINGS', color: '#f2b632', bg: '#2e2945' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

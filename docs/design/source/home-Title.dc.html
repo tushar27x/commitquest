@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Title screen, phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f2b632}a:hover{color:#ffd36b}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #13111c; font-family: 'VT323', monospace; color: #f4ecd8">
+  <div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 390px; height: 600px; background: linear-gradient(#0e0c16 0, #0e0c16 40%, #1a1630 40%, #1a1630 70%, #241e40 70%)"></div>
+  <sc-for list="{{stars}}" as="s"><div aria-hidden="true" style="position: absolute; left: {{s.x}}px; top: {{s.y}}px; width: {{s.size}}px; height: {{s.size}}px; background: #f4ecd8"></div></sc-for>
+  <div aria-hidden="true" style="position: absolute; left: 296px; top: 52px; width: 44px; height: 44px; background: #efe0bb; box-shadow: inset -12px 0 0 #c9b48a"></div>
+  <div style="position: absolute; left: 0; top: 128px; width: 390px; display: flex; flex-direction: column; align-items: center; gap: 18px">
+    <h1 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 34px; line-height: 1.25; text-align: center; color: #f2b632; text-shadow: 4px 4px 0 #8a5a1a, 8px 8px 0 #0a0910">INSIGHT<br>HUB</h1>
+    <p style="margin: 0; font-size: 26px; color: #c9c0dc; text-align: center">Keep your hero alive with your commits</p>
+  </div>
+  <div aria-hidden="true" style="position: absolute; left: -20px; top: 410px; width: 260px; height: 150px; background: #2e2945; clip-path: polygon(0 100%, 0 60%, 15% 60%, 15% 40%, 35% 40%, 35% 20%, 60% 20%, 60% 40%, 80% 40%, 80% 60%, 100% 60%, 100% 100%)"></div>
+  <div aria-hidden="true" style="position: absolute; left: 170px; top: 440px; width: 240px; height: 120px; background: #221e33; clip-path: polygon(0 100%, 0 70%, 20% 70%, 20% 45%, 45% 45%, 45% 30%, 70% 30%, 70% 50%, 100% 50%, 100% 100%)"></div>
+  <div aria-hidden="true" style="position: absolute; left: 236px; top: 392px; display: flex; align-items: flex-end; gap: 0">
+    <div style="width: 26px; height: 96px; background: #3a3456; position: relative; box-shadow: inset 0 8px 0 #4a4466"><div style="position: absolute; left: 9px; top: 26px; width: 8px; height: 10px; background: #f2b632"></div></div>
+    <div style="width: 52px; height: 64px; background: #322d4c; position: relative"><div style="position: absolute; left: 18px; top: 30px; width: 16px; height: 34px; background: #13111c"></div></div>
+    <div style="width: 26px; height: 112px; background: #3a3456; position: relative; box-shadow: inset 0 8px 0 #4a4466"><div style="position: absolute; left: 9px; top: 30px; width: 8px; height: 10px; background: #f2b632"></div></div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; left: 0; top: 560px; width: 390px; height: 40px; background: #2f6b3a; box-shadow: inset 0 6px 0 #5e9e4e, inset 0 -4px 0 #1f4a28"></div>
+  <div aria-hidden="true" style="position: absolute; left: 0; top: 496px; width: 390px; display: flex; justify-content: center; gap: 22px">
+    <sc-for list="{{party}}" as="c">
+      <div style="display: grid; grid-template-columns: repeat(16, 4px); grid-auto-rows: 4px">
+        <sc-for list="{{c.px}}" as="p"><span style="background: {{p.fill}}"></span></sc-for>
+      </div>
+    </sc-for>
+  </div>
+  <div style="position: absolute; left: 0; top: 600px; width: 390px; height: 244px; box-sizing: border-box; padding: 36px 24px 28px; display: flex; flex-direction: column; align-items: center; gap: 20px">
+    <a href="#" style="display: block; width: 100%; box-sizing: border-box; text-align: center; padding: 20px 0; text-decoration: none; font-family: 'Press Start 2P', monospace; font-size: 14px; color: #1a1410; background: #f2b632; box-shadow: 0 0 0 4px #0a0910, 6px 6px 0 4px #0a0910">PRESS START</a>
+    <p style="margin: 0; font-size: 22px; line-height: 1.1; color: #c9c0dc; text-align: center">Sign in with GitHub. Insight Hub reads public activity only, never your private repos.</p>
+    <p style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 8px; color: #8d84a6">ENTER ALSO STARTS</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+var SPRITES = {
+  PALADIN: ["................","......kkkk......",".....kmmmmk.....","....kmmmmmmk....","....kmkkkkmk....","....kmmmmmmk....","....kmmggmmk....",".....kkkkkk.....",".kkk.kaaaak..m..","kbbbkaagaaak.m..","kbgbkaggggak.m..","kbbbkaagaaakkgk.",".kbk.kaaaak..k..","..k..kmkkmk.....",".....kmk.kmk....",".....kkk.kkk...."],
+  WIZARD: [".......k........","......kak.......","......kagk......",".....kaaak......","....kaagaak...g.","..kkaaaaaaakk.k.","....kskssksk..l.","....kssssssk..l.","....kwwwwwwk..l.","...kawwwwwwak.l.","..kaaawwwwaaakl.","..kaaaawwaaaaks.","..kaaagaagaaak..","..kaaaaaaaaaak..","..kbbbbbbbbbbk..","...kkkkkkkkkk..."],
+  BARD: [".........xx.....","......kkkxk.....",".....kaaaakk....","....kaaaaaaak...","....khssssshk...","....kskssksk....","....kssssssk....",".....kssssk.....","...kkaawwaakk...","..kbaawwwwaabk..",".kllllkwwaaabk..","kllgglk.aaabk...","klgggllkaaabk...",".kllllk.kbbk....","..kkkk..kbkbk...",".......kkk.kkk.."],
+  ROGUE: ["......kkkk......",".....kaaaak.....","....kaaaaaak....","...kaabbbbaak...","...kabkkkkbak...","...kabgkkgbak...","...kabbbbbbak...","....kaabbaak....","...kkaaaaaakk...","..kaaabbbbaaak..",".mkaaabbbbaaakm.","m.ksaabbbbaask.m","...kaaabbaaak...","...kbbkkkkbbk...","...kbk....kbk...","..kkk......kkk.."]
+};
+var BASE = { k: '#1a1410', s: '#f0c08a', w: '#f4ecd8', m: '#c9ced6', g: '#f2b632' };
+var PAL = {
+  PALADIN: { a: '#3d6fc9', b: '#8a5a32' },
+  WIZARD: { a: '#6a4bc4', b: '#3f2c80', l: '#8a5a32' },
+  BARD: { a: '#c43c62', b: '#7a1f3d', h: '#7a4a2a', l: '#b07a3c', g: '#e6c27a', x: '#f2b632' },
+  ROGUE: { a: '#3b4a3f', b: '#1f2622', g: '#e8d25a' }
+};
+function pixels(name) {
+  var pal = Object.assign({}, BASE, PAL[name]);
+  var out = [];
+  SPRITES[name].forEach(function (r) {
+    var row = (r + '................').slice(0, 16);
+    for (var x = 0; x < 16; x++) out.push({ fill: pal[row[x]] || 'transparent' });
+  });
+  return out;
+}
+class Component extends DCLogic {
+  renderVals() {
+    var stars = [[24,30,4],[70,72,2],[120,24,4],[168,96,2],[210,40,2],[250,110,4],[30,150,2],[350,140,2],[90,200,2],[330,230,4],[20,290,2],[150,320,2],[280,300,2],[370,360,2],[60,370,4],[200,380,2]];
+    return {
+      stars: stars.map(function (s) { return { x: s[0], y: s[1], size: s[2] }; }),
+      party: ['PALADIN', 'WIZARD', 'BARD', 'ROGUE'].map(function (n) { return { px: pixels(n) }; })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Moods (Monk)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1440px; height: 520px; box-sizing: border-box; padding: 40px 48px; background: #13111c; font-family: 'VT323', monospace; color: #f4ecd8; display: flex; flex-direction: column; gap: 24px">
+  <div style="display: flex; justify-content: space-between; align-items: baseline">
+    <h1 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 18px; color: #f2b632; text-shadow: 4px 4px 0 #0a0910">HOW YOUR HERO FEELS</h1>
+    <span style="font-size: 22px; color: #a69dbd">Mood is derived from lives and today. It is never stored.</span>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 20px">
+    <sc-for list="{{moods}}" as="m" hint-placeholder-count="7">
+      <article style="background: #221e33; box-shadow: 0 0 0 4px #0a0910, 5px 5px 0 4px #0a0910; display: flex; flex-direction: column">
+        <div style="position: relative; height: 196px; background: linear-gradient(#2a2540, #2a2540 72%, #1a1727 72%); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 22px; box-sizing: border-box">
+          <sc-if value="{{m.rays}}" hint-placeholder-val="{{ false }}">
+            <div aria-hidden="true" style="position: absolute; left: 50%; top: 44px; width: 120px; height: 120px; margin-left: -60px; background: repeating-conic-gradient(rgba(242, 182, 50, 0.35) 0 15deg, transparent 15deg 30deg)"></div>
+          </sc-if>
+          <div style="position: relative; width: 96px; height: 96px; transform: {{m.transform}}">
+            <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(16, 6px); grid-auto-rows: 6px; filter: {{m.filter}}">
+              <sc-for list="{{m.px}}" as="p"><span style="background: {{p.fill}}"></span></sc-for>
+            </div>
+            <sc-if value="{{m.bandage}}" hint-placeholder-val="{{ false }}">
+              <div aria-hidden="true" style="position: absolute; left: 30px; top: 8px; width: 36px; height: 8px; background: #f4ecd8; box-shadow: 0 0 0 2px #1a1410; transform: rotate(-14deg)"></div>
+            </sc-if>
+          </div>
+          <sc-if value="{{m.sparkle}}" hint-placeholder-val="{{ false }}">
+            <div aria-hidden="true" style="position: absolute; left: 28px; top: 40px; display: grid; grid-template-columns: repeat(5, 3px); grid-auto-rows: 3px">
+              <sc-for list="{{m.sparklePx}}" as="p"><span style="background: {{p.fill}}"></span></sc-for>
+            </div>
+            <div aria-hidden="true" style="position: absolute; right: 26px; top: 70px; display: grid; grid-template-columns: repeat(5, 3px); grid-auto-rows: 3px">
+              <sc-for list="{{m.sparklePx}}" as="p"><span style="background: {{p.fill}}"></span></sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{m.sweat}}" hint-placeholder-val="{{ false }}">
+            <div aria-hidden="true" style="position: absolute; right: 44px; top: 76px; display: grid; grid-template-columns: repeat(3, 4px); grid-auto-rows: 4px">
+              <sc-for list="{{m.sweatPx}}" as="p"><span style="background: {{p.fill}}"></span></sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{m.bubble}}" hint-placeholder-val="{{ false }}">
+            <div aria-hidden="true" style="position: absolute; right: 16px; top: 22px; width: 44px; height: 36px; background: #f4ecd8; box-shadow: 0 0 0 3px #0a0910; display: flex; align-items: center; justify-content: center; font-family: 'Press Start 2P', monospace; font-size: 16px; color: #c8452a">!</div>
+          </sc-if>
+          <sc-if value="{{m.zzz}}" hint-placeholder-val="{{ false }}">
+            <span aria-hidden="true" style="position: absolute; right: 24px; top: 30px; font-family: 'Press Start 2P', monospace; font-size: 14px; line-height: 1.2; color: #c9c0dc; white-space: pre">{{m.zzzText}}</span>
+          </sc-if>
+          <sc-if value="{{m.stars}}" hint-placeholder-val="{{ false }}">
+            <span aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 96px; text-align: center; font-family: 'Press Start 2P', monospace; font-size: 12px; color: #f2b632; letter-spacing: 10px">+ * +</span>
+          </sc-if>
+          <sc-if value="{{m.lvText}}" hint-placeholder-val="{{ false }}">
+            <span style="position: absolute; left: 0; right: 0; top: 16px; text-align: center; font-family: 'Press Start 2P', monospace; font-size: 11px; color: {{m.lvInk}}; text-shadow: 2px 2px 0 #0a0910">{{m.lvLabel}}</span>
+          </sc-if>
+        </div>
+        <div style="padding: 14px 14px 18px; display: flex; flex-direction: column; gap: 10px">
+          <div role="img" aria-label="{{m.livesLabel}}" style="display: flex; gap: 6px">
+            <sc-for list="{{m.hearts}}" as="h">
+              <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(7, 3px); grid-auto-rows: 3px">
+                <sc-for list="{{h.px}}" as="p"><span style="background: {{p.fill}}"></span></sc-for>
+              </div>
+            </sc-for>
+          </div>
+          <h2 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 11px; color: {{m.ink}}">{{m.name}}</h2>
+          <p style="margin: 0; font-size: 20px; line-height: 1.05; color: #c9c0dc">{{m.rule}}</p>
+        </div>
+      </article>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":520}}'>
+var MONK = ["................",".....kkkkkk.....","....kssssssk....","....kssssssk....","....kskssksk....","....kssssssk....",".....kskksk.....","......kssk......","...kkaaaabbkk...","..kaaaaabbaaak..","..kaasskbaaaak..","..kaasskbaaaak..","...kaaabbaaak...","...kaaaaaaaak...","....kaaaaaak....","....kkk..kkk...."];
+var PAL = { k: '#1a1410', s: '#f0c08a', a: '#e0812f', b: '#8a3b1a' };
+var HEART = [".hh.hh.","hwhhhhh","hhhhhhh",".hhhhh.","..hhh..","...h..."];
+function grid(rows, pal, w) {
+  var out = [];
+  rows.forEach(function (r) {
+    var row = (r + '................').slice(0, w);
+    for (var x = 0; x < w; x++) out.push({ fill: pal[row[x]] || 'transparent' });
+  });
+  return out;
+}
+var FULL = grid(HEART, { h: '#e0503a', w: '#f6a08a' }, 7);
+var EMPTY = grid(HEART, { h: '#4a4466', w: '#4a4466' }, 7);
+function hearts(n) { var a = []; for (var i = 0; i < 3; i++) a.push({ px: i < n ? FULL : EMPTY }); return a; }
+function monk(closed) {
+  var rows = MONK.slice();
+  if (closed) rows[4] = '....kkksskkk....';
+  return grid(rows, PAL, 16);
+}
+var M = [
+  { name: 'HAPPY', ink: '#f5c04a', lives: 3, rule: '3 lives. Sparkles and a little bounce.', sparkle: true },
+  { name: 'OKAY', ink: '#f4ecd8', lives: 2, rule: '2 lives. Normal idle.' },
+  { name: 'WEAK', ink: '#efa07a', lives: 1, rule: '1 life left. Dimmed, bandaged, sweating.', bandage: true, sweat: true, filter: 'saturate(0.45) brightness(0.85)' },
+  { name: 'HUNGRY', ink: '#efa07a', lives: 2, rule: 'No contribution yet today, after 18:00 local. Shows on top of any life count.', bubble: true },
+  { name: 'SLEEPING', ink: '#c9c0dc', lives: 2, rule: 'One of your rest days. Missing it costs nothing.', zzz: true, closed: true },
+  { name: 'LEVEL UP', ink: '#f2b632', lives: 3, rule: 'XP passed 50 × level. Shown once after the morning check.', rays: true, lvText: true, lvLabel: 'LV 8!', lvInk: '#f2b632' },
+  { name: 'FAINTED', ink: '#efa07a', lives: 0, rule: 'Lives hit 0. Drops one level, then lives refill to 3.', stars: true, lvText: true, lvLabel: 'LV 7 → 6', lvInk: '#efa07a', transform: 'rotate(90deg) translateX(30px)', filter: 'saturate(0.6)' }
+];
+class Component extends DCLogic {
+  renderVals() {
+    var sparklePx = grid(['..g..', '..g..', 'ggwgg', '..g..', '..g..'], { g: '#f2b632', w: '#fff6d8' }, 5);
+    var sweatPx = grid(['.b.', 'bbb', 'bwb', '.b.'], { b: '#5d9ad6', w: '#cfe4f7' }, 3);
+    return {
+      moods: M.map(function (m) {
+        return {
+          sparklePx: sparklePx, sweatPx: sweatPx, zzzText: 'Z\n  z',
+          name: m.name, ink: m.ink, rule: m.rule, hearts: hearts(m.lives), livesLabel: m.lives + ' of 3 lives',
+          px: monk(m.closed), filter: m.filter || 'none', transform: m.transform || 'none',
+          sparkle: !!m.sparkle, sweat: !!m.sweat, bandage: !!m.bandage, bubble: !!m.bubble, zzz: !!m.zzz,
+          rays: !!m.rays, stars: !!m.stars, lvText: !!m.lvText, lvLabel: m.lvLabel || '', lvInk: m.lvInk || '#f2b632'
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

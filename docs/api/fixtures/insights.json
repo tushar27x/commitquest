@@ -1,0 +1,141 @@
+{
+  "user_name": "tushar27x",
+  "archetype": "MONK",
+  "archetype_scores": {
+    "PALADIN": 44,
+    "BARBARIAN": 44,
+    "WIZARD": 33,
+    "ARTIFICER": 33,
+    "CLERIC": 0,
+    "BARD": 10,
+    "MONK": 52,
+    "ROGUE": 47
+  },
+  "stats": {
+    "total_commits": 412,
+    "total_prs": 37,
+    "total_issues": 9,
+    "ranked_repos": [
+      {
+        "name": "insightsHubV2",
+        "count": 96
+      },
+      {
+        "name": "insight_hub",
+        "count": 71
+      },
+      {
+        "name": "socratese",
+        "count": 34
+      }
+    ],
+    "repo_details": [
+      {
+        "name": "insightsHubV2",
+        "readme": "[fixture README text]",
+        "files": [
+          "pom.xml",
+          "src",
+          "web"
+        ]
+      },
+      {
+        "name": "insight_hub",
+        "readme": "[fixture README text]",
+        "files": [
+          "client",
+          "server"
+        ]
+      },
+      {
+        "name": "socratese",
+        "readme": "[fixture README text]",
+        "files": [
+          "pyproject.toml",
+          "socratese"
+        ]
+      }
+    ],
+    "recent_commits": [
+      "feat: hero rules engine",
+      "fix: cooldown header rounding",
+      "docs: progress update",
+      "test: rest-day edge cases",
+      "refactor: sync writer"
+    ],
+    "code_churn": {
+      "additions": 18420,
+      "deletions": 7310
+    },
+    "top_languages": [
+      "Java",
+      "TypeScript",
+      "Python",
+      "CSS"
+    ],
+    "total_stars": 18,
+    "active_days_per_year": 186,
+    "social_ratio": "0.8",
+    "last_week_heatmap": [
+      5,
+      2,
+      3,
+      4,
+      0,
+      1,
+      0
+    ],
+    "last_month_heatmap": [
+      2,
+      5,
+      0,
+      3,
+      1,
+      0,
+      0,
+      4,
+      6,
+      2,
+      0,
+      1,
+      3,
+      0,
+      0,
+      2,
+      7,
+      3,
+      1,
+      0,
+      0,
+      5,
+      2,
+      3,
+      4,
+      0,
+      1,
+      0
+    ],
+    "heatmap_labels": [
+      "Sat",
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri"
+    ]
+  },
+  "year_in_review": "[FIXTURE] AI year in review: two or three supportive sentences about the past 12 months.",
+  "weekly_review": "[FIXTURE] AI weekly review: what went well this week and one small next step.",
+  "craft_review": "[FIXTURE] AI craft review: commit-message and PR habits, one concrete tip.",
+  "repo_summaries": {
+    "insightsHubV2": "[FIXTURE] One-sentence summary of insightsHubV2.",
+    "insight_hub": "[FIXTURE] One-sentence summary of insight_hub.",
+    "socratese": "[FIXTURE] One-sentence summary of socratese."
+  },
+  "character_sheet": {
+    "title": "The Patient Committer",
+    "lore": "[FIXTURE] Trained in the quiet halls of small diffs, this monk writes each commit like a vow."
+  },
+  "updated_at": "2026-10-16T12:32:00Z"
+}
