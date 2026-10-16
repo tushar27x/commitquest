@@ -3,7 +3,6 @@ package com.tushar27x.insightshub.it;
 import com.tushar27x.insightshub.github.model.GitHubUser.ContributionDay;
 import com.tushar27x.insightshub.repository.DailyContributionsRepository;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -14,7 +13,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** B1's upsert against a real Postgres: what the mocked unit tests can't show (backend's B1 FYI). */
-@Disabled("B36: the repository's SQL doesn't find v2.daily_contributions; backend removes this with the fix")
 @IntegrationTest
 class DailyContributionsRepositoryIT {
 
