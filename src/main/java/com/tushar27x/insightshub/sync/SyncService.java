@@ -8,6 +8,7 @@ import com.tushar27x.insightshub.github.GitHubGraphQlClient;
 import com.tushar27x.insightshub.github.model.GitHubUser;
 import com.tushar27x.insightshub.github.model.GitHubUser.ContributionDay;
 import com.tushar27x.insightshub.github.model.UserInsightsData;
+import com.tushar27x.insightshub.hero.HeroService;
 import com.tushar27x.insightshub.insights.InsightsEngine;
 import com.tushar27x.insightshub.insights.InsightsResult;
 import com.tushar27x.insightshub.ratelimit.RateLimitProperties;
@@ -44,8 +45,8 @@ public class SyncService {
     private static final TypeReference<Map<String, Object>> MAP = new TypeReference<>() {
     };
 
-    /** The days the branch scan checks. UTC until B4 adds {@code users.timezone}. */
-    static final ZoneId ACTIVITY_ZONE = ZoneOffset.UTC;
+    /** GitHub allows at most a year between {@code from} and {@code to}. */
+    static final Duration MAX_REFRESH = Duration.ofDays(365);
 
     private final UsersRepository usersRepository;
     private final TokenCipher tokenCipher;
@@ -60,12 +61,13 @@ public class SyncService {
     private final SyncProperties properties;
     private final RateLimiter rateLimiter;
     private final RateLimitProperties rateLimits;
+    private final HeroService heroService;
 
     public SyncService(UsersRepository usersRepository, TokenCipher tokenCipher, GitHubGraphQlClient gitHub,
                        InsightsEngine engine, AiInsightsService ai, InsightsWriter writer,
                        ActivityWriter activityWriter, BranchScanner branchScanner, JsonMapper jsonMapper,
                        Clock clock, SyncProperties properties, RateLimiter rateLimiter,
-                       RateLimitProperties rateLimits) {
+                       RateLimitProperties rateLimits, HeroService heroService) {
         this.usersRepository = usersRepository;
         this.tokenCipher = tokenCipher;
         this.gitHub = gitHub;
@@ -79,6 +81,7 @@ public class SyncService {
         this.properties = properties;
         this.rateLimiter = rateLimiter;
         this.rateLimits = rateLimits;
+        this.heroService = heroService;
     }
 
     /**
@@ -164,21 +167,80 @@ public class SyncService {
         }
 
         // First, so the hero's activity is saved even if a later step fails
-        List<ContributionDay> calendar = InsightsEngine.sortedDays(contributions(data.user()));
-        int days = activityWriter.writeCalendar(userId, calendar);
-        Map<LocalDate, Integer> branchCounts = branchScanner.scan(token, nodeId(data.user()), calendar, ACTIVITY_ZONE);
-        if (!branchCounts.isEmpty()) {
-            activityWriter.writeBranchCounts(userId, branchCounts);
-        }
+        Activity activity = writeActivity(user, token, data);
 
         InsightsResult result = engine.calculate(data.user());
         AiInsights texts = ai.generate(user.getLogin(), result);
         Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP); // snake_case, v1's shape
 
         writer.save(userId, stats, result, texts, clock.instant());
+        seedHeroQuietly(user);
         log.info("Sync for '{}' done in {} ms: {}, {} activity days written, branch scan {}", user.getLogin(),
-                (System.nanoTime() - start) / 1_000_000, result.archetype(), days, branchCounts);
+                (System.nanoTime() - start) / 1_000_000, result.archetype(), activity.days(), activity.branchCounts());
         return SyncOutcome.SYNCED;
+    }
+
+    /**
+     * The hero job's refresh before it settles days: the contribution calendar from {@code from} and the branch
+     * scan, written to {@code daily_contributions}. No insights, no AI and no cooldown: it's one or two cheap
+     * GitHub calls on the user's own token.
+     *
+     * @param from the oldest local day the job will settle; a day of slack covers every zone
+     * @return {@code SYNCED}, or {@code NEEDS_REAUTH} (and the user is flagged) when GitHub rejects the token.
+     * Any other GitHub failure is thrown.
+     */
+    public SyncOutcome refreshActivity(long userId, LocalDate from) {
+        Users user = load(userId);
+        if (user.isNeedsReauth() || user.getEncryptedGithubToken() == null) {
+            return SyncOutcome.NEEDS_REAUTH;
+        }
+        String token = tokenCipher.decrypt(user.getEncryptedGithubToken(), userId);
+        Instant now = clock.instant();
+        Instant since = from.minusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        if (since.isBefore(now.minus(MAX_REFRESH))) {
+            since = now.minus(MAX_REFRESH);
+        }
+        if (!since.isBefore(now)) {
+            since = now.minus(Duration.ofDays(1));
+        }
+
+        UserInsightsData data;
+        try {
+            data = gitHub.fetchUserInsights(token, user.getLogin(), since, now);
+        } catch (GitHubAuthException e) {
+            log.warn("Activity refresh for '{}': GitHub rejected the stored token; marked needs_reauth", user.getLogin());
+            writer.markNeedsReauth(userId);
+            return SyncOutcome.NEEDS_REAUTH;
+        }
+        Activity activity = writeActivity(user, token, data);
+        log.info("Activity refresh for '{}': {} days written, branch scan {}", user.getLogin(), activity.days(),
+                activity.branchCounts());
+        return SyncOutcome.SYNCED;
+    }
+
+    /** The calendar, then the branch scan for the recent days it shows as empty, in the user's zone. */
+    private Activity writeActivity(Users user, String token, UserInsightsData data) {
+        long userId = user.getGithubId();
+        List<ContributionDay> calendar = InsightsEngine.sortedDays(contributions(data.user()));
+        int days = activityWriter.writeCalendar(userId, calendar);
+        ZoneId zone = HeroService.zoneOf(user.getTimezone());
+        Map<LocalDate, Integer> branchCounts = branchScanner.scan(token, nodeId(data.user()), calendar, zone);
+        if (!branchCounts.isEmpty()) {
+            activityWriter.writeBranchCounts(userId, branchCounts);
+        }
+        return new Activity(days, branchCounts);
+    }
+
+    /** A new user's hero is created from the activity just written. Its failure mustn't fail the sync: the next one retries. */
+    private void seedHeroQuietly(Users user) {
+        try {
+            heroService.seedIfMissing(user.getGithubId());
+        } catch (RuntimeException e) {
+            log.error("Creating the hero for '{}' failed; the next sync retries", user.getLogin(), e);
+        }
+    }
+
+    private record Activity(int days, Map<LocalDate, Integer> branchCounts) {
     }
 
     private static GitHubUser.ContributionsCollection contributions(GitHubUser gitHubUser) {

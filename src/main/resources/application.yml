@@ -61,19 +61,26 @@ insightshub:
     github-client-secret: ${GITHUB_CLIENT_SECRET}
     scopes: "read:user user:email"  # public data + verified email; no `repo` (the token is stored)
     token-ttl: 24h
-    redirect-to-frontend: false  # true = v1 behaviour (FRONTEND_URL/dashboard?token=...)
+    redirect-to-frontend: true  # FRONTEND_URL/dashboard#token=... for the web app; false = the token as JSON
   rate-limit:  # fixed windows in Redis (v2:rl:*); fails open if Redis is down
     enabled: true
     policies:
       login: { requests: 5, per: 1m }      # per IP (v1)
       callback: { requests: 5, per: 1m }   # per IP (v1)
       insights: { requests: 20, per: 1m }  # per user (v1)
+      hero: { requests: 60, per: 1m }      # per user, GET /hero and /hero/events together
+      preferences: { requests: 20, per: 1m }  # per user, GET and PUT /preferences together
       sync-global: { requests: 30, per: 1m }  # all users together: protects the shared Groq key; tune to the plan
   sync:
     min-interval: 10m  # per-user cooldown for login/refresh syncs (v1: 7 days, login only)
     cron: "0 0 3 * * *"  # daily sync of every user, in UTC (Spring cron: sec min hour day month weekday; "-" = off)
     concurrency: 4  # users synced at once by the daily sync (each makes ~5 LLM calls on the shared key)
     branch-scan-days: 2  # today and yesterday: days the calendar shows as empty get a branch scan
+  hero:
+    cron: "0 5 * * * *"  # hourly, 5 past, in UTC: settles each hero's days from 06:00 local ("-" = off)
+    concurrency: 4  # heroes refreshed (GitHub, the user's own token) and settled at once
+    qualify-score: 40  # a class scoring at least this can be chosen; the top class always can
+    class-cooldown: 7d  # between class changes
   ai:
     fast-model: openai/gpt-oss-20b  # cheap model for repo summaries (v1: llama-3.1-8b-instant, retired)
     reasoning-effort: low  # gpt-oss reasons before answering; "low" keeps that short

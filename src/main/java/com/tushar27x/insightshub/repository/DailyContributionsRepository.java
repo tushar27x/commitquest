@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 
 /**
  * {@code daily_contributions}, written with plain JDBC instead of JPA: {@code save()} would SELECT
@@ -42,10 +43,16 @@ public class DailyContributionsRepository {
 
     private static final String LATEST_DATE = "SELECT max(date) FROM %s.daily_contributions WHERE user_id = ?";
 
+    private static final String FIND_COUNTS = """
+            SELECT date, calendar_count, branch_commit_count FROM %s.daily_contributions
+            WHERE user_id = ? AND date BETWEEN ? AND ?
+            """;
+
     private final JdbcTemplate jdbc;
     final String upsertSql;
     final String upsertBranchSql;
     final String latestDateSql;
+    final String findCountsSql;
 
     /** @param schema Flyway's schema, the one JPA also uses ({@code v2}) */
     public DailyContributionsRepository(JdbcTemplate jdbc, @Value("${spring.flyway.default-schema}") String schema) {
@@ -56,6 +63,7 @@ public class DailyContributionsRepository {
         this.upsertSql = UPSERT_CALENDAR_COUNT.formatted(schema);
         this.upsertBranchSql = UPSERT_BRANCH_COUNT.formatted(schema);
         this.latestDateSql = LATEST_DATE.formatted(schema);
+        this.findCountsSql = FIND_COUNTS.formatted(schema);
     }
 
     /** Upserts {@code calendar_count} for each day; rows for days not in the list are left alone. */
@@ -79,6 +87,16 @@ public class DailyContributionsRepository {
         return Optional.ofNullable(jdbc.queryForObject(latestDateSql, LocalDate.class, userId));
     }
 
+    /** The stored days in {@code [from, to]}; a day without a row had no activity seen yet. */
+    public Map<LocalDate, DayCounts> findCounts(long userId, LocalDate from, LocalDate to) {
+        Map<LocalDate, DayCounts> counts = new TreeMap<>();
+        jdbc.query(findCountsSql, rs -> {
+            counts.put(rs.getObject("date", LocalDate.class),
+                    new DayCounts(rs.getInt("calendar_count"), rs.getInt("branch_commit_count")));
+        }, userId, from, to);
+        return counts;
+    }
+
     static List<Object[]> rows(long userId, List<ContributionDay> days) {
         return days.stream()
                 .map(day -> new Object[]{userId, day.date(), day.contributionCount()})
@@ -89,5 +107,15 @@ public class DailyContributionsRepository {
         return counts.entrySet().stream()
                 .map(day -> new Object[]{userId, day.getKey(), day.getValue()})
                 .toList();
+    }
+
+    /** One day's activity: the hero counts a day as fed when either is above 0. */
+    public record DayCounts(int calendarCount, int branchCommitCount) {
+
+        public static final DayCounts NONE = new DayCounts(0, 0);
+
+        public boolean active() {
+            return calendarCount > 0 || branchCommitCount > 0;
+        }
     }
 }

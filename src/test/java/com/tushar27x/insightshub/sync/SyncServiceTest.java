@@ -14,6 +14,7 @@ import com.tushar27x.insightshub.github.model.GitHubUser.ContributionDay;
 import com.tushar27x.insightshub.github.model.GitHubUser.ContributionsCollection;
 import com.tushar27x.insightshub.github.model.GitHubUser.Week;
 import com.tushar27x.insightshub.github.model.UserInsightsData;
+import com.tushar27x.insightshub.hero.HeroService;
 import com.tushar27x.insightshub.insights.InsightsEngine;
 import com.tushar27x.insightshub.insights.InsightsResult;
 import com.tushar27x.insightshub.repository.UsersRepository;
@@ -34,6 +35,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +68,7 @@ class SyncServiceTest {
     private final ActivityWriter activityWriter = mock(ActivityWriter.class);
     private final BranchScanner branchScanner = mock(BranchScanner.class);
     private final RateLimiter rateLimiter = mock(RateLimiter.class);
+    private final HeroService heroService = mock(HeroService.class);
     private static final Policy GLOBAL = new Policy(30, Duration.ofMinutes(1));
     private final InsightsResult result = AiTestData.insights();
     private final AiInsights texts = new AiInsights("year", "week", "craft", Map.of("app", "An app."),
@@ -82,7 +85,7 @@ class SyncServiceTest {
     void setUp() {
         service = new SyncService(usersRepository, cipher, gitHub, engine, ai, writer, activityWriter, branchScanner,
                 JsonMapper.builder().build(), Clock.fixed(NOW, ZoneOffset.UTC), new SyncProperties(COOLDOWN, 4, 2), rateLimiter,
-                new RateLimitProperties(true, Map.of(RateLimitProperties.SYNC_GLOBAL, GLOBAL)));
+                new RateLimitProperties(true, Map.of(RateLimitProperties.SYNC_GLOBAL, GLOBAL)), heroService);
         when(rateLimiter.tryAcquire("sync:global", GLOBAL)).thenReturn(new Decision(true, 30, 29, Duration.ofSeconds(50)));
         user = new Users(ID, "octocat");
         user.setEncryptedGithubToken(cipher.encrypt("gho_stored", ID));
@@ -231,5 +234,89 @@ class SyncServiceTest {
     @Test
     void unknownUserIsAnError() {
         assertThatThrownBy(() -> service.sync(42L)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // --- B5: the hero ---
+
+    @Test
+    void aSyncCreatesTheHeroAfterTheInsightsAreSaved() {
+        service.sync(ID);
+
+        var order = inOrder(activityWriter, writer, heroService);
+        order.verify(activityWriter).writeCalendar(eq(ID), any());
+        order.verify(writer).save(eq(ID), any(), eq(result), eq(texts), eq(NOW));
+        order.verify(heroService).seedIfMissing(ID);
+    }
+
+    @Test
+    void aFailedHeroSeedDoesNotFailTheSync() {
+        when(heroService.seedIfMissing(ID)).thenThrow(new IllegalStateException("db down"));
+
+        assertThat(service.sync(ID)).isEqualTo(SyncOutcome.SYNCED);
+    }
+
+    @Test
+    void theBranchScanRunsInTheUsersZone() {
+        user.setTimezone("Asia/Kolkata");
+
+        service.sync(ID);
+
+        verify(branchScanner).scan("gho_stored", "U_octocat", List.of(OCT_12, OCT_13, OCT_14), ZoneId.of("Asia/Kolkata"));
+    }
+
+    @Test
+    void refreshWritesTheCalendarFromADayBeforeTheFirstDueDayWithoutAi() {
+        UserInsightsData data = new UserInsightsData(null, new GitHubUser("U_octocat", "octocat", null, null, null, null,
+                null, null, null, null, new ContributionsCollection(List.of(),
+                new ContributionCalendar(1, List.of(new Week(List.of(OCT_13)))), 1, 0, 0, 0)));
+        when(gitHub.fetchUserInsights("gho_stored", "octocat", Instant.parse("2026-10-12T00:00:00Z"), NOW))
+                .thenReturn(data);
+        when(branchScanner.scan("gho_stored", "U_octocat", List.of(OCT_13), ZoneOffset.UTC))
+                .thenReturn(Map.of(OCT_14.date(), 1));
+
+        assertThat(service.refreshActivity(ID, OCT_13.date())).isEqualTo(SyncOutcome.SYNCED);
+
+        verify(activityWriter).writeCalendar(ID, List.of(OCT_13));
+        verify(activityWriter).writeBranchCounts(ID, Map.of(OCT_14.date(), 1));
+        verifyNoInteractions(ai, engine, rateLimiter, heroService);
+        verify(writer, never()).save(anyLong(), any(), any(), any(), any());
+        verify(usersRepository, never()).claimSync(anyLong(), any(), any());
+    }
+
+    @Test
+    void refreshNeverAsksForMoreThanAYear() {
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), eq(NOW)))
+                .thenReturn(new UserInsightsData(null, null));
+
+        service.refreshActivity(ID, LocalDate.parse("2020-01-01"));
+
+        verify(gitHub).fetchUserInsights("gho_stored", "octocat", NOW.minus(Duration.ofDays(365)), NOW);
+    }
+
+    @Test
+    void refreshWithARejectedTokenFlagsTheUser() {
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any()))
+                .thenThrow(new GitHubAuthException("401"));
+
+        assertThat(service.refreshActivity(ID, OCT_13.date())).isEqualTo(SyncOutcome.NEEDS_REAUTH);
+        verify(writer).markNeedsReauth(ID);
+        verifyNoInteractions(activityWriter);
+    }
+
+    @Test
+    void refreshSkipsAFlaggedUser() {
+        user.setNeedsReauth(true);
+
+        assertThat(service.refreshActivity(ID, OCT_13.date())).isEqualTo(SyncOutcome.NEEDS_REAUTH);
+        verifyNoInteractions(gitHub);
+    }
+
+    @Test
+    void refreshLetsOtherGitHubFailuresThrough() {
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any()))
+                .thenThrow(new GitHubApiException("HTTP 502"));
+
+        assertThatThrownBy(() -> service.refreshActivity(ID, OCT_13.date())).isInstanceOf(GitHubApiException.class);
+        verifyNoInteractions(activityWriter);
     }
 }

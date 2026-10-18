@@ -14,8 +14,8 @@ import java.time.Duration;
  * @param githubClientSecret OAuth App client secret
  * @param scopes             public data + verified email only; no {@code repo}, because the token is stored
  * @param tokenTtl           lifetime of the JWT handed out at login
- * @param redirectToFrontend v1 behaviour: send the browser to {@code FRONTEND_URL/dashboard?token=...}
- *                           instead of returning the token as JSON (off while v2 has no frontend)
+ * @param redirectToFrontend send the browser to {@code FRONTEND_URL/dashboard#token=...} (the web app's hand-off,
+ *                           a fragment so the JWT never reaches a server log) instead of returning the token as JSON
  */
 @Validated
 @ConfigurationProperties(prefix = "insightshub.auth")
