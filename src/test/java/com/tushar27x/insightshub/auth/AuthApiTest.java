@@ -73,6 +73,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "insightshub.jwt-secret=" + SecurityTestData.JWT_SECRET,
         "insightshub.auth.github-client-id=client-id",
         "insightshub.auth.github-client-secret=client-secret",
+        "insightshub.auth.redirect-to-frontend=false", // the token as JSON; the redirect has its own test
         // the real rate-limit interceptor is part of the slice; limits high enough not to interfere here
         "insightshub.rate-limit.policies.login.requests=1000",
         "insightshub.rate-limit.policies.login.per=1m",

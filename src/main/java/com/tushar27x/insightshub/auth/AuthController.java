@@ -95,10 +95,7 @@ public class AuthController {
 
         String clearState = stateCookie("", Duration.ZERO).toString(); // one login per state
         if (authProperties.redirectToFrontend()) {
-            URI dashboard = UriComponentsBuilder.fromUriString(frontendUrl + "/dashboard")
-                    .queryParam("token", result.token().value())
-                    .build().toUri();
-            return ResponseEntity.status(HttpStatus.FOUND).location(dashboard)
+            return ResponseEntity.status(HttpStatus.FOUND).location(dashboardUri(frontendUrl, result.token().value()))
                     .header(HttpHeaders.SET_COOKIE, clearState).build();
         }
         return ResponseEntity.ok()
@@ -110,6 +107,17 @@ public class AuthController {
     @GetMapping("/logout")
     public ResponseEntity<Void> logout() {
         return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(frontendUrl)).build();
+    }
+
+    /**
+     * {@code FRONTEND_URL/dashboard#token=<jwt>}. A fragment, not a query string: browsers never send it to a
+     * server, so the JWT stays out of access logs, proxies and {@code Referer} headers. The web app reads it and
+     * clears it from the address bar.
+     */
+    static URI dashboardUri(String frontendUrl, String jwt) {
+        return UriComponentsBuilder.fromUriString(frontendUrl + "/dashboard")
+                .fragment("token=" + jwt)
+                .build().toUri();
     }
 
     private String callbackUri() {
