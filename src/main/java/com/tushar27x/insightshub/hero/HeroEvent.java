@@ -1,6 +1,8 @@
 package com.tushar27x.insightshub.hero;
 
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -11,6 +13,8 @@ import java.util.Objects;
  *   <li>{@code LIFE_GAINED}: {@code {lives, streak}}</li>
  *   <li>{@code LEVEL_UP}, {@code LEVEL_DOWN}: {@code {from, to}}</li>
  *   <li>{@code FAINTED}, {@code RESTED}: {@code {}}</li>
+ *   <li>{@code CLASS_CHANGED}: {@code {from, to, chosen}}, the current class before and after, and the stored
+ *       choice ({@code null} = follow the top score)</li>
  * </ul>
  */
 public record HeroEvent(HeroEventType type, LocalDate onDate, Map<String, Object> details) {
@@ -18,6 +22,7 @@ public record HeroEvent(HeroEventType type, LocalDate onDate, Map<String, Object
     public HeroEvent {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(onDate, "onDate");
-        details = Map.copyOf(details);
+        // Not Map.copyOf: CLASS_CHANGED's "chosen" can be null
+        details = Collections.unmodifiableMap(new LinkedHashMap<>(details));
     }
 }

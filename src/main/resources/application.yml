@@ -70,6 +70,7 @@ insightshub:
       insights: { requests: 20, per: 1m }  # per user (v1)
       hero: { requests: 60, per: 1m }      # per user, GET /hero and /hero/events together
       preferences: { requests: 20, per: 1m }  # per user, GET and PUT /preferences together
+      hero-class: { requests: 10, per: 1m }   # per user, PUT /hero/class (the 7-day cooldown is separate)
       sync-global: { requests: 30, per: 1m }  # all users together: protects the shared Groq key; tune to the plan
   sync:
     min-interval: 10m  # per-user cooldown for login/refresh syncs (v1: 7 days, login only)

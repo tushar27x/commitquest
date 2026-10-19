@@ -3,11 +3,13 @@ package com.tushar27x.insightshub.hero;
 import com.tushar27x.insightshub.hero.HeroRules.CatchUp;
 import com.tushar27x.insightshub.repository.HeroRepository;
 import com.tushar27x.insightshub.repository.HeroRepository.SettledDay;
+import com.tushar27x.insightshub.repository.UsersRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * The hero's writes, each in one transaction. A separate bean like {@code sync.InsightsWriter}:
@@ -17,9 +19,11 @@ import java.time.LocalDate;
 public class HeroWriter {
 
     private final HeroRepository heroes;
+    private final UsersRepository usersRepository;
 
-    public HeroWriter(HeroRepository heroes) {
+    public HeroWriter(HeroRepository heroes, UsersRepository usersRepository) {
         this.heroes = heroes;
+        this.usersRepository = usersRepository;
     }
 
     /** @return false if the user already had a hero */
@@ -46,6 +50,22 @@ public class HeroWriter {
         heroes.insertDays(userId, catchUp.days().stream()
                 .map(day -> new SettledDay(day.state().lastEvaluatedOn(), day.xpGained(), day.state().streak()))
                 .toList());
+        return true;
+    }
+
+    /**
+     * Saves a class switch and its {@code CLASS_CHANGED} event, all or nothing. The class moves only if
+     * {@code archetype_changed_at} is still {@code expectedChangedAt}, so of two racing switches one wins and
+     * the other writes nothing. The event's unique key (user, type, day) is safe because of the cooldown.
+     *
+     * @return false if the class was changed since {@code expectedChangedAt} was read
+     */
+    @Transactional
+    public boolean changeClass(long userId, Instant expectedChangedAt, ClassSwitch.Change change, Instant now) {
+        if (usersRepository.changeClass(userId, change.chosen(), now, expectedChangedAt) != 1) {
+            return false;
+        }
+        heroes.insertEvents(userId, List.of(change.event()));
         return true;
     }
 }

@@ -67,7 +67,7 @@ class HeroServiceTest {
     }
 
     private HeroService serviceAt(String instant) {
-        return new HeroService(usersRepository, heroes, activity, new HeroWriter(heroes),
+        return new HeroService(usersRepository, heroes, activity, new HeroWriter(heroes, usersRepository),
                 Clock.fixed(Instant.parse(instant), ZoneOffset.UTC));
     }
 
@@ -171,7 +171,7 @@ class HeroServiceTest {
                 List.of(new HeroDay(OCT_14, 0, 0, false, false), new HeroDay(OCT_15, 0, 0, false, false)));
 
         // Another run already moved the hero to Oct 14: this one read Oct 13
-        assertThat(new HeroWriter(heroes).apply(ID, OCT_13, stale, Instant.now())).isFalse();
+        assertThat(new HeroWriter(heroes, usersRepository).apply(ID, OCT_13, stale, Instant.now())).isFalse();
 
         assertThat(heroes.states.get(ID).lastEvaluatedOn()).isEqualTo(OCT_14);
         assertThat(heroes.eventsOf(ID)).isEmpty();
