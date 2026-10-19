@@ -9,11 +9,11 @@ import java.time.Duration;
  * {@code insightshub.sync.*}. The daily sync's schedule, {@code insightshub.sync.cron}, is read by
  * {@code @Scheduled} in {@link ScheduledSync} directly.
  *
- * @param minInterval    per-user cooldown between syncs the user starts (login or refresh); the daily sync
- *                       skips users inside it too. GitHub's limit is per user token, so it isn't the
- *                       constraint; each sync also makes five LLM calls on the app's shared key.
- * @param concurrency    how many users the daily sync runs at once. Bounds the load on the shared LLM key
- *                       and the database pool, not on GitHub (each user has their own budget).
+ * @param minInterval    per-user cooldown between syncs the user starts (login or refresh). GitHub's limit is
+ *                       per user token, so it isn't the constraint; each sync also makes five LLM calls on the
+ *                       app's shared key. The daily activity refresh neither checks nor claims it.
+ * @param concurrency    how many users the daily activity refresh runs at once. It makes no LLM calls, so this
+ *                       bounds the database pool, not GitHub (each user has their own budget).
  * @param branchScanDays how many days, up to today, the branch scan checks for commits the calendar misses
  */
 @ConfigurationProperties(prefix = "insightshub.sync")
