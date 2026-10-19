@@ -30,7 +30,7 @@ jobs:
       - run: ./mvnw -B verify
 
   web:
-    name: Web (lint, test, build)
+    name: Web (lint, test, build, wiring)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -50,3 +50,7 @@ jobs:
       # Includes lib/api/fixtures.test.ts: fixture drift from docs/api/fixtures/ and validation against the types.
       - run: npm test
       - run: npm run build
+      # I4: the /api rewrite forwards path, query, headers and bodies intact, and waits for a slow /sync
+      # (35 s, past Next's 30 s default proxy timeout). Starts a fake backend and `next dev`; about a minute.
+      - name: Wiring check (proxy)
+        run: node ../e2e/wiring/proxy-check.mjs
