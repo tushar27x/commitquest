@@ -8,7 +8,9 @@ Example payloads live in `docs/api/fixtures/` and follow the fixture story in `d
 
 ## Conventions
 
-- **Base path:** `/api`. The web app calls `/api/*` on its own origin, and Next `rewrites` forward it to the backend. The one exception is the login link, which goes to `${NEXT_PUBLIC_BACKEND_URL}/api/auth/login` directly.
+- **Base path:** `/api`. The web app calls `/api/*` on its own origin, and Next `rewrites` forward it to the backend (`web/next.config.ts`, target `BACKEND_URL`, server-side, default `http://localhost:8080`), so there's no CORS. The one exception is the login link, which goes to `${NEXT_PUBLIC_BACKEND_URL}/api/auth/login` directly, because the `oauth_state` cookie must live on the backend origin.
+- **Proxy timeout:** 120 s (`experimental.proxyTimeout`), above `POST /sync`'s worst case of about 90 s. Next's default is 30 s; on a timeout or an unreachable backend the proxy answers a plain-text 500 (see "(no body)" below). `e2e/wiring/proxy-check.mjs` proves it in CI. Any proxy in front of production needs the same allowance.
+- **Rate-limit keys behind the proxy:** the per-IP policies are only on `/auth/login` and `/auth/callback`, which the browser calls directly. Everything proxied is keyed per user (JWT `sub`), so the proxy's single IP doesn't matter.
 - **Auth:** `Authorization: Bearer <jwt>` (HS256, 24 h, `sub` = GitHub id). The user is always taken from the JWT, never from a parameter.
 - **JSON:** snake_case keys. Timestamps are ISO-8601 UTC (`Instant`). Calendar dates are `YYYY-MM-DD` in the **user's timezone**.
 - **Enums** are UPPER_CASE strings: archetypes `PALADIN BARBARIAN WIZARD ARTIFICER CLERIC BARD MONK ROGUE`; weekdays `MONDAY…SUNDAY`.
@@ -114,11 +116,12 @@ Body: `{ "archetype": "ROGUE" }`, or `{ "archetype": null }` to go back to follo
 | 400 | Unknown archetype string: Spring's own 400 (a JSON error, no `errors[]`) |
 | 404 | No hero yet (before the first sync) |
 
-- **No-op first:** a request equal to the stored `chosen` returns 200 with no event and no cooldown change, even during the cooldown.
+- **Order of checks (B6):** the same as the stored `chosen` → 200 no-op (no event, no cooldown change, even during the cooldown) → not qualified → 409 (it wins over the cooldown: waiting wouldn't help) → within the cooldown → 429 → the change.
+- `detail` texts (for logs; the UI branches on status): 409 "ROGUE isn't qualified: it scores 33, and a class needs 40 or the top score"; 429 "The class was changed recently; it can change again at <instant>".
 - Every real change starts the 7-day cooldown, including a change to `null` and **pinning** the class you already follow (`chosen` null → the current top class): the stored value changes, so it emits `CLASS_CHANGED` with `from == to`. The UI offers that as "PIN <CLASS>" rather than "BECOME <CLASS>".
 - Qualification is checked against the latest scores, only at switch time: a chosen class that later drops below 40 is kept (`class.scored` then suggests the new top class).
 - The change emits `CLASS_CHANGED` on the user's local today (details above). Level, XP, lives and streak don't change.
-- Two racing PUTs: one 200, the other 429 (compare-and-set on `archetype_changed_at`, with `Retry-After` from the winner's change).
+- Two racing PUTs: one wins (compare-and-set on `archetype_changed_at`). The loser re-reads the user: a 200 no-op if the winner stored the same class, otherwise 429 with `Retry-After` from the winner's change.
 
 ### `GET /api/user/preferences` · `PUT /api/user/preferences` (JWT)
 Body and response: `fixtures/preferences.json`, `{timezone, rest_days[], alerts_enabled, public_profile}`.
@@ -132,7 +135,7 @@ Body and response: `fixtures/preferences.json`, `{timezone, rest_days[], alerts_
 - `PUT` takes the **full object**: all four fields are required, and each missing one has an `errors[]` entry.
 - Messages: `timezone` "must be an IANA time zone, like Europe/Berlin" (region ids only: `+05:30` and `GMT+5` are refused), `rest_days` "at most 2 rest days" and "must not repeat a day". An unknown weekday string is a JSON error: Spring's own 400, no `errors[]`.
 
-A `rest_days` change takes effect **from the next local day**: the hero job uses the value that applied on the day it evaluates. The web app sends the browser's zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`) on first login if it differs from the stored zone.
+A `rest_days` change takes effect **from the next local day**: the hero job uses the value that applied on the day it evaluates. **Browser zone on login (I4):** after the `#token` hand-off, the web app reads `GET /preferences`. If the stored `timezone` is still the default `UTC` and the browser's zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`) resolves to a different zone, it sends one `PUT /preferences` with the full object and only `timezone` changed. A zone the user picked in Settings (anything but `UTC`) is never overwritten, and a failed PUT is ignored (Settings can fix it). Compare zones by what `Intl` resolves them to: Chrome reports `Asia/Calcutta` for `Asia/Kolkata`.
 
 ### `GET /api/leaderboard?archetype=MONK&page=0&size=20` · `GET /api/user/rank` (Phase 13, JWT)
 Shape to be defined by the integration agent when Phase 13 starts. Ranking is by `level DESC, xp DESC`, within the **current class**, for users with `public_profile = true`.
