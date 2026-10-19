@@ -14,7 +14,7 @@ Example payloads live in `docs/api/fixtures/` and follow the fixture story in `d
 - **Enums** are UPPER_CASE strings: archetypes `PALADIN BARBARIAN WIZARD ARTIFICER CLERIC BARD MONK ROGUE`; weekdays `MONDAY…SUNDAY`.
 - **Errors (Phase 9, B2):** RFC 9457 `application/problem+json` on every error, always with all five keys: `{ "type": "about:blank", "title": <HTTP reason phrase>, "status", "detail", "instance": <request path, no query string> }`. `type` is always `about:blank`: tell errors apart by **status and endpoint**, never by `type`, `title` or `detail` text.
 - **Validation 400s** add `errors: [{ "field", "message" }]`, where `field` is the snake_case JSON name (a rule across fields, like "at most 2 rest days", uses that field's name, e.g. `rest_days`). `detail` is then "The request is invalid; see 'errors'". Spring's own 400s (malformed JSON, missing parameter) have no `errors`.
-- **429:** always carries `Retry-After` in whole seconds, rounded up, at least 1. `X-RateLimit-Limit` and `X-RateLimit-Remaining` come **only** from the `@RateLimit` endpoints (`/auth/login`, `/auth/callback`, `GET /user/insights`), on success and on 429. The `/sync` 429s don't carry them; the UI reads only `Retry-After`.
+- **429:** always carries `Retry-After` in whole seconds, rounded up, at least 1. `X-RateLimit-Limit` and `X-RateLimit-Remaining` come **only** from the `@RateLimit` endpoints, on success and on 429: `/auth/login`, `/auth/callback` (5/min per IP each), `GET /user/insights` (20/min per user), `GET /user/hero` + `GET /user/hero/events` (policy `hero`, 60/min per user, shared), `GET` + `PUT /user/preferences` (policy `preferences`, 20/min per user, shared) and `PUT /user/hero/class` (policy `hero-class`, 10/min per user). The `/sync` 429s don't carry them; the UI reads only `Retry-After`.
 
 | Status | Meaning for the UI |
 |---|---|
@@ -35,7 +35,7 @@ Example payloads live in `docs/api/fixtures/` and follow the fixture story in `d
 302 to GitHub, and sets the `oauth_state` cookie (HttpOnly, `path=/api/auth`, 10 min). Rate limit: 5/min per IP.
 
 ### `GET /api/auth/callback?code&state` (public)
-**Change in this plan:** with `insightshub.auth.redirect-to-frontend: true`, it 302s to **`${FRONTEND_URL}/dashboard#token=<jwt>`**, a fragment and not `?token=`. Login also runs `syncIfDue`; a failure there doesn't block login. If GitHub fails during the code exchange, it returns 502 (since B2; was 500). Rate limit: 5/min per IP.
+**Change in this plan (B5):** with `insightshub.auth.redirect-to-frontend: true` (the default in `application.yml` since B5), it 302s to **`${FRONTEND_URL}/dashboard#token=<jwt>`**, a fragment and not `?token=`. Login also runs `syncIfDue`; a failure there doesn't block login. If GitHub fails during the code exchange, it returns 502 (since B2; was 500). Rate limit: 5/min per IP.
 
 ### `GET /api/auth/logout`
 302 to `FRONTEND_URL`. The web app just drops its token; it doesn't need to call this.
@@ -66,7 +66,7 @@ Synchronous: usually under 30 s, worst case about 90 s.
 ## New endpoints (Phases 10–13)
 
 ### `GET /api/user/hero` (JWT)
-Returns 200 with `fixtures/hero.json`. Before the first sync, 404.
+Returns 200 with `fixtures/hero.json`. Before the first sync, 404 (the hero is created at the end of the first successful sync).
 
 | Field | Type | Notes |
 |---|---|---|
@@ -74,11 +74,11 @@ Returns 200 with `fixtures/hero.json`. Before the first sync, 404.
 | `lives`, `max_lives` | int | `max_lives` is always 3 |
 | `streak` | int | Consecutive active days. Rest days pause it |
 | `streak_for_next_life` | int | 3. The UI shows "N more active days wins a heart back" as `3 - (streak % 3)` when `lives < 3` |
-| `mood` | enum | `HAPPY OKAY WEAK HUNGRY SLEEPING LEVEL_UP FAINTED`. Computed on each request, never stored. `LEVEL_UP` and `FAINTED` show once: the day after the event, until the next evaluation |
+| `mood` | enum | `HAPPY OKAY WEAK HUNGRY SLEEPING LEVEL_UP FAINTED`. Computed on each request, never stored. Priority: `FAINTED` > `LEVEL_UP` > `SLEEPING` > `HUNGRY` > `base_mood`. `LEVEL_UP` and `FAINTED` come from the events on `last_evaluated_on`, so they show from that evaluation until the next one. `FAINTED` follows both a `LEVEL_DOWN` and a level-1 `FAINTED` event (the hearts ran out); the UI shows "LV n → n−1" only when the level really dropped. `SLEEPING`: today is a rest day with no activity yet (with activity: the base mood). `HUNGRY`: after 18:00 local, not a rest day, no activity today |
 | `base_mood` | enum | `HAPPY OKAY WEAK`, from lives only (what the sprite shows under an overlay) |
 | `tier` | enum | `CAMPFIRE` (1–4), `VILLAGE` (5–9), `KEEP` (10–14), `CITADEL` (15+) |
 | `today` | object | `{date, active, calendar_count, branch_commit_count, day_ends_at}`. `day_ends_at` is the next local midnight as an Instant, for the countdown |
-| `week` | array[7] | Monday→Sunday of the current local week: `{date, status}`, where status is `active` `missed` `rest` `today` `future`. Days before today are `active`, `missed` or (rest days only) `rest`. Today is `today`, or `rest` when today is a rest day. Later days are `future`, or `rest` for rest days. The UI highlights today by matching `today.date`, not by status |
+| `week` | array[7] | Monday→Sunday of the current local week: `{date, status}`, where status is `active` `missed` `rest` `today` `future`. Days before today are `active`, `missed` or (rest days only) `rest`. Today is `today`, or `rest` when today is a rest day. Later days are `future`, or `rest` for rest days. Days before sign-up are `missed` when inactive (there's no "none" status; this only shows in a new user's first week). The UI highlights today by matching `today.date`, not by status |
 | `timezone` | string | IANA |
 | `rest_days` | array | Weekday enums, at most 2 |
 | `class` | object | `{chosen: CLASS\|null, current: CLASS, scored: CLASS, qualified: CLASS[], can_switch_at: Instant\|null}`. `current = chosen ?? scored`. `can_switch_at` is null when switching is allowed now |
@@ -88,7 +88,8 @@ Returns 200 with `fixtures/hero.json`. Before the first sync, 404.
 Returns 200 with `fixtures/hero-events.json`: `{ events: [{type, on_date, details}], xp_days: [{on_date, xp, streak}] }`, newest last.
 
 - Event types: `LIFE_LOST LIFE_GAINED LEVEL_UP LEVEL_DOWN FAINTED RESTED CLASS_CHANGED`.
-- `days` is between 1 and 90, default 30.
+- `days` is between 1 and 90, default 30. The window is `today − days … today` in the user's zone (30 on Friday 16 Oct → 16 Sep … 16 Oct). Outside 1–90 → validation 400 with `errors[{field: "days"}]`; not a number → Spring's own 400.
+- 404 before the first sync, like `GET /hero`.
 - `xp_days` has **one row per settled day** in the window, oldest first, up to `last_evaluated_on`. `xp` is the XP that day gave (10 or 0), and `streak` is the streak after it. Inactive days have `xp: 0, streak: 0`; rest days have `xp: 0` and keep the paused streak. Days before sign-up (seeded on first login) have no rows.
 - `events` are newest last. Each 0-XP day has a `RESTED` or `LIFE_LOST` event. On one day the order is `LEVEL_UP` before `LIFE_GAINED`, and `LIFE_LOST` before `LEVEL_DOWN` or `FAINTED`.
 
@@ -98,21 +99,26 @@ Returns 200 with `fixtures/hero-events.json`: `{ events: [{type, on_date, detail
 | `LIFE_GAINED` | `{lives, streak}` |
 | `LEVEL_UP`, `LEVEL_DOWN` | `{from, to}` |
 | `FAINTED`, `RESTED` | `{}` |
-| `CLASS_CHANGED` | Defined in B6 |
+| `CLASS_CHANGED` | `{from, to, chosen}`: `from` and `to` are `class.current` before and after, `chosen` is the new stored value (`CLASS` or `null`). Pinning the class you already follow has `from == to` (show "Pinned <CLASS>") |
 
 - The fixture is a 30-day story (`2026-09-16` to `2026-10-15`) that ends exactly in `hero.json`'s state; `lib/api/fixtures.test.ts` checks it against the rules above.
 
 ### `PUT /api/user/hero/class` (JWT)
-Body: `{ "archetype": "ROGUE" }`, or `{ "archetype": null }` to go back to following the top score.
+Body: `{ "archetype": "ROGUE" }`, or `{ "archetype": null }` to go back to following the top score. A missing `archetype` key is the same as `null`.
 
 | Result | Meaning |
 |---|---|
-| 200 | The updated `hero` object |
-| 409 | Not qualified (score < 40 and not the top class) |
-| 429 + `Retry-After` | Within 7 days of the last change |
-| 400 | Unknown archetype |
+| 200 | The updated `hero` object (same shape as `GET /hero`) |
+| 409 | Not qualified: score < 40 (`insightshub.hero.qualify-score`) and not the top scored class |
+| 429 + `Retry-After` | Within 7 days of the last change (`archetype_changed_at`) |
+| 400 | Unknown archetype string: Spring's own 400 (a JSON error, no `errors[]`) |
+| 404 | No hero yet (before the first sync) |
 
-The change emits a `CLASS_CHANGED` event. Level, XP and lives don't change.
+- **No-op first:** a request equal to the stored `chosen` returns 200 with no event and no cooldown change, even during the cooldown.
+- Every real change starts the 7-day cooldown, including a change to `null` and **pinning** the class you already follow (`chosen` null → the current top class): the stored value changes, so it emits `CLASS_CHANGED` with `from == to`. The UI offers that as "PIN <CLASS>" rather than "BECOME <CLASS>".
+- Qualification is checked against the latest scores, only at switch time: a chosen class that later drops below 40 is kept (`class.scored` then suggests the new top class).
+- The change emits `CLASS_CHANGED` on the user's local today (details above). Level, XP, lives and streak don't change.
+- Two racing PUTs: one 200, the other 429 (compare-and-set on `archetype_changed_at`, with `Retry-After` from the winner's change).
 
 ### `GET /api/user/preferences` · `PUT /api/user/preferences` (JWT)
 Body and response: `fixtures/preferences.json`, `{timezone, rest_days[], alerts_enabled, public_profile}`.
@@ -120,7 +126,11 @@ Body and response: `fixtures/preferences.json`, `{timezone, rest_days[], alerts_
 | Result | Meaning |
 |---|---|
 | 200 | Saved |
-| 400 | A validation `ProblemDetail`: invalid IANA zone, more than 2 rest days, duplicate days |
+| 400 | A validation `ProblemDetail` with `errors[]` (below) |
+| 404 | The JWT's user no longer exists |
+
+- `PUT` takes the **full object**: all four fields are required, and each missing one has an `errors[]` entry.
+- Messages: `timezone` "must be an IANA time zone, like Europe/Berlin" (region ids only: `+05:30` and `GMT+5` are refused), `rest_days` "at most 2 rest days" and "must not repeat a day". An unknown weekday string is a JSON error: Spring's own 400, no `errors[]`.
 
 A `rest_days` change takes effect **from the next local day**: the hero job uses the value that applied on the day it evaluates. The web app sends the browser's zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`) on first login if it differs from the stored zone.
 
