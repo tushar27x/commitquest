@@ -89,16 +89,20 @@ export function GameStateProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(timer);
   }, [restUntil]);
 
-  // A 401 from any query ends the session (mutations report through `save` below).
-  useEffect(
-    () =>
-      queryClient.getQueryCache().subscribe((event) => {
-        if (event.type === "updated" && event.action.type === "error" && isUnauthorized(event.action.error)) {
-          setSessionEnded(true);
-        }
-      }),
-    [queryClient],
-  );
+  // A 401 from any query or mutation (SAVE, change class, settings) ends the session.
+  useEffect(() => {
+    const onEvent = (event: { type: string; action?: { type: string; error?: unknown } }) => {
+      if (event.type === "updated" && event.action?.type === "error" && isUnauthorized(event.action.error)) {
+        setSessionEnded(true);
+      }
+    };
+    const unsubscribeQueries = queryClient.getQueryCache().subscribe(onEvent);
+    const unsubscribeMutations = queryClient.getMutationCache().subscribe(onEvent);
+    return () => {
+      unsubscribeQueries();
+      unsubscribeMutations();
+    };
+  }, [queryClient]);
 
   // The token is dead: drop it, but keep the cached data on screen behind the dialog.
   useEffect(() => {

@@ -129,10 +129,29 @@ describe("recentLog", () => {
   });
 });
 
+describe("recentLog: class changes (B6 details)", () => {
+  const log = (details: Record<string, unknown>) =>
+    recentLog({ events: [{ type: "CLASS_CHANGED", on_date: "2026-10-16", details }], xp_days: [] }, "2026-10-16")[0].text;
+
+  it("tells a pin from a switch", () => {
+    expect(log({ from: "MONK", to: "MONK", chosen: "MONK" })).toBe("Pinned Monk.");
+    expect(log({ from: "MONK", to: "ROGUE", chosen: "ROGUE" })).toBe("Became a Rogue.");
+    expect(log({ from: "ROGUE", to: "MONK", chosen: null })).toBe("Following the top score: Monk.");
+    expect(log({})).toBe("Changed class.");
+  });
+});
+
 describe("faintLabel", () => {
   it("shows the level drop from the event", () => {
     const h = { ...hero, level: 6 };
     expect(faintLabel(h, [{ type: "LEVEL_DOWN", on_date: "2026-10-15", details: { from: 7, to: 6 } }])).toBe("LV 7 → 6");
+  });
+
+  it("shows no drop for a faint at level 1, even after an earlier level-down", () => {
+    const h = { ...hero, level: 1 };
+    const drop = { type: "LEVEL_DOWN" as const, on_date: "2026-10-01", details: { from: 2, to: 1 } };
+    expect(faintLabel(h, [drop])).toBe("LV 2 → 1");
+    expect(faintLabel(h, [drop, { type: "FAINTED", on_date: "2026-10-15", details: {} }])).toBe("LV 1");
   });
 
   it("falls back to the level when there is no event", () => {

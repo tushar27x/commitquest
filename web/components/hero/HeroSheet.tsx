@@ -9,13 +9,10 @@ import { Arrow } from "@/components/ui/Arrow";
 import { SegmentBar } from "@/components/ui/SegmentBar";
 import { buttonClass } from "@/components/ui/pixel-button";
 import type { Archetype, Hero, Insights } from "@/lib/api/types";
-import { CLASS_INFO } from "@/lib/classes";
+import { CLASS_INFO, classSuggestion } from "@/lib/classes";
 import { className, scoreRows } from "@/lib/journal";
 import { useHero, useInsights } from "@/lib/queries";
 import { classAccent, classSprite } from "@/lib/sprites";
-
-/** Matches the backend's qualification threshold (contract: score ≥ 40 or the top class). */
-const QUALIFY_SCORE = 40;
 
 /** Hero: the character sheet (docs/design/png/character-sheet-*.png). */
 export function HeroSheetScreen() {
@@ -103,9 +100,9 @@ function HeroSheet() {
 
 /** A chosen class that isn't the top score: say where the habits point now (plan §2). */
 function ClassNote({ hero, insights }: { hero: Hero; insights: Insights }) {
-  const { chosen, scored } = hero.class;
-  if (!chosen || chosen === scored) return null;
-  const weak = (insights.archetype_scores[chosen] ?? 0) < QUALIFY_SCORE;
+  const suggestion = classSuggestion(hero.class, insights.archetype_scores);
+  if (!suggestion) return null;
+  const { scored, belowThreshold: weak } = suggestion;
   return (
     <p className={`text-center md:text-left ${weak ? "text-ember" : "text-muted-2"}`}>
       {weak ? "Your habits now point to " : "Chosen class. Your top score is "}

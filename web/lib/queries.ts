@@ -4,7 +4,7 @@
 
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, api } from "./api";
-import type { Hero, HeroEvents, Insights, Preferences } from "./api/types";
+import type { ChangeClassRequest, Hero, HeroEvents, Insights, Preferences } from "./api/types";
 
 const STALE_TIME_MS = 10 * 60_000;
 const GC_TIME_MS = 30 * 60_000;
@@ -74,6 +74,34 @@ export function useSync() {
     onSuccess: (insights) => {
       queryClient.setQueryData(queryKeys.insights, insights);
       return queryClient.invalidateQueries({ queryKey: queryKeys.hero });
+    },
+  });
+}
+
+/** `PUT /hero/class`: 200 is the updated hero (and a CLASS_CHANGED event). */
+export function useChangeClass() {
+  const queryClient = useQueryClient();
+  return useMutation<Hero, ApiError, ChangeClassRequest>({
+    mutationFn: (body) => api<Hero>("/api/user/hero/class", { method: "PUT", body }),
+    onSuccess: (hero) => {
+      queryClient.setQueryData(queryKeys.hero, hero);
+      void queryClient.invalidateQueries({ queryKey: ["hero", "events"] });
+    },
+  });
+}
+
+/**
+ * `PUT /preferences` with the full object. Saves run one at a time (`scope`), so a slow
+ * answer can't overwrite a newer one. The hero carries the zone and rest days, so it reloads.
+ */
+export function useSavePreferences() {
+  const queryClient = useQueryClient();
+  return useMutation<Preferences, ApiError, Preferences>({
+    mutationFn: (body) => api<Preferences>("/api/user/preferences", { method: "PUT", body }),
+    scope: { id: "preferences" },
+    onSuccess: (saved) => {
+      queryClient.setQueryData(queryKeys.preferences, saved);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.hero, exact: true });
     },
   });
 }
