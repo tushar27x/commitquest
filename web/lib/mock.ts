@@ -155,9 +155,12 @@ export function validatePreferences(body: Partial<Preferences>): FieldError[] {
   return errors;
 }
 
-/** Region ids only, like the backend: `+05:30` and `GMT+5` are refused. */
-function isIanaZone(zone: string): boolean {
-  if (zone !== "UTC" && !zone.includes("/")) return false;
+/**
+ * Like the backend's `@IanaTimeZone`: any zone id Java knows (`Asia/Calcutta`, `Etc/GMT+5`, `UTC`),
+ * but no offsets (`+05:30`, `GMT+5`, `UTC-3`). Intl stands in for `ZoneId.getAvailableZoneIds()`.
+ */
+export function isIanaZone(zone: string): boolean {
+  if (/^[+-]/.test(zone) || /^(GMT|UTC?|UT)[+-]/i.test(zone)) return false;
   try {
     new Intl.DateTimeFormat("en", { timeZone: zone });
     return true;

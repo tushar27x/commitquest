@@ -6,12 +6,13 @@ import type { Tier } from "@/lib/api/types";
 // (1 on phone, larger on desktop, set by HeroScene), so one markup serves both scenes.
 // The art keeps the board's literal colours: they are scene paint, not UI tokens.
 
-const u = (n: number) => `calc(var(--u) * ${n}px)`;
+/** `n` pixels in scene units. */
+export const u = (n: number) => `calc(var(--u) * ${n}px)`;
 
 /** Ground and path height; the hero stands just above the ground line. */
 export const GROUND = "23%";
 
-function Block({ style, className = "", children }: { style: CSSProperties; className?: string; children?: ReactNode }) {
+export function Block({ style, className = "", children }: { style: CSSProperties; className?: string; children?: ReactNode }) {
   return (
     <div className={`absolute ${className}`} style={style}>
       {children}
@@ -19,9 +20,9 @@ function Block({ style, className = "", children }: { style: CSSProperties; clas
   );
 }
 
-const TRIANGLE = "polygon(50% 0, 100% 100%, 0 100%)";
+export const TRIANGLE = "polygon(50% 0, 100% 100%, 0 100%)";
 
-function Ground({ fill, edge, checker }: { fill: string; edge: string; checker?: boolean }) {
+export function Ground({ fill, edge, checker }: { fill: string; edge: string; checker?: boolean }) {
   return (
     <>
       <Block
@@ -54,7 +55,7 @@ function Ground({ fill, edge, checker }: { fill: string; edge: string; checker?:
   );
 }
 
-function Stars({ stars }: { stars: [number, number, number][] }) {
+export function Stars({ stars }: { stars: [number, number, number][] }) {
   return stars.map(([x, y, size]) => (
     <Block key={`${x},${y}`} style={{ left: `${x}%`, top: `${y}%`, width: size, height: size, background: "var(--color-bone)" }} />
   ));

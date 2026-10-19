@@ -87,6 +87,12 @@ export function useChangeClass() {
       queryClient.setQueryData(queryKeys.hero, hero);
       void queryClient.invalidateQueries({ queryKey: ["hero", "events"] });
     },
+    // 409 (no longer qualified) or 429 (cooldown): our `qualified` / `can_switch_at` are stale.
+    onError: (error) => {
+      if (error.status === 409 || error.status === 429) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.hero, exact: true });
+      }
+    },
   });
 }
 

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import heroFixture from "../public/fixtures/hero.json";
 import variantsFixture from "../public/fixtures/hero-variants.json";
 import type { Hero } from "./api/types";
-import { applyVariant, servedByMock } from "./mock";
+import { applyVariant, isIanaZone, servedByMock } from "./mock";
 
 const hero = heroFixture as Hero;
 const variants = variantsFixture as Record<string, unknown>;
@@ -123,5 +123,15 @@ describe("mockFetch: class change and preferences (B5/B6 rules)", () => {
     const good = { timezone: "Europe/Berlin", rest_days: ["SATURDAY"], alerts_enabled: false, public_profile: true };
     expect((await mockFetch("/api/user/preferences", put(good))).status).toBe(200);
     expect(await (await mockFetch("/api/user/preferences")).json()).toEqual(good);
+  });
+});
+
+describe("isIanaZone (mock of the backend's @IanaTimeZone)", () => {
+  it("accepts region ids, aliases and Etc zones", () => {
+    for (const zone of ["Europe/Berlin", "Asia/Kolkata", "Asia/Calcutta", "Etc/GMT+5", "UTC"]) expect(isIanaZone(zone)).toBe(true);
+  });
+
+  it("refuses offsets and unknown ids", () => {
+    for (const zone of ["+05:30", "-03:00", "GMT+5", "UTC-3", "Mars/Olympus", ""]) expect(isIanaZone(zone)).toBe(false);
   });
 });
