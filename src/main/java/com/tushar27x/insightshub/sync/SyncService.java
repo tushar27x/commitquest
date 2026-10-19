@@ -33,7 +33,8 @@ import java.util.Map;
 /**
  * One user's sync: GitHub → daily activity (calendar + branch scan) → stats and archetype → AI texts →
  * database (v1: the body of {@code callback()}).
- * Needs only a user id, so the login callback, refresh and the daily {@link ScheduledSync} can all call it.
+ * Needs only a user id, so the login callback and refresh can call it. The daily {@link ScheduledSync} and the
+ * hourly hero job call {@link #refreshActivity} instead: activity only, no AI.
  * <p>
  * The slow steps (GitHub, LLMs: seconds each) run outside any transaction; only the final write in
  * {@link ActivityWriter} and {@link InsightsWriter} hold a database connection.
@@ -125,21 +126,6 @@ public class SyncService {
     }
 
     /**
-     * The daily sync's entry point. Claims the cooldown like a user's sync does, so a refresh can't
-     * run alongside it, and skips users who synced in the last {@code min-interval}. It doesn't take
-     * the global cap: {@link ScheduledSync} bounds its own concurrency, and user syncs keep the whole cap.
-     */
-    public SyncOutcome scheduledSync(long userId) {
-        Users user = load(userId);
-        Instant now = clock.instant();
-        if (usersRepository.claimSync(userId, now, now.minus(properties.minInterval())) == 0) {
-            log.info("Scheduled sync for '{}' skipped: synced less than {} ago", user.getLogin(), properties.minInterval());
-            return SyncOutcome.COOLDOWN;
-        }
-        return sync(user);
-    }
-
-    /**
      * Always syncs, without the cooldown. Returns
      * {@link SyncOutcome#NEEDS_REAUTH} (and flags the user) when GitHub rejects the stored token;
      * any other failure is thrown, and nothing is written.
@@ -181,11 +167,11 @@ public class SyncService {
     }
 
     /**
-     * The hero job's refresh before it settles days: the contribution calendar from {@code from} and the branch
-     * scan, written to {@code daily_contributions}. No insights, no AI and no cooldown: it's one or two cheap
-     * GitHub calls on the user's own token.
+     * The daily {@link ScheduledSync}, and the hero job before it settles days: the contribution calendar from
+     * {@code from} and the branch scan, written to {@code daily_contributions}. No insights, no AI and no cooldown:
+     * it's one or two cheap GitHub calls on the user's own token.
      *
-     * @param from the oldest local day the job will settle; a day of slack covers every zone
+     * @param from the oldest local day to refresh; a day of slack covers every zone
      * @return {@code SYNCED}, or {@code NEEDS_REAUTH} (and the user is flagged) when GitHub rejects the token.
      * Any other GitHub failure is thrown.
      */

@@ -73,9 +73,9 @@ insightshub:
       hero-class: { requests: 10, per: 1m }   # per user, PUT /hero/class (the 7-day cooldown is separate)
       sync-global: { requests: 30, per: 1m }  # all users together: protects the shared Groq key; tune to the plan
   sync:
-    min-interval: 10m  # per-user cooldown for login/refresh syncs (v1: 7 days, login only)
-    cron: "0 0 3 * * *"  # daily sync of every user, in UTC (Spring cron: sec min hour day month weekday; "-" = off)
-    concurrency: 4  # users synced at once by the daily sync (each makes ~5 LLM calls on the shared key)
+    min-interval: 10m  # per-user cooldown for login/refresh syncs, the only ones that call the LLM (v1: 7 days, login only)
+    cron: "0 0 3 * * *"  # daily activity-only refresh of every user, no LLM calls, in UTC (Spring cron: sec min hour day month weekday; "-" = off)
+    concurrency: 4  # users refreshed at once by the daily job (GitHub on each user's own token + DB writes)
     branch-scan-days: 2  # today and yesterday: days the calendar shows as empty get a branch scan
   hero:
     cron: "0 5 * * * *"  # hourly, 5 past, in UTC: settles each hero's days from 06:00 local ("-" = off)

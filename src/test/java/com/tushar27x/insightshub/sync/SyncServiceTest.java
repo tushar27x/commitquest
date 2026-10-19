@@ -215,23 +215,6 @@ class SyncServiceTest {
     }
 
     @Test
-    void scheduledSyncClaimsTheCooldownWithoutTheGlobalCap() {
-        when(usersRepository.claimSync(ID, NOW, NOW.minus(COOLDOWN))).thenReturn(1);
-
-        assertThat(service.scheduledSync(ID)).isEqualTo(SyncOutcome.SYNCED);
-        verify(writer).save(eq(ID), any(), eq(result), eq(texts), eq(NOW));
-        verifyNoInteractions(rateLimiter);
-    }
-
-    @Test
-    void scheduledSyncSkipsAUserWhoJustSynced() {
-        when(usersRepository.claimSync(ID, NOW, NOW.minus(COOLDOWN))).thenReturn(0);
-
-        assertThat(service.scheduledSync(ID)).isEqualTo(SyncOutcome.COOLDOWN);
-        verifyNoInteractions(gitHub, ai, writer, activityWriter, branchScanner);
-    }
-
-    @Test
     void unknownUserIsAnError() {
         assertThatThrownBy(() -> service.sync(42L)).isInstanceOf(IllegalArgumentException.class);
     }
