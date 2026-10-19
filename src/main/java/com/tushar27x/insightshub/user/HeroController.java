@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,9 +21,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class HeroController {
 
     private final HeroQueryService heroQueryService;
+    private final HeroClassService heroClassService;
 
-    public HeroController(HeroQueryService heroQueryService) {
+    public HeroController(HeroQueryService heroQueryService, HeroClassService heroClassService) {
         this.heroQueryService = heroQueryService;
+        this.heroClassService = heroClassService;
     }
 
     @RateLimit(policy = "hero", key = KeyType.USER)
@@ -36,6 +40,16 @@ public class HeroController {
     public HeroEventsResponse events(@AuthenticationPrincipal Jwt jwt,
                                      @RequestParam(defaultValue = "30") @Min(1) @Max(90) int days) {
         return heroQueryService.events(githubId(jwt), days).orElseThrow(HeroController::noHero);
+    }
+
+    /**
+     * Switches the class, or {@code {"archetype": null}} to follow the top score. 200 with the updated hero,
+     * 409 if not qualified, 429 + {@code Retry-After} within the 7-day cooldown.
+     */
+    @RateLimit(policy = "hero-class", key = KeyType.USER)
+    @PutMapping("/class")
+    public HeroResponse changeClass(@AuthenticationPrincipal Jwt jwt, @RequestBody ClassRequest request) {
+        return heroClassService.change(githubId(jwt), request.archetype()).orElseThrow(HeroController::noHero);
     }
 
     private static ResponseStatusException noHero() {

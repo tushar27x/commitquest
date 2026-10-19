@@ -1,5 +1,6 @@
 package com.tushar27x.insightshub.repository;
 
+import com.tushar27x.insightshub.entity.Archetype;
 import com.tushar27x.insightshub.entity.Users;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -50,4 +51,35 @@ public interface UsersRepository extends JpaRepository<Users, Long> {
               and (u.syncRequestedAt is null or u.syncRequestedAt < :cutoff)
             """)
     int claimSync(@Param("id") long id, @Param("now") Instant now, @Param("cutoff") Instant cutoff);
+
+    /**
+     * Stores a class change if nobody changed the class since {@code expectedChangedAt} was read: a
+     * compare-and-set like {@link #claimSync}, so of two racing switches only one starts the cooldown.
+     * {@code = null} is never true in SQL, so a first change ({@code expectedChangedAt == null}) has its own query.
+     *
+     * @param chosen null = follow the top score
+     * @return 1 if stored, 0 if the class was changed in the meantime (or there's no such user)
+     */
+    default int changeClass(long id, Archetype chosen, Instant now, Instant expectedChangedAt) {
+        return expectedChangedAt == null
+                ? changeClassFirstTime(id, chosen, now)
+                : changeClassSince(id, chosen, now, expectedChangedAt);
+    }
+
+    @Transactional
+    @Modifying
+    @Query("""
+            update Users u set u.chosenArchetype = :chosen, u.archetypeChangedAt = :now
+            where u.githubId = :id and u.archetypeChangedAt is null
+            """)
+    int changeClassFirstTime(@Param("id") long id, @Param("chosen") Archetype chosen, @Param("now") Instant now);
+
+    @Transactional
+    @Modifying
+    @Query("""
+            update Users u set u.chosenArchetype = :chosen, u.archetypeChangedAt = :now
+            where u.githubId = :id and u.archetypeChangedAt = :expected
+            """)
+    int changeClassSince(@Param("id") long id, @Param("chosen") Archetype chosen, @Param("now") Instant now,
+                         @Param("expected") Instant expected);
 }

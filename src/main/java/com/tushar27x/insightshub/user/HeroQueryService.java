@@ -141,7 +141,7 @@ public class HeroQueryService {
     }
 
     /** {@code insights.archetype_scores} by class; names that aren't a class any more are ignored. */
-    private static Map<Archetype, Integer> scores(Insights insights) {
+    static Map<Archetype, Integer> scores(Insights insights) {
         Map<Archetype, Integer> scores = new EnumMap<>(Archetype.class);
         insights.getArchetypeScores().forEach((name, score) -> {
             for (Archetype archetype : Archetype.values()) {

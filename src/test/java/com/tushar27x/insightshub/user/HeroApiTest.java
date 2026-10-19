@@ -3,6 +3,8 @@ package com.tushar27x.insightshub.user;
 import com.tushar27x.insightshub.auth.AuthProperties;
 import com.tushar27x.insightshub.config.ClockConfig;
 import com.tushar27x.insightshub.config.InsightsHubProperties;
+import com.tushar27x.insightshub.entity.Archetype;
+import com.tushar27x.insightshub.error.TooManyRequestsException;
 import com.tushar27x.insightshub.ratelimit.InMemoryRateLimiter;
 import com.tushar27x.insightshub.ratelimit.RateLimitConfig;
 import com.tushar27x.insightshub.ratelimit.RateLimitInterceptor;
@@ -20,13 +22,16 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.Duration;
 import java.util.Optional;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -45,7 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * {@code /api/user/hero}, {@code /hero/events} and {@code /preferences} behind the real security chain and
+ * {@code /api/user/hero}, {@code /hero/events}, {@code /hero/class} and {@code /preferences} behind the real security chain and
  * rate-limit interceptor; the services are mocked. Payloads are compared strictly with the contract's fixtures,
  * so a renamed key, a wrong type or an enum in the wrong case fails here.
  */
@@ -59,6 +64,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "insightshub.rate-limit.policies.hero.per=1m",
         "insightshub.rate-limit.policies.preferences.requests=1000",
         "insightshub.rate-limit.policies.preferences.per=1m",
+        "insightshub.rate-limit.policies.hero-class.requests=1000",
+        "insightshub.rate-limit.policies.hero-class.per=1m",
 })
 @Import({SecurityConfig.class, JwtConfig.class, JwtService.class, ClockConfig.class,
         RateLimitInterceptor.class, RateLimitConfig.class, HeroApiTest.TestBeans.class})
@@ -88,6 +95,8 @@ class HeroApiTest {
     private HeroQueryService heroQueryService;
     @MockitoBean
     private PreferencesService preferencesService;
+    @MockitoBean
+    private HeroClassService heroClassService;
 
     @BeforeEach
     void setUp() {
@@ -144,7 +153,9 @@ class HeroApiTest {
         mvc.perform(get("/api/user/preferences")).andExpect(status().isUnauthorized());
         mvc.perform(put("/api/user/preferences").contentType(MediaType.APPLICATION_JSON).content(Fixtures.read("preferences.json")))
                 .andExpect(status().isUnauthorized());
-        verifyNoInteractions(heroQueryService, preferencesService);
+        mvc.perform(put("/api/user/hero/class").contentType(MediaType.APPLICATION_JSON).content("{\"archetype\": \"ROGUE\"}"))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(heroQueryService, preferencesService, heroClassService);
     }
 
     @Test
@@ -190,6 +201,74 @@ class HeroApiTest {
         when(heroQueryService.events(ID, 30)).thenReturn(Optional.empty());
 
         mvc.perform(as(get("/api/user/hero/events"))).andExpect(status().isNotFound());
+    }
+
+    // --- PUT /hero/class ---
+
+    @Test
+    void aClassChangeReturnsTheHeroInTheContractShape() throws Exception {
+        String fixture = Fixtures.read("hero.json");
+        when(heroClassService.change(ID, Archetype.ROGUE))
+                .thenReturn(Optional.of(jsonMapper.readValue(fixture, HeroResponse.class)));
+
+        putClass("{\"archetype\": \"ROGUE\"}")
+                .andExpect(status().isOk())
+                .andExpect(content().json(fixture, JsonCompareMode.STRICT))
+                .andExpect(header().string("X-RateLimit-Limit", "1000"));
+    }
+
+    @Test
+    void nullOrNoKeyMeansFollowTheTopScore() throws Exception {
+        when(heroClassService.change(ID, null)).thenReturn(Optional.of(
+                jsonMapper.readValue(Fixtures.read("hero.json"), HeroResponse.class)));
+
+        putClass("{\"archetype\": null}").andExpect(status().isOk());
+        putClass("{}").andExpect(status().isOk());
+        verify(heroClassService, org.mockito.Mockito.times(2)).change(ID, null);
+    }
+
+    @Test
+    void notQualifiedIs409Problem() throws Exception {
+        when(heroClassService.change(ID, Archetype.WIZARD)).thenThrow(new ResponseStatusException(HttpStatus.CONFLICT,
+                "WIZARD isn't qualified: it scores 33, and a class needs 40 or the top score"));
+
+        putClass("{\"archetype\": \"WIZARD\"}")
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type").value("about:blank"))
+                .andExpect(jsonPath("$.detail").value("WIZARD isn't qualified: it scores 33, and a class needs 40 or the top score"))
+                .andExpect(jsonPath("$.instance").value("/api/user/hero/class"));
+    }
+
+    @Test
+    void theCooldownIs429WithRetryAfter() throws Exception {
+        when(heroClassService.change(ID, Archetype.PALADIN)).thenThrow(new TooManyRequestsException(
+                "The class was changed recently", Duration.ofHours(30)));
+
+        putClass("{\"archetype\": \"PALADIN\"}")
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "108000"))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+    }
+
+    @Test
+    void anUnknownClassIsSpringsOwn400() throws Exception {
+        putClass("{\"archetype\": \"NECROMANCER\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+        putClass("{\"archetype\": \"rogue\"}").andExpect(status().isBadRequest());
+        verifyNoInteractions(heroClassService);
+    }
+
+    @Test
+    void classChangeBeforeTheFirstSyncIs404() throws Exception {
+        when(heroClassService.change(ID, Archetype.ROGUE)).thenReturn(Optional.empty());
+
+        putClass("{\"archetype\": \"ROGUE\"}").andExpect(status().isNotFound());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions putClass(String body) throws Exception {
+        return mvc.perform(as(put("/api/user/hero/class")).contentType(MediaType.APPLICATION_JSON).content(body));
     }
 
     // --- /preferences ---

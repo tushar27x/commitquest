@@ -52,7 +52,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * cache, the services, the SQL and JSONB on Postgres, and Jackson. Each response must have the fixture's shape
  * (keys, JSON types) and the contract's enums and formats; the values come from real data.
  * <p>
- * The hero lives through a 14-day story built so that the rules emit every event type B5 can produce.
+ * The hero lives through a 14-day story built so that the rules emit every event type B5 can produce, then
+ * switches class ({@code PUT /hero/class}, B6) for {@code CLASS_CHANGED}.
  */
 @IntegrationTest
 class ApiContractIT {
@@ -137,7 +138,7 @@ class ApiContractIT {
                 Rule.format("$.events[].on_date", DATE),
                 Rule.format("$.xp_days[].on_date", DATE))));
 
-        // Every type B5 can emit came back, each with the details the contract defines for it.
+        // Every type B5 and B6 can emit came back, each with the details the contract defines for it.
         Set<String> types = new TreeSet<>();
         List<String> errors = new ArrayList<>();
         for (JsonNode event : events.get("events")) {
@@ -147,7 +148,7 @@ class ApiContractIT {
         }
         assertThat(errors).isEmpty();
         assertThat(types).containsExactlyInAnyOrder("LIFE_LOST", "LIFE_GAINED", "LEVEL_UP", "LEVEL_DOWN", "FAINTED",
-                "RESTED");
+                "RESTED", "CLASS_CHANGED");
 
         // Newest last; one xp_days row per settled day, ending at last_evaluated_on.
         List<String> eventDates = events.get("events").valueStream().map(e -> e.get("on_date").stringValue()).toList();
@@ -165,6 +166,37 @@ class ApiContractIT {
         MvcResult response = call(get("/api/user/hero/events?days=91"), user);
         JsonNode problem = assertProblem(response, 400, "/api/user/hero/events", true);
         assertThat(problem.get("errors").valueStream().map(e -> e.get("field").stringValue())).containsExactly("days");
+    }
+
+    // ---- PUT /hero/class ----
+
+    @Test
+    void classErrorsAreProblems() throws Exception {
+        long user = newUser(7, "it-contract-class");
+        saveInsights(user);
+        heroService.seedIfMissing(user);
+        JsonNode heroClass = body(call(get("/api/user/hero"), user)).get("class");
+        Set<String> qualified = new TreeSet<>();
+        heroClass.get("qualified").forEach(c -> qualified.add(c.stringValue()));
+
+        String unqualified = ARCHETYPES.stream().filter(c -> !qualified.contains(c)).findFirst().orElseThrow();
+        assertProblem(putClass(user, unqualified), 409, "/api/user/hero/class", false);
+
+        assertJson(putClass(user, heroClass.get("scored").stringValue()), 200); // pins the top class
+        MvcResult cooling = putClass(user, null);
+        assertProblem(cooling, 429, "/api/user/hero/class", false);
+        assertThat(cooling.getResponse().getHeader(HttpHeaders.RETRY_AFTER)).matches("\\d+");
+
+        MvcResult unknown = call(put("/api/user/hero/class").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"archetype\": \"NECROMANCER\"}"), user);
+        assertThat(unknown.getResponse().getStatus()).isEqualTo(400);
+    }
+
+    @Test
+    void classBeforeTheFirstSyncIs404() throws Exception {
+        long user = newUser(8, "it-contract-class-new");
+
+        assertProblem(putClass(user, "ROGUE"), 404, "/api/user/hero/class", false);
     }
 
     // ---- GET/PUT /preferences ----
@@ -229,9 +261,10 @@ class ApiContractIT {
      * Settles 14 days with the real rules on the real tables. With d = today − n (UTC, the user's zone):
      * d14 inactive → LIFE_LOST (2 hearts) · d13–d9 active → LIFE_GAINED on d11 (3-day streak), LEVEL_UP on d9
      * (50 XP) · d8 rest day → RESTED · d7–d5 inactive → LIFE_LOST ×3, LEVEL_DOWN on d5 · d4–d2 inactive →
-     * LIFE_LOST ×3, FAINTED on d2 (level 1) · d1 (rest weekday again) settles only after 06:00 UTC.
+     * LIFE_LOST ×3, FAINTED on d2 (level 1) · d1 (rest weekday again) settles only after 06:00 UTC. Then
+     * today: PUT /hero/class to a qualified class other than the top one (or pins the top one) → CLASS_CHANGED.
      */
-    private void playStory(long user) throws IOException {
+    private void playStory(long user) throws Exception {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         saveInsights(user); // GET /hero needs them too: the first sync writes the insights, then seeds the hero
         assertThat(heroService.seedIfMissing(user)).isTrue(); // no activity yet: level 1, 0 XP, 3 hearts
@@ -244,6 +277,24 @@ class ApiContractIT {
         jdbc.update("UPDATE v2.users SET rest_days = ? WHERE github_id = ?", restBit, user);
 
         assertThat(heroService.evaluate(user)).isGreaterThanOrEqualTo(13);
+
+        JsonNode heroClass = body(call(get("/api/user/hero"), user)).get("class");
+        String scored = heroClass.get("scored").stringValue();
+        String target = heroClass.get("qualified").valueStream().map(JsonNode::stringValue)
+                .filter(c -> !c.equals(scored)).findFirst().orElse(scored);
+        MvcResult switched = putClass(user, target);
+        assertJson(switched, 200);
+        assertRateLimitHeaders(switched);
+        JsonNode hero = body(switched); // the same object as GET /hero
+        assertFits(hero, "hero.json", heroSpec());
+        assertThat(hero.at("/class/chosen").stringValue()).isEqualTo(target);
+        assertThat(hero.at("/class/can_switch_at").isString()).isTrue();
+    }
+
+    /** @param archetype null sends {@code {"archetype": null}} */
+    private MvcResult putClass(long user, String archetype) throws Exception {
+        String body = archetype == null ? "{\"archetype\": null}" : "{\"archetype\": \"" + archetype + "\"}";
+        return call(put("/api/user/hero/class").contentType(MediaType.APPLICATION_JSON).content(body), user);
     }
 
     // ---- Helpers ----
@@ -273,6 +324,18 @@ class ApiContractIT {
         List<String> errors = new ArrayList<>();
         if (!details.isObject() || !new TreeSet<>(details.propertyNames()).equals(new TreeSet<>(expected))) {
             errors.add(type + ": details " + details + ", the contract has keys " + new TreeSet<>(expected));
+            return errors;
+        }
+        if (type.equals("CLASS_CHANGED")) {
+            for (String key : List.of("from", "to")) {
+                if (!details.get(key).isString() || !ARCHETYPES.contains(details.get(key).stringValue())) {
+                    errors.add("CLASS_CHANGED." + key + ": not a class: " + details.get(key));
+                }
+            }
+            JsonNode chosen = details.get("chosen");
+            if (!chosen.isNull() && !(chosen.isString() && ARCHETYPES.contains(chosen.stringValue()))) {
+                errors.add("CLASS_CHANGED.chosen: neither null nor a class: " + chosen);
+            }
             return errors;
         }
         for (String key : List.of("lives", "streak", "from", "to")) {
