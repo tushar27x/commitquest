@@ -71,7 +71,7 @@ export async function api<T>(path: string, { method = "GET", body, signal }: Api
 
   let res: Response;
   try {
-    res = await (servedByMock(path) ? mockFetch(path, init) : fetch(path, init));
+    res = await (servedByMock(path, init.method) ? mockFetch(path, init) : fetch(path, init));
   } catch (err) {
     if (signal?.aborted) throw err;
     throw new ApiError(NETWORK_ERROR, `${method} ${path} failed: network error`);

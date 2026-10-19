@@ -1,17 +1,32 @@
 // Mock mode (docs/api/contract.md, "Mock mode"): answers /api/* from web/public/fixtures/.
 //
 // - NEXT_PUBLIC_MOCK=1 serves every endpoint from fixtures.
-// - The hero and preferences endpoints don't exist yet (backend B5), so they are always
-//   served from fixtures until NEXT_PUBLIC_HERO_API=1.
+// - `PUT /hero/class` doesn't exist yet (backend B6), so it is always served by the mock.
 // - `?mock=<variant>` merges that entry of hero-variants.json over hero.json.
 // - `?mock_error=<status>` forces that status on the next call (once per page load).
 
-import type { Archetype, Hero, Preferences, ProblemDetail } from "./api/types";
+import type { Archetype, FieldError, Hero, HeroEvent, HeroEvents, Preferences, ProblemDetail, ValidationProblem } from "./api/types";
 
 export const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK === "1";
-const HERO_API_LIVE = process.env.NEXT_PUBLIC_HERO_API === "1";
 
-const PENDING_ENDPOINTS = ["/api/user/hero", "/api/user/preferences"];
+/**
+ * Mock mode plays the fixture story: it is Friday 16 Oct 2026, 18:20 in Asia/Kolkata
+ * (plan §5), and the clock runs on from there. Otherwise it's the real time.
+ * (`lib/clock.ts` re-exports it for components.)
+ */
+const MOCK_STORY_NOW = Date.parse("2026-10-16T12:50:00Z");
+const loadedAt = Date.now();
+
+export function clockNow(): number {
+  return MOCK_MODE ? MOCK_STORY_NOW + (Date.now() - loadedAt) : Date.now();
+}
+
+const DAY_MS = 86_400_000;
+/** The class cooldown (contract: 7 days). */
+const CLASS_COOLDOWN_MS = 7 * DAY_MS;
+
+/** Endpoints the backend doesn't have yet. Remove an entry once its step merges. */
+const PENDING_ENDPOINTS = ["PUT /api/user/hero/class"];
 
 const SYNC_DELAY_MS = 3_000;
 /** 7:31, the countdown shown in the design. */
@@ -28,11 +43,10 @@ const ERROR_TITLES: Record<number, string> = {
 };
 
 /** Whether a request to this path is answered by the mock instead of the backend. */
-export function servedByMock(path: string): boolean {
+export function servedByMock(path: string, method = "GET"): boolean {
   if (MOCK_MODE) return true;
-  if (HERO_API_LIVE) return false;
   const { pathname } = new URL(path, "http://mock");
-  return PENDING_ENDPOINTS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  return PENDING_ENDPOINTS.includes(`${method.toUpperCase()} ${pathname}`);
 }
 
 type FixtureName = "insights" | "hero" | "hero-variants" | "hero-events" | "preferences";
@@ -91,7 +105,9 @@ async function mockHero(): Promise<Hero> {
 }
 
 let savedPreferences: Preferences | null = null;
-let chosenClass: { archetype: Archetype | null } | null = null;
+let chosenClass: { archetype: Archetype | null; canSwitchAt: string } | null = null;
+/** CLASS_CHANGED events from mock class changes, appended to hero-events.json. */
+const classEvents: HeroEvent[] = [];
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -101,17 +117,53 @@ function json(body: unknown, status = 200): Response {
 }
 
 /** Same shape as the backend (B2): `type` is always about:blank, `instance` the request path. */
-function problem(status: number, detail: string, instance: string): Response {
-  const body: ProblemDetail = {
+function problem(
+  status: number,
+  detail: string,
+  instance: string,
+  { retryAfter = MOCK_RETRY_AFTER_S, errors }: { retryAfter?: number; errors?: FieldError[] } = {},
+): Response {
+  const body: ProblemDetail | ValidationProblem = {
     type: "about:blank",
     title: ERROR_TITLES[status] ?? "Error",
     status,
-    detail: `[mock] ${detail}`,
+    detail: errors ? "The request is invalid; see 'errors'" : `[mock] ${detail}`,
     instance,
+    ...(errors ? { errors } : {}),
   };
   const headers: Record<string, string> = { "Content-Type": "application/problem+json" };
-  if (status === 429) headers["Retry-After"] = String(MOCK_RETRY_AFTER_S);
+  if (status === 429) headers["Retry-After"] = String(retryAfter);
   return new Response(JSON.stringify(body), { status, headers });
+}
+
+/** The backend's checks for `PUT /preferences` (B5): every field required, an IANA zone, at most 2 distinct days. */
+export function validatePreferences(body: Partial<Preferences>): FieldError[] {
+  const errors: FieldError[] = [];
+  const required = ["timezone", "rest_days", "alerts_enabled", "public_profile"] as const;
+  for (const field of required) {
+    if (body[field] === undefined || body[field] === null) errors.push({ field, message: "must not be null" });
+  }
+  if (typeof body.timezone === "string" && !isIanaZone(body.timezone)) {
+    errors.push({ field: "timezone", message: "must be an IANA time zone, like Europe/Berlin" });
+  }
+  if (Array.isArray(body.rest_days)) {
+    if (body.rest_days.length > 2) errors.push({ field: "rest_days", message: "at most 2 rest days" });
+    if (new Set(body.rest_days).size !== body.rest_days.length) {
+      errors.push({ field: "rest_days", message: "must not repeat a day" });
+    }
+  }
+  return errors;
+}
+
+/** Region ids only, like the backend: `+05:30` and `GMT+5` are refused. */
+function isIanaZone(zone: string): boolean {
+  if (zone !== "UTC" && !zone.includes("/")) return false;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: zone });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function delay(ms: number, signal?: AbortSignal | null): Promise<void> {
@@ -156,16 +208,30 @@ export async function mockFetch(path: string, init: RequestInit = {}): Promise<R
 
     case "PUT /api/user/hero/class": {
       const hero = withChosenClass(await mockHero());
-      const archetype = readBody<{ archetype: Archetype | null }>(init)?.archetype ?? null;
+      const archetype = readBody<{ archetype?: Archetype | null }>(init)?.archetype ?? null;
+      // Picking the stored choice again changes nothing: 200, no cooldown (B6).
+      if (archetype === hero.class.chosen) return json(hero);
+      const wait = hero.class.can_switch_at ? Date.parse(hero.class.can_switch_at) - clockNow() : 0;
+      if (wait > 0) {
+        return problem(429, "the class cooldown is running", pathname, { retryAfter: Math.ceil(wait / 1000) });
+      }
       if (archetype !== null && !hero.class.qualified.includes(archetype)) {
         return problem(409, `${archetype} is not qualified`, pathname);
       }
-      chosenClass = { archetype };
+      // Pinning the class you already follow is a change too: from == to, and the cooldown starts.
+      classEvents.push({
+        type: "CLASS_CHANGED",
+        on_date: hero.today.date,
+        details: { from: hero.class.current, to: archetype ?? hero.class.scored, chosen: archetype },
+      });
+      chosenClass = { archetype, canSwitchAt: new Date(clockNow() + CLASS_COOLDOWN_MS).toISOString() };
       return json(withChosenClass(hero));
     }
 
-    case "GET /api/user/hero/events":
-      return json(await fixture("hero-events"));
+    case "GET /api/user/hero/events": {
+      const story = await fixture<HeroEvents>("hero-events");
+      return json({ ...story, events: [...story.events, ...classEvents] });
+    }
 
     case "GET /api/user/preferences":
       return json(savedPreferences ?? (await fixture<Preferences>("preferences")));
@@ -173,7 +239,9 @@ export async function mockFetch(path: string, init: RequestInit = {}): Promise<R
     case "PUT /api/user/preferences": {
       const body = readBody<Partial<Preferences>>(init);
       if (!body) return problem(400, "body is not JSON", pathname);
-      savedPreferences = { ...(await fixture<Preferences>("preferences")), ...body };
+      const errors = validatePreferences(body);
+      if (errors.length > 0) return problem(400, "invalid preferences", pathname, { errors });
+      savedPreferences = body as Preferences;
       return json(savedPreferences);
     }
 
@@ -184,9 +252,9 @@ export async function mockFetch(path: string, init: RequestInit = {}): Promise<R
 
 function withChosenClass(hero: Hero): Hero {
   if (!chosenClass) return hero;
-  const { archetype } = chosenClass;
+  const { archetype, canSwitchAt } = chosenClass;
   return {
     ...hero,
-    class: { ...hero.class, chosen: archetype, current: archetype ?? hero.class.scored },
+    class: { ...hero.class, chosen: archetype, current: archetype ?? hero.class.scored, can_switch_at: canSwitchAt },
   };
 }

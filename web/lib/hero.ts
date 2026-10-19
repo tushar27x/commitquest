@@ -125,8 +125,13 @@ function eventText(event: HeroEvent): { text: string; tone: LogTone } {
     case "RESTED":
       return { text: "Rest day. Nothing lost.", tone: "muted" };
     case "CLASS_CHANGED": {
-      const to = typeof d.to === "string" ? d.to : null;
-      return { text: to ? `Became a ${to.charAt(0)}${to.slice(1).toLowerCase()}.` : "Changed class.", tone: "bone" };
+      // B6 details: {from, to, chosen}. from == to with a chosen class is a pin.
+      const name = (v: unknown) => (typeof v === "string" && v ? `${v.charAt(0)}${v.slice(1).toLowerCase()}` : null);
+      const to = name(d.to);
+      if (!to) return { text: "Changed class.", tone: "bone" };
+      if (d.chosen === null) return { text: `Following the top score: ${to}.`, tone: "bone" };
+      if (d.from === d.to) return { text: `Pinned ${to}.`, tone: "bone" };
+      return { text: `Became a ${to}.`, tone: "bone" };
     }
   }
 }
