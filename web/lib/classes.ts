@@ -24,6 +24,83 @@ export const CLASS_INFO: Record<Archetype, ClassInfo> = {
   ROGUE: { habit: "Strikes from the shadows, doing much of their work on weekends", signals: "weekend share", tip: "Rogues score on weekend work." },
 };
 
+// What earns each class: the backend scorer (ScoringArchetypeClassifier, ALGO_VERSION 1).
+// A score is 0–100, a weighted sum of signals; each signal scales linearly from 0 points at
+// `from` to full points at `to`. Shown by the "i" buttons on the Hero sheet.
+
+export interface ScoreSignal {
+  /** Share of the class score, in percent. The weights of a class add up to 100. */
+  weight: number;
+  name: string;
+  /** What is measured. */
+  measure: string;
+  /** 0 points here… */
+  from: string;
+  /** …full points here. */
+  to: string;
+}
+
+export interface ClassScoring {
+  signals: ScoreSignal[];
+  /** What to build to raise the score. */
+  tip: string;
+  note?: string;
+}
+
+export const CLASS_SCORING: Record<Archetype, ClassScoring> = {
+  PALADIN: {
+    signals: [
+      { weight: 60, name: "Showing up", measure: "share of days with a contribution", from: "10%", to: "70%" },
+      { weight: 40, name: "Longest streak", measure: "days in a row", from: "3 days", to: "30 days" },
+    ],
+    tip: "Contribute on most days and keep a long streak.",
+  },
+  BARBARIAN: {
+    signals: [
+      { weight: 50, name: "Big pull requests", measure: "average lines changed per PR", from: "300", to: "3,000" },
+      { weight: 50, name: "Bursts", measure: "busiest day vs your average active day", from: "3×", to: "10×" },
+    ],
+    tip: "Ship large PRs and big bursts of work.",
+  },
+  WIZARD: {
+    signals: [{ weight: 100, name: "Languages", measure: "distinct languages across your top repos", from: "2", to: "8" }],
+    tip: "Build in more languages.",
+  },
+  ARTIFICER: {
+    signals: [
+      { weight: 100, name: "Infrastructure", measure: "top repos with a Dockerfile, CI, Terraform, k8s… at the root", from: "0%", to: "60%" },
+    ],
+    tip: "Containerise, deploy and automate your projects.",
+  },
+  CLERIC: {
+    signals: [
+      { weight: 50, name: "Issues", measure: "issues out of commits + PRs + issues", from: "5%", to: "30%" },
+      { weight: 50, name: "Fixes", measure: "your commits whose subject says fix, bug, patch…", from: "10%", to: "50%" },
+    ],
+    tip: "Report issues and fix bugs.",
+  },
+  BARD: {
+    signals: [
+      { weight: 40, name: "Pull requests", measure: "PRs out of commits + PRs", from: "10%", to: "50%" },
+      { weight: 30, name: "Audience", measure: "followers + stars on top repos, log scale", from: "10", to: "1,000" },
+      { weight: 30, name: "Docs", measure: "top repos with a README of 500+ characters", from: "20%", to: "80%" },
+    ],
+    tip: "Open PRs, write READMEs, share your work.",
+  },
+  MONK: {
+    signals: [
+      { weight: 60, name: "Clear commits", measure: "your commit subjects with 3+ words and 15+ characters", from: "40%", to: "90%" },
+      { weight: 40, name: "Small PRs", measure: "average PR size, only if you open PRs", from: "800+ lines", to: "100 lines" },
+    ],
+    tip: "Keep PRs small and commit messages clear.",
+  },
+  ROGUE: {
+    signals: [{ weight: 100, name: "Weekend work", measure: "Saturday + Sunday share of contributions", from: "30%", to: "60%" }],
+    tip: "Do more of your work on weekends.",
+    note: "An even week is about 29%, which scores 0. No visible activity at all also makes a Rogue.",
+  },
+};
+
 // Class switching (plan §2). The backend is the source of truth: `hero.class.qualified`
 // decides which rows can be picked, and `PUT /hero/class` answers 409 when one can't.
 

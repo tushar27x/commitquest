@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import heroFixture from "../public/fixtures/hero.json";
 import insightsFixture from "../public/fixtures/insights.json";
 import type { Hero, HeroClass, Insights } from "./api/types";
-import { classAction, classOptions, classSuggestion, cooldownLeft, qualifiedClasses } from "./classes";
+import { CLASS_ORDER } from "./sprites";
+import { CLASS_SCORING, classAction, classOptions, classSuggestion, cooldownLeft, qualifiedClasses } from "./classes";
 
 const hero = heroFixture as Hero;
 const scores = (insightsFixture as Insights).archetype_scores;
@@ -80,5 +81,18 @@ describe("cooldownLeft", () => {
 
   it("takes a later local deadline (a 429's Retry-After)", () => {
     expect(cooldownLeft(following, now, now + 5_000)).toBe(5_000);
+  });
+});
+
+describe("CLASS_SCORING", () => {
+  it("covers all 8 classes, in roster order", () => {
+    expect(Object.keys(CLASS_SCORING)).toEqual(CLASS_ORDER);
+  });
+
+  it("has weights adding up to 100 and a tip for every class", () => {
+    for (const [archetype, { signals, tip }] of Object.entries(CLASS_SCORING)) {
+      expect(signals.reduce((sum, s) => sum + s.weight, 0), archetype).toBe(100);
+      expect(tip, archetype).not.toBe("");
+    }
   });
 });

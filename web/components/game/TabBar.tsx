@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { PixelSprite } from "@/components/PixelSprite";
 import { TABS, isActiveTab } from "@/lib/nav";
+import { tabIcon } from "@/lib/tab-icons";
 
 /** Phone navigation (below md): a bottom bar with 64 px tabs above the safe area. */
 export function TabBar() {
@@ -23,7 +25,7 @@ export function TabBar() {
               active ? "bg-stone-lit text-gold" : "text-muted-2 active:text-gold"
             }`}
           >
-            <span aria-hidden className="size-3.5 bg-current shadow-[0_0_0_2px_var(--color-outline)]" />
+            <PixelSprite {...tabIcon(tab.href)} scale={2} />
             {tab.label}
           </Link>
         );
