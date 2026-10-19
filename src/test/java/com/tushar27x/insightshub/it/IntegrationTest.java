@@ -15,7 +15,8 @@ import java.lang.annotation.Target;
  * <p>
  * They also share one database, so each class owns a block of 100 GitHub ids for its test users and
  * stays inside it ({@code USER + n} included): {@code DailyContributionsRepositoryIT} 9_000_0xx,
- * {@code UsersRepositoryIT} 9_000_1xx, {@code HeroSchemaIT} 9_000_2xx. A new class takes the next free
+ * {@code UsersRepositoryIT} 9_000_1xx, {@code HeroSchemaIT} 9_000_2xx,
+ * {@code HeroRepositoryIT} 9_000_3xx. A new class takes the next free
  * block and adds itself here. Clean up your own block in {@code @BeforeEach}, never other rows.
  */
 @Target(ElementType.TYPE)

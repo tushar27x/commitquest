@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   ARCHETYPES, BASE_MOODS, HERO_EVENT_TYPES, MOODS, TIERS, WEEK_STATUSES, WEEKDAYS,
-  type Hero, type HeroEvents, type Insights, type Preferences,
+  type Hero, type HeroEvent, type HeroEventDetails, type HeroEventType, type HeroEvents, type Insights, type Preferences,
 } from "./types";
 
 const DOCS = join(__dirname, "../../../docs/api/fixtures");
@@ -69,8 +69,25 @@ const hero = obj<Hero>({
   last_evaluated_on: date,
 });
 
+// One `details` shape per event type: a type missing here, or in HeroEventDetails, fails to compile.
+const noDetails = record(() => [], []);
+const eventDetails: Record<HeroEventType, Check> = {
+  LIFE_LOST: obj<HeroEventDetails["LIFE_LOST"]>({ lives: int, reason: oneOf(["NO_ACTIVITY"]) }),
+  LIFE_GAINED: obj<HeroEventDetails["LIFE_GAINED"]>({ lives: int, streak: int }),
+  LEVEL_UP: obj<HeroEventDetails["LEVEL_UP"]>({ from: int, to: int }),
+  LEVEL_DOWN: obj<HeroEventDetails["LEVEL_DOWN"]>({ from: int, to: int }),
+  FAINTED: noDetails,
+  RESTED: noDetails,
+  CLASS_CHANGED: obj<HeroEventDetails["CLASS_CHANGED"]>({ from: archetype, to: archetype, chosen: nullable(archetype) }),
+};
+const heroEvent: Check = (v, p) => {
+  const errs = obj<HeroEvent>({ type: oneOf(HERO_EVENT_TYPES), on_date: date, details: record(() => []) })(v, p);
+  const e = v as HeroEvent;
+  return errs.length ? errs : eventDetails[e.type](e.details, `${p}.details`);
+};
+
 const heroEvents = obj<HeroEvents>({
-  events: array(obj({ type: oneOf(HERO_EVENT_TYPES), on_date: date, details: record(() => []) })),
+  events: array(heroEvent),
   xp_days: array(obj({ on_date: date, xp: int, streak: int })),
 });
 

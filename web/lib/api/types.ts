@@ -192,7 +192,21 @@ export interface Hero {
 export interface HeroEvent {
   type: HeroEventType;
   on_date: LocalDate;
+  /** Shape per type in `HeroEventDetails`; read it defensively (older rows, future types). */
   details: Record<string, unknown>;
+}
+
+/** `details` per event type (contract.md, `GET /hero/events`). */
+export interface HeroEventDetails {
+  /** `lives` is what was left: 0 on the last heart, then LEVEL_DOWN or FAINTED the same day. */
+  LIFE_LOST: { lives: number; reason: "NO_ACTIVITY" };
+  LIFE_GAINED: { lives: number; streak: number };
+  LEVEL_UP: { from: number; to: number };
+  LEVEL_DOWN: { from: number; to: number };
+  FAINTED: Record<string, never>;
+  RESTED: Record<string, never>;
+  /** `from`/`to` are `class.current` before and after; `from === to` when pinning the followed class (B6). */
+  CLASS_CHANGED: { from: Archetype; to: Archetype; chosen: Archetype | null };
 }
 
 export interface XpDay {
@@ -210,7 +224,7 @@ export interface HeroEvents {
 // PUT /api/user/hero/class
 
 export interface ChangeClassRequest {
-  /** Null goes back to following the top score. */
+  /** Null (or a missing key) goes back to following the top score. Response: the updated `Hero`. */
   archetype: Archetype | null;
 }
 
