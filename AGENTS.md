@@ -6,7 +6,7 @@ Product spec: `docs/v2-hero-plan.md` (wins over this file and `PROGRESS.md` wher
 
 ## Project index
 
-_Last indexed: 2026-10-14, after Phase 8 (commit `a51a427`). Updated 2026-10-16 for the hero-pet plan (I0), I2, B3 (Phase 10) and B4 (`23ed3e2`); 2026-10-19 for B5 (`df24904`)._
+_Last indexed: 2026-10-14, after Phase 8 (commit `a51a427`). Updated 2026-10-16 for the hero-pet plan (I0), I2, B3 (Phase 10) and B4 (`23ed3e2`); 2026-10-19 for B5 (`df24904`); 2026-10-29 for I5._
 
 ### What it is
 
@@ -24,8 +24,8 @@ Planned: the leaderboard (B8), the digest's unsubscribe link (B7). Shapes in `do
 - **Done:** Phases 0–8 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
   insights engine + D&D archetype scoring, AI layer, GitHub OAuth + JWT, sync + Redis cache, rate limiting). PRs #2–#8 merged to `main`.
 - **Open v1 issue:** B26 — v1 production still calls Groq models that were retired.
-- **Done in Part D:** I0 (#9), B1 (#10), U1 (#11), B2 / Phase 9 (#12), I1 (#13), U2 (#14), I2 Testcontainers + CI (#15), B36 fix (#16, #17), U3 Home (#18), closed-eye sprites (#19), B3 / Phase 10 daily sync (#20), B4 hero schema + rules (#22), U4 Journal + Hero sheet (#23), B4 contract (#24), B5 hero job + hero/preferences API (#25), B5 contract + B6 contract (#26), U5 Change class + Settings (#27), U6 Arena shell (#28), I3 contract tests (#29), B6 class change (#30), I4 wiring (#31), tab icons + class info from the developer's feedback (`0ef3d35`), activity-only daily sync (#32).
-- **Next up:** backend **B7** (Phase 12 digest) · ui: browser zone on login (REQUEST) and the Arena board after B8 · integration **I5** (Playwright e2e) after I4 (wiring). Run locally: `docs/run-locally.md`. Full order: `docs/agents/WORKFLOW.md`.
+- **Done in Part D:** I0 (#9), B1 (#10), U1 (#11), B2 / Phase 9 (#12), I1 (#13), U2 (#14), I2 Testcontainers + CI (#15), B36 fix (#16, #17), U3 Home (#18), closed-eye sprites (#19), B3 / Phase 10 daily sync (#20), B4 hero schema + rules (#22), U4 Journal + Hero sheet (#23), B4 contract (#24), B5 hero job + hero/preferences API (#25), B5 contract + B6 contract (#26), U5 Change class + Settings (#27), U6 Arena shell (#28), I3 contract tests (#29), B6 class change (#30), I4 wiring (#31), tab icons + class info from the developer's feedback (`0ef3d35`), activity-only daily sync (#32), browser zone on login (#34), B7 / Phase 12 digest (#35). In review: I5 Playwright e2e (#36).
+- **Next up:** integration: the B7 contract · backend **B8** (Phase 13 Arena) · ui: B38, the Arena board after B8 · integration **I6** (responsive/a11y, release checklist). Run locally: `docs/run-locally.md`. Full order: `docs/agents/WORKFLOW.md`.
 - **Open items:** see the latest "End of session" entry at the bottom of `PROGRESS.md`.
 - Working agreement & phase details: `PROGRESS.md` (status table at the top, learning log at the bottom).
 
@@ -40,8 +40,8 @@ Planned: the leaderboard (B8), the digest's unsubscribe link (B7). Shapes in `do
 | `docs/design/` | `README.md` (index), `png/` (13 mockup screens), `tokens.json`, `sprites.json`, `source/*.dc.html` (board markup, reference only) |
 | `docs/agents/` | `WORKFLOW.md` (lanes, worktrees, step order) and `HANDOFF.md` (message board between the agents) |
 | `.claude/agents/` | Agent definitions: `backend-engineer.md`, `ui-engineer.md`, `integration-qa.md` |
-| `.github/workflows/ci.yml` | CI on every PR and push to `main`: backend `./mvnw verify` (Testcontainers), web design check + lint + test + build. No secrets |
-| `e2e/` | `wiring/proxy-check.mjs` (I4: the Next rewrite and its timeout, in CI); Playwright e2e from I5 (integration lane) |
+| `.github/workflows/ci.yml` | CI on every PR and push to `main`: backend `./mvnw verify` (Testcontainers), web design check + lint + test + build + wiring, e2e (Playwright: mock, stubbed, full stack). No secrets |
+| `e2e/` | `wiring/proxy-check.mjs` (I4: the Next rewrite and its timeout). I5 Playwright, its own `package.json`: `playwright.config.ts`, `specs/{mock,stubbed,fullstack}/`, `support/` (fixtures from `docs/api/fixtures/`, `stubApi`, a runtime-built fake JWT). All in CI |
 
 ### Agent lanes
 
@@ -100,6 +100,7 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 - `InsightsEngineParityTest` — golden JSON against v1: `insights/v1-expected-insights.json` + `v1-parity-user.json`.
 - Opt-in live tests (need env: `GITHUB_TOKEN`, `GROQ_API_KEY`): `GitHubGraphQlClientLiveTest`, `InsightsEngineLiveTest`, `AiLiveTest`, `BranchActivityLiveTest` (`GITHUB_TOKEN`: checks what `history()` filters on).
 - **Integration tests** (`it/`, classes named `*IT`, run by Failsafe in `./mvnw verify`; Docker needed): `@IntegrationTest` = `@SpringBootTest` + `TestcontainersConfig` (Postgres 17 + Redis 7 via `@ServiceConnection`, test secrets generated at runtime, LLM base URL on a closed local port, the daily-sync cron off). All ITs share one context. `ApplicationContextIT` (the old `contextLoads`: Flyway migrates an empty DB, `ddl-auto: validate` passes, nothing in `public`), `UsersRepositoryIT` (atomic `claimSync`, `findIdsForScheduledSync`), `DailyContributionsRepositoryIT` (both upserts: idempotent, calendar and branch counts independent, `GREATEST`), `HeroSchemaIT` (V5's CHECKs and keys accept exactly what the rules allow), `HeroRepositoryIT` (seed once, a catch-up settled twice writes each day once, the CAS, JSONB details, preferences persisted), `HeroClassIT` (B6: the JPQL compare-and-set, `CLASS_CHANGED` JSONB with a `null` `chosen`, a lost race writes no event), `ApiContractIT` (I3: the real `/insights`, `/hero`, `/hero/events`, `/preferences` and their errors, checked by shape against `docs/api/fixtures/` with `ContractShape`: keys, JSON kinds, nullables, enums, formats; a 14-day hero story emits every event type). ITs build MockMvc from the shared context, never `@AutoConfigureMockMvc` (a second context starts new containers). The hero cron is off too. Each IT class owns a block of 100 test user ids (see `IntegrationTest`).
+- **E2e backend** (`it/E2eBackend`, `it/GitHubStub`; not tests, so neither plugin runs them): the app with `TestcontainersConfig` and a `RestClientCustomizer` that answers GitHub in-process. `--e2e.frontend-url` / `--e2e.backend-url` move the URLs. Started by Playwright with `./mvnw spring-boot:test-run -Dspring-boot.run.main-class=…E2eBackend`.
 - B23 is fixed: Surefire and Failsafe point the datasource and Redis at unresolvable `*.invalid` hosts, so a test that boots the app without `TestcontainersConfig` fails to connect instead of reaching Neon. New context-booting tests go in `it/` with `@IntegrationTest`.
 
 ### Infrastructure & config facts
@@ -116,7 +117,7 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 
 - One PR per step (B1–B8, U1–U6, I0–I6): three agents implement everything, including Phases 2.6 and 10–13; the developer reviews and merges (see Agent lanes).
 - No AI-agent attribution in commits or PR descriptions (no co-author lines, no "generated with" footers).
-- Bugs go to `BUGS.md` with the next `B` number (currently B1–B37); PR descriptions list the phase's bugs.
+- Bugs go to `BUGS.md` with the next `B` number (currently B1–B39); PR descriptions list the phase's bugs.
 - No key- or token-shaped literals in code or tests, even fake ones: build test keys at runtime (B31).
 - DTOs only from controllers (never entities); no secrets in logs; AI output always has a static fallback;
   the LLM never decides the archetype (code scores it, the LLM adds flavour).
@@ -133,5 +134,6 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 - `./mvnw verify` — unit tests, then the `*IT` integration tests on Testcontainers. Needs Docker; never touches Neon. CI runs the same.
 - `web/`: `npm run dev`, `npm run lint`, `npm run build` (from U1); `NEXT_PUBLIC_MOCK=1` serves fixtures for everything. With `NEXT_PUBLIC_MOCK=0`, `/api/*` goes to `BACKEND_URL` (default `http://localhost:8080`). Full guide: `docs/run-locally.md`.
 - `node e2e/wiring/proxy-check.mjs` — the proxy wiring check (fake backend + `next dev`, about a minute).
+- `e2e/` (needs `web/node_modules`; once: `npm ci && npx playwright install chromium`): `npm run test:mock` (mock-mode production build, port 3201), `npm run test:web` (real build on 3202, `/api/*` stubbed by Playwright), `npm run test:fullstack` (plus `it/E2eBackend` on 18081: Testcontainers, so Docker; GitHub stubbed, LLM off; never Neon, GitHub or Groq). `npm test` runs mock + web. Each suite builds `web/` itself, so they run one after the other.
 
 <!-- Remaining sections to be added as directed by the user. -->
