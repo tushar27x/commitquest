@@ -4,6 +4,7 @@ import com.redis.testcontainers.RedisContainer;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -35,10 +36,14 @@ public class TestcontainersConfig {
     /**
      * Replaces every {@code ${...}} placeholder in application.yml, so the tests need no {@code .env}
      * and never use real secrets. The LLM base URL points at a closed local port: a test that
-     * accidentally calls the AI layer fails fast instead of reaching Groq.
+     * accidentally calls the AI layer fails fast instead of reaching Groq, and the Gemini fallback
+     * stays off even if a {@code .env} sets {@code GEMINI_API_KEY}.
+     * <p>
+     * The e2e backend ({@link E2eBackend}) moves the two URLs with {@code --e2e.frontend-url} and
+     * {@code --e2e.backend-url}: dynamic properties beat command-line arguments.
      */
     @Bean
-    DynamicPropertyRegistrar testProperties() {
+    DynamicPropertyRegistrar testProperties(Environment env) {
         return registry -> {
             registry.add("spring.datasource.username", () -> "test");
             registry.add("spring.datasource.password", () -> "test");
@@ -46,8 +51,9 @@ public class TestcontainersConfig {
             registry.add("spring.data.redis.ssl.enabled", () -> "false");
             registry.add("spring.ai.openai.api-key", () -> randomBase64(24));
             registry.add("spring.ai.openai.base-url", () -> "http://127.0.0.1:9/v1");
-            registry.add("insightshub.frontend-url", () -> "http://localhost:3000");
-            registry.add("insightshub.backend-url", () -> "http://localhost:8080");
+            registry.add("insightshub.ai.fallback.api-key", () -> "");
+            registry.add("insightshub.frontend-url", () -> env.getProperty("e2e.frontend-url", "http://localhost:3000"));
+            registry.add("insightshub.backend-url", () -> env.getProperty("e2e.backend-url", "http://localhost:8080"));
             registry.add("insightshub.jwt-secret", () -> randomBase64(48));
             registry.add("insightshub.encryption-key", () -> randomBase64(32));
             registry.add("insightshub.auth.github-client-id", () -> "test-client");

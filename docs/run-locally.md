@@ -13,7 +13,7 @@ npm run dev                     # http://localhost:3000
 
 Mock mode plays the fixture story (Friday 16 Oct 2026, 18:20 in Asia/Kolkata) and serves every `/api/*` call from `web/public/fixtures/`. Add to any URL:
 - `?mock=<variant>` for moods and tiers: `happy okay weak sleeping level_up fainted tier_campfire tier_keep tier_citadel class_cooldown`.
-- `?mock_error=401|404|409|429|502` to force that status on the next call.
+- `?mock_error=401|404|409|429|502` to force that status on the first call of the page load. Under `npm run dev` it currently does nothing (B38: React StrictMode spends it on a cancelled fetch); `npm run build && npx next start` works.
 
 ## B. Full stack: backend + web app
 
@@ -47,7 +47,23 @@ browser ──PRESS START──▶ backend :8080/api/auth/login ──▶ GitHub
 ```
 
 **Good to know:**
-- Time zone: set yours in Settings after the first login. (Sending the browser's zone automatically when yours is still the default `UTC` is in the contract and waits on the UI, HANDOFF 2026-10-19.) Until then the hero settles days in UTC.
+- Time zone: on the first login the web app sends your browser's zone while the stored one is still the default `UTC` (#34). A zone you pick in Settings is never overwritten.
 - The 10-minute sync cooldown also applies to login: logging in twice in a row shows "RESTING m:ss".
-- `PUT /hero/class` exists since B6, but the web app still serves it from the mock until the UI drops it from `PENDING_ENDPOINTS` (`web/lib/mock.ts`; HANDOFF REQUEST).
 - Check the proxy without the backend: `node e2e/wiring/proxy-check.mjs` (fake backend + `next dev`, about a minute).
+
+## C. End-to-end tests (Playwright, `e2e/`)
+
+Nothing here touches Neon, GitHub or Groq. Once: `cd web && npm ci`, then `cd ../e2e && npm ci && npx playwright install chromium`.
+
+```bash
+cd e2e
+npm run test:mock        # mock mode on a production build (port 3201): screens, moods, tiers, GET errors
+npm run test:web         # the real build (port 3202), /api/* answered by Playwright from docs/api/fixtures/
+npm run test:fullstack   # the real build + the backend on Testcontainers (port 18081): Docker needed
+npm test                 # mock + web
+```
+
+- Each suite builds `web/` (`.next`) itself, so run them one after the other, not in parallel.
+- The full-stack backend is `it/E2eBackend`: the real app on throwaway Postgres + Redis, GitHub answered in-process (`it/GitHubStub`), the LLM on a closed port (every AI text is its static fallback). Playwright stubs GitHub's authorize redirect and blocks any other request to GitHub.
+- Locally, a server already on 3201/3202/18081 is reused; stop it if it runs a different build.
+- A failure leaves a trace in `e2e/test-results/`: `npx playwright show-trace <path>/trace.zip`.

@@ -54,3 +54,46 @@ jobs:
       # (35 s, past Next's 30 s default proxy timeout). Starts a fake backend and `next dev`; about a minute.
       - name: Wiring check (proxy)
         run: node ../e2e/wiring/proxy-check.mjs
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: e2e
+    steps:
+      - uses: actions/checkout@v4
+      # The full-stack project starts the backend (it/E2eBackend) on Testcontainers: Java, Maven and Docker.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run typecheck
+      # Mock mode on its own production build: every screen, mood, tier and the GET errors.
+      - run: npm run test:mock
+      # The real build: the stubbed project (hand-off, every error state) and the full-stack smoke test.
+      # Nothing reaches GitHub, Groq or Neon: GitHub is stubbed in the backend, the LLM port is closed.
+      - run: npm run test:web
+        env:
+          E2E_FULLSTACK: "1"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 7
