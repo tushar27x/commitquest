@@ -103,6 +103,19 @@ export function sameTimeZone(a: string | null, b: string | null): boolean {
   }
 }
 
+/** The backend's zone until the user sets one (contract, "GET/PUT /preferences"). */
+export const DEFAULT_TIME_ZONE = "UTC";
+
+/**
+ * Browser zone on login (contract): the preferences to PUT, or null to leave them alone.
+ * Only a zone still at the default is replaced; a zone picked in Settings never is.
+ */
+export function adoptBrowserZone(stored: Preferences, browserZone: string | null): Preferences | null {
+  if (stored.timezone !== DEFAULT_TIME_ZONE || !browserZone) return null;
+  if (sameTimeZone(stored.timezone, browserZone)) return null;
+  return { ...stored, timezone: browserZone };
+}
+
 export function isValidTimeZone(zone: string): boolean {
   if (!zone) return false;
   try {

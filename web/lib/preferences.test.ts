@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "./api";
 import type { Preferences } from "./api/types";
-import { fieldErrors, restDayLocked, samePreferences, sameTimeZone, timeZoneOptions, toggleRestDay } from "./preferences";
+import { adoptBrowserZone, fieldErrors, restDayLocked, samePreferences, sameTimeZone, timeZoneOptions, toggleRestDay } from "./preferences";
 
 const prefs: Preferences = { timezone: "Asia/Kolkata", rest_days: ["SUNDAY"], alerts_enabled: true, public_profile: false };
 
@@ -19,6 +19,24 @@ describe("rest-day picker", () => {
 
   it("drops a picked day", () => {
     expect(toggleRestDay(["MONDAY", "SUNDAY"], "MONDAY")).toEqual(["SUNDAY"]);
+  });
+});
+
+describe("adoptBrowserZone", () => {
+  const fresh: Preferences = { ...prefs, timezone: "UTC" };
+
+  it("replaces the default UTC with the browser's zone, nothing else", () => {
+    expect(adoptBrowserZone(fresh, "Asia/Kolkata")).toEqual({ ...fresh, timezone: "Asia/Kolkata" });
+  });
+
+  it("never overwrites a zone the user picked", () => {
+    expect(adoptBrowserZone(prefs, "Europe/Berlin")).toBeNull();
+  });
+
+  it("leaves UTC when the browser is in UTC or can't tell", () => {
+    expect(adoptBrowserZone(fresh, "UTC")).toBeNull();
+    expect(adoptBrowserZone(fresh, "Etc/UTC")).toBeNull();
+    expect(adoptBrowserZone(fresh, null)).toBeNull();
   });
 });
 
