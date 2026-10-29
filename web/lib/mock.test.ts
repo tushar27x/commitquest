@@ -33,12 +33,8 @@ describe("applyVariant", () => {
 });
 
 describe("servedByMock (NEXT_PUBLIC_MOCK unset)", () => {
-  it("serves the endpoints the backend hasn't built yet", () => {
-    expect(servedByMock("/api/user/hero/class", "PUT")).toBe(true);
-    expect(servedByMock("/api/user/hero/class", "put")).toBe(true);
-  });
-
-  it("sends the existing endpoints to the backend", () => {
+  it("sends every endpoint to the backend", () => {
+    expect(servedByMock("/api/user/hero/class", "PUT")).toBe(false);
     expect(servedByMock("/api/user/hero")).toBe(false);
     expect(servedByMock("/api/user/hero/events?days=30")).toBe(false);
     expect(servedByMock("/api/user/preferences")).toBe(false);
@@ -101,6 +97,13 @@ describe("mockFetch: class change and preferences (B5/B6 rules)", () => {
   it("refuses a class that doesn't qualify with 409", async () => {
     const mockFetch = await load();
     expect((await mockFetch("/api/user/hero/class", put({ archetype: "CLERIC" }))).status).toBe(409);
+  });
+
+  it("answers 409 before 429 when a class is not qualified and the cooldown runs", async () => {
+    const mockFetch = await load();
+    expect((await mockFetch("/api/user/hero/class", put({ archetype: "MONK" }))).status).toBe(200);
+    expect((await mockFetch("/api/user/hero/class", put({ archetype: "CLERIC" }))).status).toBe(409);
+    expect((await mockFetch("/api/user/hero/class", put({ archetype: null }))).status).toBe(429);
   });
 
   it("validates PUT /preferences like the backend", async () => {

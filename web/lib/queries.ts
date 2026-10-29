@@ -5,6 +5,7 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, api } from "./api";
 import type { ChangeClassRequest, Hero, HeroEvents, Insights, Preferences } from "./api/types";
+import { adoptBrowserZone, browserTimeZone } from "./preferences";
 
 const STALE_TIME_MS = 10 * 60_000;
 const GC_TIME_MS = 30 * 60_000;
@@ -110,4 +111,26 @@ export function useSavePreferences() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.hero, exact: true });
     },
   });
+}
+
+/**
+ * Browser zone on login (contract): if the stored zone is still the default UTC, send the
+ * browser's zone once. Runs after the `#token` hand-off without blocking it; a failure is
+ * ignored (Settings can fix the zone).
+ */
+export async function sendBrowserZone(queryClient: QueryClient): Promise<void> {
+  try {
+    const stored = await queryClient.fetchQuery<Preferences>({
+      queryKey: queryKeys.preferences,
+      queryFn: ({ signal }) => api<Preferences>("/api/user/preferences", { signal }),
+    });
+    const next = adoptBrowserZone(stored, browserTimeZone());
+    if (!next) return;
+    const saved = await api<Preferences>("/api/user/preferences", { method: "PUT", body: next });
+    queryClient.setQueryData(queryKeys.preferences, saved);
+    // The hero's dates and `day_ends_at` follow the zone.
+    await queryClient.invalidateQueries({ queryKey: queryKeys.hero, exact: true });
+  } catch {
+    // Ignored on purpose: the user keeps UTC until they pick a zone in Settings.
+  }
 }

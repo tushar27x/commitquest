@@ -1,7 +1,6 @@
 // Mock mode (docs/api/contract.md, "Mock mode"): answers /api/* from web/public/fixtures/.
 //
 // - NEXT_PUBLIC_MOCK=1 serves every endpoint from fixtures.
-// - `PUT /hero/class` doesn't exist yet (backend B6), so it is always served by the mock.
 // - `?mock=<variant>` merges that entry of hero-variants.json over hero.json.
 // - `?mock_error=<status>` forces that status on the next call (once per page load).
 
@@ -26,7 +25,7 @@ const DAY_MS = 86_400_000;
 const CLASS_COOLDOWN_MS = 7 * DAY_MS;
 
 /** Endpoints the backend doesn't have yet. Remove an entry once its step merges. */
-const PENDING_ENDPOINTS = ["PUT /api/user/hero/class"];
+const PENDING_ENDPOINTS: readonly string[] = [];
 
 const SYNC_DELAY_MS = 3_000;
 /** 7:31, the countdown shown in the design. */
@@ -214,12 +213,13 @@ export async function mockFetch(path: string, init: RequestInit = {}): Promise<R
       const archetype = readBody<{ archetype?: Archetype | null }>(init)?.archetype ?? null;
       // Picking the stored choice again changes nothing: 200, no cooldown (B6).
       if (archetype === hero.class.chosen) return json(hero);
+      // Not qualified wins over the cooldown: waiting wouldn't help (B6).
+      if (archetype !== null && !hero.class.qualified.includes(archetype)) {
+        return problem(409, `${archetype} isn't qualified`, pathname);
+      }
       const wait = hero.class.can_switch_at ? Date.parse(hero.class.can_switch_at) - clockNow() : 0;
       if (wait > 0) {
-        return problem(429, "the class cooldown is running", pathname, { retryAfter: Math.ceil(wait / 1000) });
-      }
-      if (archetype !== null && !hero.class.qualified.includes(archetype)) {
-        return problem(409, `${archetype} is not qualified`, pathname);
+        return problem(429, "The class was changed recently", pathname, { retryAfter: Math.ceil(wait / 1000) });
       }
       // Pinning the class you already follow is a change too: from == to, and the cooldown starts.
       classEvents.push({
