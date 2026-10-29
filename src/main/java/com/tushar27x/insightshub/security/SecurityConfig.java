@@ -39,6 +39,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // /error: let the error response through, or every failure on a public path becomes a 401
                         .requestMatchers("/api/auth/**", "/actuator/health", "/error").permitAll()
+                        // GET and POST: the signed token in the link is the authorization (Phase 12)
+                        .requestMatchers("/api/notifications/unsubscribe").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors.authenticationEntryPoint(unauthorized).accessDeniedHandler(forbidden))
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults())

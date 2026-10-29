@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!--/* Unsubscribe page (Phase 12, UnsubscribeController). Self-contained: no scripts, no external assets. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>Link not valid · Insight Hub</title>
+    <style>
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+               background: #13111C; color: #F4ECD8; font-family: Georgia, 'Times New Roman', serif; }
+        main { max-width: 440px; margin: 16px; padding: 24px; background: #221E33; border: 3px solid #0A0910; }
+        h1 { margin: 0 0 12px; font-size: 22px; color: #F2B632; }
+        p { margin: 0 0 16px; line-height: 1.5; color: #C9C0DC; }
+        a { color: #F4ECD8; }
+        button { padding: 10px 18px; font: inherit; font-size: 15px; cursor: pointer;
+                 background: #F2B632; color: #0A0910; border: 2px solid #0A0910; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>This link does not work</h1>
+    <p>It may be incomplete or more than a year old. You can turn digest emails off in
+        <a th:href="${settingsUrl}" href="#">Settings</a>.</p>
+</main>
+</body>
+</html>

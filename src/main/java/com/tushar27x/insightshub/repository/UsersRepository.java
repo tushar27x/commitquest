@@ -53,6 +53,16 @@ public interface UsersRepository extends JpaRepository<Users, Long> {
     int claimSync(@Param("id") long id, @Param("now") Instant now, @Param("cutoff") Instant cutoff);
 
     /**
+     * Turns the digest off: the signed unsubscribe link (Phase 12). Idempotent.
+     *
+     * @return 0 if there's no such user (the link outlived the account), else 1
+     */
+    @Transactional
+    @Modifying
+    @Query("update Users u set u.alertsEnabled = false where u.githubId = :id")
+    int disableAlerts(@Param("id") long id);
+
+    /**
      * Stores a class change if nobody changed the class since {@code expectedChangedAt} was read: a
      * compare-and-set like {@link #claimSync}, so of two racing switches only one starts the cooldown.
      * {@code = null} is never true in SQL, so a first change ({@code expectedChangedAt == null}) has its own query.

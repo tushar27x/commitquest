@@ -17,7 +17,7 @@ import java.lang.annotation.Target;
  * stays inside it ({@code USER + n} included): {@code DailyContributionsRepositoryIT} 9_000_0xx,
  * {@code UsersRepositoryIT} 9_000_1xx, {@code HeroSchemaIT} 9_000_2xx,
  * {@code HeroRepositoryIT} 9_000_3xx, {@code ApiContractIT} 9_000_4xx,
- * {@code HeroClassIT} 9_000_5xx. A new class takes the next free
+ * {@code HeroClassIT} 9_000_5xx, {@code DigestIT} 9_000_6xx. A new class takes the next free
  * block and adds itself here. Clean up your own block in {@code @BeforeEach}, never other rows.
  */
 @Target(ElementType.TYPE)

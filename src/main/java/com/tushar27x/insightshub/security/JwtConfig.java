@@ -51,7 +51,7 @@ public class JwtConfig {
         return decoder;
     }
 
-    private static SecretKey signingKey(String secret) {
+    static SecretKey signingKey(String secret) {
         byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
         if (bytes.length < MIN_SECRET_BYTES) {
             throw new IllegalStateException("JWT_SECRET must be at least " + MIN_SECRET_BYTES + " bytes for HS256");

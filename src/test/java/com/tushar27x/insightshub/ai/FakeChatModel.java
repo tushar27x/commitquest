@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
-/** A {@link ChatModel} that answers from a function and records every prompt it receives. */
-final class FakeChatModel implements ChatModel {
+/** A {@link ChatModel} that answers from a function and records every prompt it receives. Public for {@code notify}. */
+public final class FakeChatModel implements ChatModel {
 
     static final String PERSONA = "PERSONA";
 
@@ -37,15 +37,15 @@ final class FakeChatModel implements ChatModel {
                 .usage(new DefaultUsage(promptTokens, completionTokens)).build());
     }
 
-    static FakeChatModel answering(String text) {
+    public static FakeChatModel answering(String text) {
         return new FakeChatModel(prompt -> text);
     }
 
-    static FakeChatModel answering(Function<Prompt, String> answer) {
+    public static FakeChatModel answering(Function<Prompt, String> answer) {
         return new FakeChatModel(answer);
     }
 
-    static FakeChatModel failing() {
+    public static FakeChatModel failing() {
         return new FakeChatModel(prompt -> {
             throw new IllegalStateException("provider down");
         });
@@ -61,7 +61,7 @@ final class FakeChatModel implements ChatModel {
         return prompts.getLast();
     }
 
-    String lastUserText() {
+    public String lastUserText() {
         return last().getUserMessage().getText();
     }
 
@@ -70,7 +70,7 @@ final class FakeChatModel implements ChatModel {
     }
 
     /** Providers named p0, p1, ... with models "big" / "small", each with the persona as default system prompt. */
-    static LlmChain chain(FakeChatModel... models) {
+    public static LlmChain chain(FakeChatModel... models) {
         List<LlmProvider> providers = new java.util.ArrayList<>();
         for (int i = 0; i < models.length; i++) {
             providers.add(new LlmProvider("p" + i,
