@@ -31,6 +31,17 @@ spring:
       # at most 2 s before the rate limiter fails open and the cache is skipped.
       timeout: 2s
       connect-timeout: 2s
+  mail:  # SMTP for the digest (Phase 12); unused while insightshub.digest.enabled is false
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.connectiontimeout: 10000  # ms; a slow SMTP server holds one digest, not the run
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   ai:
     model:
       audio:
@@ -71,6 +82,7 @@ insightshub:
       hero: { requests: 60, per: 1m }      # per user, GET /hero and /hero/events together
       preferences: { requests: 20, per: 1m }  # per user, GET and PUT /preferences together
       hero-class: { requests: 10, per: 1m }   # per user, PUT /hero/class (the 7-day cooldown is separate)
+      unsubscribe: { requests: 10, per: 1m }  # per IP, GET and POST /api/notifications/unsubscribe together
       sync-global: { requests: 30, per: 1m }  # all users together: protects the shared Groq key; tune to the plan
   sync:
     min-interval: 10m  # per-user cooldown for login/refresh syncs, the only ones that call the LLM (v1: 7 days, login only)
@@ -82,6 +94,12 @@ insightshub:
     concurrency: 4  # heroes refreshed (GitHub, the user's own token) and settled at once
     qualify-score: 40  # a class scoring at least this can be chosen; the top class always can
     class-cooldown: 7d  # between class changes
+  digest:  # Phase 12: one email a day per user with notable hero events
+    enabled: ${DIGEST_ENABLED:false}  # needs MAIL_HOST and DIGEST_FROM; off, the app runs without SMTP
+    cron: "0 35 * * * *"  # hourly, 35 past, in UTC: 30 min after the hero job ("-" = off)
+    send-hour: 8  # local hour from which a user is due (yesterday settles by 06:00 local)
+    concurrency: 4  # users at once: one fast-tier LLM call + one email each
+    from: ${DIGEST_FROM:}  # e.g. "Insight Hub <digest@example.com>"
   ai:
     fast-model: openai/gpt-oss-20b  # cheap model for repo summaries (v1: llama-3.1-8b-instant, retired)
     reasoning-effort: low  # gpt-oss reasons before answering; "low" keeps that short
@@ -91,6 +109,9 @@ insightshub:
       api-key: ${GEMINI_API_KEY:}
       model: ${GEMINI_MODEL:gemini-3.6-flash}
 management:
+  health:
+    mail:
+      enabled: false  # an SMTP outage must not mark the app DOWN; the digest retries on its own
   endpoint:
     health:
       show-details: when-authorized  # anonymous callers get only UP/DOWN; a valid JWT sees DB/Redis details

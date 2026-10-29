@@ -55,6 +55,7 @@ public class TestcontainersConfig {
             // The daily sync (B3) is off: its 03:00 UTC cron must not fire in the middle of a test run.
             registry.add("insightshub.sync.cron", () -> "-");
             registry.add("insightshub.hero.cron", () -> "-"); // and so is the hourly hero job (B5)
+            registry.add("insightshub.digest.cron", () -> "-"); // and the hourly digest (B7); DigestIT calls it directly
         };
     }
 

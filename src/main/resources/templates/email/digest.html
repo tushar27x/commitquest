@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--/* The digest email (Phase 12). Email clients ignore <style> blocks and external CSS: inline styles only.
+       Colours from docs/design/tokens.json (Pixel Realm). Every value is escaped by th:text. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${digest.subject}">Your hero</title>
+</head>
+<body style="margin:0;padding:0;background:#13111C;font-family:Georgia,'Times New Roman',serif;color:#F4ECD8;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#13111C;">
+    <tr>
+        <td align="center" style="padding:24px 12px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                   style="max-width:560px;background:#221E33;border:3px solid #0A0910;">
+                <tr>
+                    <td style="padding:20px 24px 8px;">
+                        <p style="margin:0 0 4px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#8D84A6;">
+                            Insight Hub</p>
+                        <h1 style="margin:0;color:#F2B632;font-size:22px;line-height:1.3;" th:text="${digest.subject}">Your hero</h1>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:8px 24px;font-size:16px;line-height:1.5;">
+                        <p style="margin:0 0 12px;">Hi <span th:text="${digest.login}">octocat</span>,</p>
+                        <p style="margin:0 0 16px;" th:text="${digest.intro}">Intro.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 24px;">
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                            <tr th:each="line : ${digest.headlines}">
+                                <td style="padding:6px 0;border-top:1px dashed #4A4466;font-size:15px;line-height:1.4;">
+                                    <strong th:text="${line.day}">Tue 27 Oct</strong>
+                                    <span th:text="${line.text}">Your hero reached level 4.</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr th:if="${!digest.also.isEmpty()}">
+                    <td style="padding:12px 24px 0;font-size:14px;line-height:1.4;color:#C9C0DC;">
+                        <p style="margin:0 0 4px;font-weight:bold;">Also</p>
+                        <p style="margin:0 0 2px;" th:each="line : ${digest.also}">
+                            <span th:text="${line.day}">Mon 26 Oct</span>:
+                            <span th:text="${line.text}">A rest day.</span>
+                        </p>
+                    </td>
+                </tr>
+                <tr th:if="${digest.hero != null}">
+                    <td style="padding:16px 24px 0;font-size:14px;color:#C9C0DC;">
+                        Your hero now: level <span th:text="${digest.hero.level}">3</span>,
+                        <span th:text="${digest.hero.lives}">2</span>
+                        <span th:text="${digest.hero.lives == 1} ? 'heart' : 'hearts'">hearts</span>,
+                        streak <span th:text="${digest.hero.streak}">4</span>.
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:20px 24px;">
+                        <a th:href="${digest.appUrl}" href="#"
+                           style="display:inline-block;padding:10px 18px;background:#F2B632;color:#0A0910;border:2px solid #0A0910;text-decoration:none;font-size:15px;">
+                            See your hero</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:12px 24px 20px;border-top:3px solid #4A4466;font-size:12px;line-height:1.5;color:#8D84A6;">
+                        You get this because digest emails are on in
+                        <a th:href="${digest.settingsUrl}" href="#" style="color:#8D84A6;">Settings</a>.
+                        <a th:href="${digest.unsubscribeUrl}" href="#" style="color:#8D84A6;">Turn them off</a>.
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>
