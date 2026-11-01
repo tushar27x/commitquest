@@ -5,13 +5,14 @@ import com.tushar27x.insightshub.hero.Tier;
 import com.tushar27x.insightshub.repository.ArenaRepository;
 import com.tushar27x.insightshub.repository.ArenaRepository.Rank;
 import com.tushar27x.insightshub.repository.ArenaRepository.Row;
-import com.tushar27x.insightshub.repository.ArenaRepository.Standing;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -30,7 +31,7 @@ class ArenaServiceTest {
 
     @Test
     void withoutAClassTheBoardIsTheCallersCurrentClass() {
-        when(repository.standing(ME)).thenReturn(Optional.of(new Standing(true, false, Archetype.MONK)));
+        when(repository.currentClass(ME)).thenReturn(Optional.of(Archetype.MONK));
         when(repository.count(Archetype.MONK)).thenReturn(3);
         when(repository.page(Archetype.MONK, 20, 0L)).thenReturn(List.of(
                 new Row(OTHER, "other", 12, 300, 3, 1),
@@ -54,12 +55,12 @@ class ArenaServiceTest {
         assertThat(board.archetype()).isEqualTo(Archetype.ROGUE);
         assertThat(board.page()).isEqualTo(2);
         assertThat(board.entries()).isEmpty();
-        verify(repository, never()).standing(anyLong());
+        verify(repository, never()).currentClass(anyLong());
     }
 
     @Test
     void withoutAClassOrAHeroThereIsNoBoard() {
-        when(repository.standing(ME)).thenReturn(Optional.empty());
+        when(repository.currentClass(ME)).thenReturn(Optional.empty());
 
         assertThat(service.leaderboard(ME, null, 0, 20)).isEmpty();
         verify(repository, never()).page(eq(Archetype.MONK), anyInt(), anyLong());
@@ -73,35 +74,27 @@ class ArenaServiceTest {
     }
 
     @Test
-    void aPublicCallerGetsTheirRankAndTopPercent() {
-        when(repository.standing(ME)).thenReturn(Optional.of(new Standing(true, false, Archetype.MONK)));
+    void aRankedCallerGetsTheirRankAndTopPercent() {
+        when(repository.currentClass(ME)).thenReturn(Optional.of(Archetype.MONK));
         when(repository.rankOf(ME, Archetype.MONK)).thenReturn(Optional.of(new Rank(4, 37)));
 
-        assertThat(service.rank(ME)).contains(new RankResponse(Archetype.MONK, true, 4, 37, 11));
+        assertThat(service.rank(ME)).contains(new RankResponse(Archetype.MONK, 4, 37, 11));
     }
 
     @Test
-    void aPrivateCallerIsNotRankedButSeesTheBoardSize() {
-        when(repository.standing(ME)).thenReturn(Optional.of(new Standing(false, false, Archetype.MONK)));
+    void aCallerOffTheBoardIsNotInTheArena() {
+        // private, or needs_reauth: the query leaves both off the board, so the service sees the same thing
+        when(repository.currentClass(ME)).thenReturn(Optional.of(Archetype.MONK));
         when(repository.rankOf(ME, Archetype.MONK)).thenReturn(Optional.empty());
-        when(repository.count(Archetype.MONK)).thenReturn(36);
 
-        assertThat(service.rank(ME)).contains(new RankResponse(Archetype.MONK, false, null, 36, null));
-    }
-
-    @Test
-    void aRevokedTokenTakesAPublicCallerOffTheBoard() {
-        when(repository.standing(ME)).thenReturn(Optional.of(new Standing(true, true, Archetype.WIZARD)));
-        when(repository.rankOf(ME, Archetype.WIZARD)).thenReturn(Optional.empty());
-        when(repository.count(Archetype.WIZARD)).thenReturn(5);
-
-        assertThat(service.rank(ME)).contains(new RankResponse(Archetype.WIZARD, true, null, 5, null));
+        assertThatThrownBy(() -> service.rank(ME)).isInstanceOf(NotInArenaException.class);
     }
 
     @Test
     void noRankBeforeTheFirstSync() {
-        when(repository.standing(ME)).thenReturn(Optional.empty());
+        when(repository.currentClass(ME)).thenReturn(Optional.empty());
 
         assertThat(service.rank(ME)).isEmpty();
+        verify(repository, never()).rankOf(anyLong(), any());
     }
 }

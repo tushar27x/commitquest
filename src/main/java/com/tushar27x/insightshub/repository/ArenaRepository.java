@@ -50,9 +50,9 @@ public class ArenaRepository {
             WITH ranked AS (%s)
             SELECT rank, total FROM ranked WHERE user_id = ?
             """;
-    /** The caller's own standing, whether or not they're on a board. Empty without a hero and insights. */
-    private static final String STANDING = """
-            SELECT u.public_profile, u.needs_reauth, COALESCE(u.chosen_archetype, i.archetype) AS archetype
+    /** The user's current class ({@code chosen ?? scored}), on a board or not. Empty without a hero and insights. */
+    private static final String CURRENT_CLASS = """
+            SELECT COALESCE(u.chosen_archetype, i.archetype) AS archetype
             FROM %1$s.users u
             JOIN %1$s.insights i ON i.user_id = u.github_id
             JOIN %1$s.hero_state h ON h.user_id = u.github_id
@@ -63,7 +63,7 @@ public class ArenaRepository {
     final String pageSql;
     final String countSql;
     final String rankOfSql;
-    final String standingSql;
+    final String currentClassSql;
 
     /** @param schema Flyway's schema, the one JPA also uses ({@code v2}) */
     public ArenaRepository(JdbcTemplate jdbc, @Value("${spring.flyway.default-schema}") String schema) {
@@ -76,7 +76,7 @@ public class ArenaRepository {
         this.pageSql = PAGE.formatted(ranked);
         this.countSql = COUNT.formatted(board);
         this.rankOfSql = RANK_OF.formatted(ranked);
-        this.standingSql = STANDING.formatted(schema);
+        this.currentClassSql = CURRENT_CLASS.formatted(schema);
     }
 
     /** One page of a class's board, best first; {@code offset} is in rows. */
@@ -98,22 +98,15 @@ public class ArenaRepository {
                 archetype.name(), userId).stream().findFirst();
     }
 
-    /** The user's visibility and current class; empty before the first sync (no hero or insights yet). */
-    public Optional<Standing> standing(long userId) {
-        return jdbc.query(standingSql, (rs, n) -> {
-            String archetype = rs.getString("archetype");
-            return new Standing(rs.getBoolean("public_profile"), rs.getBoolean("needs_reauth"),
-                    archetype == null ? null : Archetype.valueOf(archetype));
-        }, userId).stream().filter(standing -> standing.archetype() != null).findFirst();
+    /** The user's current class, whether or not they're on its board; empty before the first sync. */
+    public Optional<Archetype> currentClass(long userId) {
+        return jdbc.query(currentClassSql, (rs, n) -> Optional.ofNullable(rs.getString("archetype")), userId)
+                .stream().flatMap(Optional::stream).map(Archetype::valueOf).findFirst();
     }
 
     public record Row(long userId, String login, int level, int xp, int lives, int rank) {
     }
 
     public record Rank(int rank, int total) {
-    }
-
-    /** @param archetype the current class ({@code chosen ?? scored}), never null */
-    public record Standing(boolean publicProfile, boolean needsReauth, Archetype archetype) {
     }
 }

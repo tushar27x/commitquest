@@ -26,7 +26,7 @@ class ArenaRepositoryTest {
             assertThat(sql).contains("FROM v2.hero_state h", "JOIN v2.users u", "JOIN v2.insights i")
                     .doesNotContain("%");
         }
-        assertThat(repository.standingSql).contains("FROM v2.users u", "JOIN v2.insights i", "JOIN v2.hero_state h");
+        assertThat(repository.currentClassSql).contains("FROM v2.users u", "JOIN v2.insights i", "JOIN v2.hero_state h");
     }
 
     @Test
