@@ -295,10 +295,11 @@ New bugs get the next `B` number. PR descriptions list the bugs found while buil
 - **Lesson:** when data is fetched on one clock and consumed on another, check its freshness at the moment of use, per time zone.
 
 ### B38
-**`?mock_error` does nothing under `next dev`** · U1/U2 (mock mode) · Code · found by integration in I5
+**`?mock_error` does nothing under `next dev`** · U1/U2 (mock mode) · Code · found by integration in I5, fixed in `ui/b38-mock-error`
 - **Symptom:** `npm run dev` with `NEXT_PUBLIC_MOCK=1`, then `/home?mock_error=401` (or 404, 429): Home renders normally, with no "Session ended", NEW GAME or "road blocked" state. The same URLs work on a production build (`next build && next start`), which is what the I5 mock suite now runs on.
 - **Root cause:** `takeForcedError` (`web/lib/mock.ts`) fails only the first API call of the page load (`forcedErrorUsed`). In development, React StrictMode mounts every component twice, so the first fetch belongs to a query that is cancelled and fetched again. The forced error goes to the cancelled fetch, and the second one succeeds.
 - **Fix (ui):** count the forced error as used only once its response is delivered (skip it when `init.signal` is aborted), or fail the first call per endpoint. `docs/run-locally.md` advertises `?mock_error` for `npm run dev`, so that's where it has to work.
+- **Fixed in `ui/b38-mock-error`:** a call only *claims* the forced error, then waits one tick (`delay(0, signal)`). If its `signal` aborts first, an abort listener releases the claim and the call rejects like a cancelled `fetch`, so the refetch gets the error; otherwise it's marked used and the problem is returned. Still one error per page load, also with concurrent calls (the claim is taken synchronously). Unit test: an aborted first fetch leaves the error for the next one (`lib/mock.test.ts`). Checked under `next dev` (401, 404, 429 states show) and by the I5 mock suite on the production build.
 - **Lesson:** dev-only tooling needs a test in the mode developers actually use; StrictMode's double mount defeats any "first call only" state kept at module level.
 
 ### B39
