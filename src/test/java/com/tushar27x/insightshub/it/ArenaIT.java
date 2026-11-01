@@ -2,12 +2,12 @@ package com.tushar27x.insightshub.it;
 
 import com.tushar27x.insightshub.arena.ArenaService;
 import com.tushar27x.insightshub.arena.LeaderboardResponse;
+import com.tushar27x.insightshub.arena.NotInArenaException;
 import com.tushar27x.insightshub.arena.RankResponse;
 import com.tushar27x.insightshub.entity.Archetype;
 import com.tushar27x.insightshub.repository.ArenaRepository;
 import com.tushar27x.insightshub.repository.ArenaRepository.Rank;
 import com.tushar27x.insightshub.repository.ArenaRepository.Row;
-import com.tushar27x.insightshub.repository.ArenaRepository.Standing;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * The Arena's window query on a real Postgres (B8). The board is global and the database is shared with the other
@@ -86,11 +87,12 @@ class ArenaIT {
     }
 
     @Test
-    void theStandingIsTheCurrentClassWhateverTheVisibility() {
-        assertThat(arena.standing(TIED_CHOSEN)).contains(new Standing(true, false, Archetype.MONK));
-        assertThat(arena.standing(PRIVATE)).contains(new Standing(false, false, Archetype.MONK));
-        assertThat(arena.standing(REAUTH)).contains(new Standing(true, true, Archetype.MONK));
-        assertThat(arena.standing(NO_HERO)).isEmpty();
+    void theCurrentClassIsKnownWhateverTheVisibility() {
+        assertThat(arena.currentClass(TIED_CHOSEN)).contains(Archetype.MONK);
+        assertThat(arena.currentClass(MOVED_ON)).contains(Archetype.WIZARD);
+        assertThat(arena.currentClass(PRIVATE)).contains(Archetype.MONK);
+        assertThat(arena.currentClass(REAUTH)).contains(Archetype.MONK);
+        assertThat(arena.currentClass(NO_HERO)).isEmpty();
     }
 
     @Test
@@ -101,9 +103,14 @@ class ArenaIT {
 
         int total = arena.count(Archetype.MONK);
         assertThat(service.rank(TIED_LOW_ID)).contains(
-                new RankResponse(Archetype.MONK, true, 1, total, (int) Math.max(1, (100L + total - 1) / total)));
-        assertThat(service.rank(PRIVATE)).contains(new RankResponse(Archetype.MONK, false, null, total, null));
+                new RankResponse(Archetype.MONK, 1, total, (int) Math.max(1, (100L + total - 1) / total)));
         assertThat(service.rank(NO_HERO)).isEmpty();
+    }
+
+    @Test
+    void privateAndRevokedCallersAreNotInTheArena() {
+        assertThatThrownBy(() -> service.rank(PRIVATE)).isInstanceOf(NotInArenaException.class);
+        assertThatThrownBy(() -> service.rank(REAUTH)).isInstanceOf(NotInArenaException.class);
     }
 
     private void hero(long id, String login, boolean isPublic, boolean needsReauth, String scored, String chosen,

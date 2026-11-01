@@ -171,33 +171,38 @@ class ArenaApiTest {
 
     @Test
     void theRankIsServedInTheProposedShape() throws Exception {
-        when(arenaService.rank(ID)).thenReturn(Optional.of(new RankResponse(Archetype.MONK, true, 4, 37, 11)));
+        when(arenaService.rank(ID)).thenReturn(Optional.of(new RankResponse(Archetype.MONK, 4, 37, 11)));
 
         mvc.perform(as(get("/api/user/rank")))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-RateLimit-Limit", "1000"))
                 .andExpect(content().json("""
-                        {"archetype": "MONK", "public_profile": true, "rank": 4, "total": 37, "top_percent": 11}
+                        {"archetype": "MONK", "rank": 4, "total": 37, "top_percent": 11}
                         """, JsonCompareMode.STRICT));
     }
 
     @Test
-    void aPrivateProfileHasANullRankNotAnError() throws Exception {
-        when(arenaService.rank(ID)).thenReturn(Optional.of(new RankResponse(Archetype.MONK, false, null, 36, null)));
+    void aCallerOffTheBoardIsA404NotInTheArena() throws Exception {
+        when(arenaService.rank(ID)).thenThrow(new NotInArenaException());
 
         mvc.perform(as(get("/api/user/rank")))
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
                 .andExpect(content().json("""
-                        {"archetype": "MONK", "public_profile": false, "rank": null, "total": 36, "top_percent": null}
+                        {"type": "about:blank", "title": "Not in the Arena", "status": 404,
+                         "detail": "Your profile isn't ranked. Turn on \\"Show me in the Arena\\" in Settings, then log in again to refresh your stats.",
+                         "instance": "/api/user/rank"}
                         """, JsonCompareMode.STRICT));
     }
 
     @Test
-    void noRankBeforeTheFirstSyncIs404Problem() throws Exception {
+    void noRankBeforeTheFirstSyncIsThePlain404() throws Exception {
         when(arenaService.rank(ID)).thenReturn(Optional.empty());
 
         mvc.perform(as(get("/api/user/rank")))
                 .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title").value("Not Found"))
+                .andExpect(jsonPath("$.detail").value("No hero yet for this user; sync first"))
                 .andExpect(jsonPath("$.instance").value("/api/user/rank"));
     }
 

@@ -265,21 +265,24 @@ B8 (`backend/b8-arena`, pushed, **no PR yet**): Phase 13 Arena, built to the def
 
 **2. `GET /api/user/rank`** (JWT, same `arena` policy)
 ```json
-{"archetype": "MONK", "public_profile": true, "rank": 4, "total": 37, "top_percent": 11}
+{"archetype": "MONK", "rank": 4, "total": 37, "top_percent": 11}
 ```
-Private caller (or a revoked token): `{"archetype": "MONK", "public_profile": false, "rank": null, "total": 36, "top_percent": null}`.
-- `archetype` = the caller's current class, the board they're ranked on. `total` = heroes on that board, not counting a caller who isn't on it. `top_percent` = `ceil(100 × rank / total)`, 1–100 (rank 1 of 40 → 3). The UI can find the caller's page as `floor((rank − 1) / size)`.
-- 404 before the first sync; 401/429 as above.
+- Sent only when the caller is on the board, so `rank` and `top_percent` are never null. `archetype` = the caller's current class, the board they're ranked on. `total` = heroes on that board, the caller included. `top_percent` = `ceil(100 × rank / total)`, 1–100 (rank 1 of 40 → 3). The UI can find the caller's page as `floor((rank − 1) / size)`. No `public_profile` key: it would always be true.
+- **404 "Not in the Arena"**: the caller has a hero but isn't on the board (private profile, or `needs_reauth`):
+  ```json
+  {"type": "about:blank", "title": "Not in the Arena", "status": 404,
+   "detail": "Your profile isn't ranked. Turn on \"Show me in the Arena\" in Settings, then log in again to refresh your stats.",
+   "instance": "/api/user/rank"}
+  ```
+- **404 before the first sync** keeps the usual problem: `title: "Not Found"`, `detail: "No hero yet for this user; sync first"`. The UI tells the two 404s apart by `title` (an exception to the "never by `title`" convention, for this endpoint only; please note it in the conventions). 401/429 as above.
 
-**3. Open questions for the developer** (my default, built; where to change it):
-1. **`public_profile` default:** **off** (opt-in), as V1 already has it (`DEFAULT FALSE`). Reason: the board shows a GitHub login and activity-derived stats to every other user, so showing it should be a choice; the Arena screen can nudge with "Show me in the Arena". On would need a new migration (and a decision about existing users).
-2. **`/user/rank` for a private caller:** **200 with `rank: null`** (and `public_profile: false`, the board's `total`), not 404 and not a "you would be #5" rank. Reason: it isn't an error, the UI gets one shape to render ("Show me in the Arena to get ranked"), and "private" never means "ranked quietly". Flip: `Arena.RANK_200_WHEN_PRIVATE` (false → 404).
-3. **Row fields:** **`rank, login, avatar_url, level, xp, lives, tier, is_you`**. Reason: what the board needs to draw a hero card and highlight you, all already public on GitHub or shown in-game; no streak, rest days, timezone or class scores (habit details people may not want ranked). Change: `LeaderboardResponse.Entry`.
-4. **Page size:** **20 by default, at most 50**. Reason: 20 fits a phone screen or two; 50 caps the query and payload. Change: `Arena.DEFAULT_PAGE_SIZE`, `Arena.MAX_PAGE_SIZE`.
+**3. Decisions (developer, 2026-11-01):** 1. `public_profile` stays **off** by default (opt-in, V1's `DEFAULT FALSE`): no change. 2. A caller who isn't ranked (private or `needs_reauth`) gets the **404 "Not in the Arena"** above, not a 200 with `rank: null`; `public_profile` is dropped from the 200. 3. Row fields as proposed: `rank, login, avatar_url, level, xp, lives, tier, is_you`. 4. Pages of **20**, at most **50**. Where they live: `arena/Arena` (page sizes), `arena/NotInArenaException` (title, detail), `LeaderboardResponse.Entry` (row fields).
 
-**4. `AGENTS.md` index:** new `arena/` package: `Arena` (the open-question defaults, `topPercent`, `avatarUrl`), `ArenaService`, `ArenaController` (`GET /api/leaderboard`, `GET /api/user/rank`), DTOs `LeaderboardResponse`, `RankResponse`. `repository/ArenaRepository` (JdbcTemplate, schema-qualified: `page`, `count`, `rankOf`, `standing`). Policy `arena` (30/min per user, shared). No migration. Tests: `ArenaTest`, `ArenaRepositoryTest`, `ArenaServiceTest`, `ArenaApiTest`. No new bugs (still B1–B39).
+(The questions as first proposed: `public_profile` off; a private caller's rank as a 200 with `rank: null`; the row fields above; 20/50.)
 
-**5. `it/`** (your lane, written in this branch, please review): new `it/ArenaIT` (ids **9_000_7xx**, added to `IntegrationTest`'s javadoc). The board is global and the DB is shared, so its heroes sit at levels 900+ and totals are compared with `count`. Covers: level-then-XP order, a shared rank with the GitHub-id tie-break, a chosen class moving a hero to another board, private / `needs_reauth` / hero-less users left off, paging, `rankOf` agreeing with the board, and the service end to end. For `ApiContractIT`, once the fixtures exist: the two endpoints by shape, plus `size=51` → 400.
+**4. `AGENTS.md` index:** new `arena/` package: `Arena` (page sizes, `topPercent`, `avatarUrl`), `NotInArenaException` (the 404 "Not in the Arena"), `ArenaService`, `ArenaController` (`GET /api/leaderboard`, `GET /api/user/rank`), DTOs `LeaderboardResponse`, `RankResponse`. `repository/ArenaRepository` (JdbcTemplate, schema-qualified: `page`, `count`, `rankOf`, `currentClass`). Policy `arena` (30/min per user, shared). No migration. Tests: `ArenaTest`, `ArenaRepositoryTest`, `ArenaServiceTest`, `ArenaApiTest`. No new bugs (still B1–B39).
+
+**5. `it/`** (your lane, written in this branch, please review): new `it/ArenaIT` (ids **9_000_7xx**, added to `IntegrationTest`'s javadoc). The board is global and the DB is shared, so its heroes sit at levels 900+ and totals are compared with `count`. Covers: level-then-XP order, a shared rank with the GitHub-id tie-break, a chosen class moving a hero to another board, private / `needs_reauth` / hero-less users left off, paging, `rankOf` agreeing with the board, the service end to end, and private / `needs_reauth` callers getting `NotInArenaException`. For `ApiContractIT`, once the fixtures exist: the two endpoints by shape, plus `size=51` → 400, and `/user/rank` for a private user → 404 with `title` "Not in the Arena".
 
 **6. `PROGRESS.md`:** I appended "As built (B8)" under Phase 13 (done-when boxes left alone: they describe the older score-ranking plan; yours to rewrite).
 Status: open

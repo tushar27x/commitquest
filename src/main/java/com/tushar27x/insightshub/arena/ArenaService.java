@@ -4,7 +4,6 @@ import com.tushar27x.insightshub.entity.Archetype;
 import com.tushar27x.insightshub.hero.HeroView;
 import com.tushar27x.insightshub.repository.ArenaRepository;
 import com.tushar27x.insightshub.repository.ArenaRepository.Rank;
-import com.tushar27x.insightshub.repository.ArenaRepository.Standing;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +30,7 @@ public class ArenaService {
     public Optional<LeaderboardResponse> leaderboard(long callerId, Archetype archetype, int page, int size) {
         Optional<Archetype> board = archetype != null
                 ? Optional.of(archetype)
-                : arena.standing(callerId).map(Standing::archetype);
+                : arena.currentClass(callerId);
         return board.map(chosen -> new LeaderboardResponse(chosen, page, size, arena.count(chosen),
                 arena.page(chosen, size, (long) page * size).stream()
                         .map(row -> new LeaderboardResponse.Entry(row.rank(), row.login(), Arena.avatarUrl(row.userId()),
@@ -40,23 +39,15 @@ public class ArenaService {
     }
 
     /**
-     * The caller's rank on the board of their current class. Empty before the first sync, and for a private
-     * profile unless {@link Arena#RANK_200_WHEN_PRIVATE}.
+     * The caller's rank on the board of their current class. Empty before the first sync.
+     *
+     * @throws NotInArenaException the caller has a hero but isn't on the board (private, or {@code needs_reauth})
      */
     @Transactional(readOnly = true)
     public Optional<RankResponse> rank(long callerId) {
-        Optional<Standing> standing = arena.standing(callerId);
-        if (standing.isEmpty() || (!standing.get().publicProfile() && !Arena.RANK_200_WHEN_PRIVATE)) {
-            return Optional.empty();
-        }
-        Standing me = standing.get();
-        Optional<Rank> rank = arena.rankOf(callerId, me.archetype());
-        if (rank.isEmpty()) { // private, or a revoked token: not on the board
-            return Optional.of(new RankResponse(me.archetype(), me.publicProfile(), null, arena.count(me.archetype()),
-                    null));
-        }
-        Rank mine = rank.get();
-        return Optional.of(new RankResponse(me.archetype(), me.publicProfile(), mine.rank(), mine.total(),
-                Arena.topPercent(mine.rank(), mine.total())));
+        return arena.currentClass(callerId).map(archetype -> {
+            Rank mine = arena.rankOf(callerId, archetype).orElseThrow(NotInArenaException::new);
+            return new RankResponse(archetype, mine.rank(), mine.total(), Arena.topPercent(mine.rank(), mine.total()));
+        });
     }
 }

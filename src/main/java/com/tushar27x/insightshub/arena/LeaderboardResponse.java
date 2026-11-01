@@ -16,7 +16,7 @@ import java.util.List;
 public record LeaderboardResponse(Archetype archetype, int page, int size, int total, List<Entry> entries) {
 
     /**
-     * One hero on the board (open question 3: the fields of a row).
+     * One hero on the board.
      *
      * @param rank  shared by heroes with the same level and XP (1, 2, 2, 4)
      * @param isYou whether this row is the caller's hero

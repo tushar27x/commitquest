@@ -42,7 +42,10 @@ public class ArenaController {
                 .orElseThrow(() -> noHero("No hero yet for this user; sync first, or pass an archetype"));
     }
 
-    /** The caller's rank on their current class's board; {@code rank: null} when they aren't on it. */
+    /**
+     * The caller's rank on their current class's board. 404 "Not in the Arena" when they aren't on it (private, or a
+     * revoked GitHub token), and the usual 404 before the first sync; the UI tells them apart by {@code title}.
+     */
     @RateLimit(policy = "arena", key = KeyType.USER)
     @GetMapping("/api/user/rank")
     public RankResponse rank(@AuthenticationPrincipal Jwt jwt) {

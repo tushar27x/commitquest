@@ -1,23 +1,18 @@
 package com.tushar27x.insightshub.arena;
 
 /**
- * The Arena's open product choices (Phase 13), kept here so each is a one-line change. The fourth,
- * whether {@code public_profile} starts on, is the column default in {@code V1__users_and_insights.sql}
- * ({@code FALSE}: opt-in); turning it on for new users would take a new migration.
+ * The Arena's product choices (Phase 13, decided by the developer on 2026-11-01), kept here so each is a one-line
+ * change. Also decided: {@code public_profile} starts off (the column default in {@code V1__users_and_insights.sql},
+ * opt-in), a caller who isn't ranked gets a 404 ({@link NotInArenaException}), and the leaderboard row fields
+ * ({@link LeaderboardResponse.Entry}).
  */
 public final class Arena {
 
-    /** Open question 4: rows per leaderboard page when {@code size} is left out. */
+    /** Rows per leaderboard page when {@code size} is left out. */
     public static final int DEFAULT_PAGE_SIZE = 20;
 
-    /** Open question 4: the largest {@code size} accepted (more is a validation 400). */
+    /** The largest {@code size} accepted (more is a validation 400). */
     public static final int MAX_PAGE_SIZE = 50;
-
-    /**
-     * Open question 2: whether {@code GET /api/user/rank} still answers 200 for a private profile (with
-     * {@code rank: null} and the board's size), instead of a 404.
-     */
-    public static final boolean RANK_200_WHEN_PRIVATE = true;
 
     private Arena() {
     }
