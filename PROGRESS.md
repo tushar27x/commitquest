@@ -63,18 +63,18 @@ From Part D on, 🤖 names the lane: **backend**, **ui** or **integration** (ste
 | | **Part B: New v2 features** | | | |
 | 10 | Scheduled daily sync, activity history & branch scan | 🤖 backend (B1, B3) | ✅ (activity-only since #32; first live run pending) | [#10](https://github.com/tushar27x/insightsHubV2/pull/10) [#20](https://github.com/tushar27x/insightsHubV2/pull/20) [#32](https://github.com/tushar27x/insightsHubV2/pull/32) |
 | 11 | Hero engine (lives, XP, levels) | 🤖 backend (B4–B6) | ✅ | [#22](https://github.com/tushar27x/insightsHubV2/pull/22) [#25](https://github.com/tushar27x/insightsHubV2/pull/25) [#30](https://github.com/tushar27x/insightsHubV2/pull/30) |
-| 12 | Notifications: daily digest email (from `hero_events`) | 🤖 backend (B7) | ⬜ | |
-| 13 | Arena: leaderboards by hero level within the chosen class | 🤖 backend (B8) | ⬜ | |
+| 12 | Notifications: daily digest email (from `hero_events`) | 🤖 backend (B7) | ✅ (first live run pending: needs SMTP) | [#35](https://github.com/tushar27x/insightsHubV2/pull/35) |
+| 13 | Arena: leaderboards by hero level within the chosen class | 🤖 backend (B8) | 🟨 built on `backend/b8-arena`, waiting for the contract | |
 | | **Part C: Ship it** | | | |
-| 14 | Testing, API docs & deployment | 🤖 integration (I2, I3, I5, I6); deploy TBD | 🟨 I2, I3, I5 (PR open) | [#15](https://github.com/tushar27x/insightsHubV2/pull/15) [#29](https://github.com/tushar27x/insightsHubV2/pull/29) |
+| 14 | Testing, API docs & deployment | 🤖 integration (I2, I3, I5, I6); deploy TBD | 🟨 I2, I3, I5 done; I6 and deploy left | [#15](https://github.com/tushar27x/insightsHubV2/pull/15) [#29](https://github.com/tushar27x/insightsHubV2/pull/29) [#36](https://github.com/tushar27x/insightsHubV2/pull/36) |
 | | **Part D: Hero-pet plan** | | | |
 | D0 | Docs: kit committed, `PROGRESS.md` + `AGENTS.md` updated | 🤖 integration (I0) | ✅ | [#9](https://github.com/tushar27x/insightsHubV2/pull/9) |
 | D1 | Web UI in `web/` (scaffold, title, Home, Journal, Hero, Settings, Arena shell) | 🤖 ui (U1–U6) | 🟨 U1–U6 + first feedback (Arena shell; the board after B8) | [#11](https://github.com/tushar27x/insightsHubV2/pull/11) [#14](https://github.com/tushar27x/insightsHubV2/pull/14) [#18](https://github.com/tushar27x/insightsHubV2/pull/18) [#23](https://github.com/tushar27x/insightsHubV2/pull/23) [#27](https://github.com/tushar27x/insightsHubV2/pull/27) [#28](https://github.com/tushar27x/insightsHubV2/pull/28) `0ef3d35` |
-| D2 | Contract, shared types, wiring, e2e | 🤖 integration (I1, I4, I5) | 🟨 I1, I4, sprites, hero-events, B5/B6 contract; I5 (PR open) | [#13](https://github.com/tushar27x/insightsHubV2/pull/13) [#19](https://github.com/tushar27x/insightsHubV2/pull/19) [#24](https://github.com/tushar27x/insightsHubV2/pull/24) [#26](https://github.com/tushar27x/insightsHubV2/pull/26) [#31](https://github.com/tushar27x/insightsHubV2/pull/31) |
+| D2 | Contract, shared types, wiring, e2e | 🤖 integration (I1, I4, I5) | 🟨 I1, I4, I5, sprites, hero-events, B5/B6/B7 contract; B8 contract left | [#13](https://github.com/tushar27x/insightsHubV2/pull/13) [#19](https://github.com/tushar27x/insightsHubV2/pull/19) [#24](https://github.com/tushar27x/insightsHubV2/pull/24) [#26](https://github.com/tushar27x/insightsHubV2/pull/26) [#31](https://github.com/tushar27x/insightsHubV2/pull/31) [#36](https://github.com/tushar27x/insightsHubV2/pull/36) |
 | | **Stretch** | | | |
 | S | RAG chat, Discord alerts, friends leaderboard, observability | 🧑 | ⬜ | |
 
-**Next up** (each waits for the developer's go): review I5 (#36) · 🤖 integration: the B7 contract (unsubscribe pages, `List-Unsubscribe` headers) · 🤖 backend B8 (Phase 13 Arena) · 🤖 ui: B38 (`?mock_error` under `next dev`), `web/README.md` (B39), then the Arena board after B8 · 🤖 integration I6. Run it locally: [`docs/run-locally.md`](docs/run-locally.md).
+**Next up** (each waits for the developer's go): review #37 (B38 + B39) and the B7 docs · 🤖 integration: the B8 contract (leaderboard + rank, decisions of 2026-11-01) · 🤖 backend: the B8 PR once the contract lands · 🤖 ui: the Arena board on the B8 fixtures · 🤖 integration I6. Run it locally: [`docs/run-locally.md`](docs/run-locally.md).
 
 ---
 
