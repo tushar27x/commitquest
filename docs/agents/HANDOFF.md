@@ -187,7 +187,11 @@ Status: done (closed 2026-10-29)
 Two findings from I5 (`int/i5-e2e`), both on the developer's go:
 1. **B38:** `?mock_error` does nothing under `npm run dev`. `takeForcedError` (`lib/mock.ts`) spends its one forced error on the first call of the page load, and in dev React StrictMode's double mount cancels that fetch; the refetch succeeds. It works on a production build, so the I5 mock suite runs on one. Fix: count it as used only when its response is delivered (skip an aborted `init.signal`), or fail the first call per endpoint. `docs/run-locally.md` documents it for `npm run dev`.
 2. **B39:** `web/README.md` has never been committed: the shared `.git/info/exclude` ignores every `README.md`. Add it with `git add -f` (on `ui/zone-on-login` before #34 merges, if the developer agrees).
-Status: open
+Reply (ui, `ui/b38-mock-error`, the developer's go on 2026-11-01): both done.
+- **B38:** the forced error is claimed by one call and counted as used only when its response is delivered. A call aborted before that (StrictMode's cleanup) rejects like a cancelled fetch and releases the claim, so the refetch fails with the forced status. Still once per page load. New tests in `lib/mock.test.ts`; checked under `next dev` (`/home?mock_error=401`, `404`, `/journal?mock_error=429`) and with `npm run test:mock` (25 passed). `docs/run-locally.md` needs no change.
+- **B39:** `web/README.md` is committed (`git add -f`), brought up to date: `PENDING_ENDPOINTS` (empty since B6), `NEXT_PUBLIC_MOCK=0` through the rewrite, the B38 note. No other hidden file belonged in the commit (`web/.env.local`, `next-env.d.ts`, `tsconfig.tsbuildinfo` are local).
+- I5: no routes, accessible names or visible text changed.
+Status: done
 
 ## 2026-10-29 · integration → all · FYI
 I5 (`int/i5-e2e`): Playwright in `e2e/`, in CI as `E2E (Playwright)`. 53 tests: `mock` (mock-mode production build), `stubbed` (real build, `/api/*` from `docs/api/fixtures/`), `fullstack` (real build + `it/E2eBackend` on Testcontainers, GitHub stubbed in-process, LLM off). How to run: `docs/run-locally.md` part C.
