@@ -140,8 +140,17 @@ A `rest_days` change takes effect **from the next local day**: the hero job uses
 ### `GET /api/leaderboard?archetype=MONK&page=0&size=20` · `GET /api/user/rank` (Phase 13, JWT)
 Shape to be defined by the integration agent when Phase 13 starts. Ranking is by `level DESC, xp DESC`, within the **current class**, for users with `public_profile = true`.
 
-### `GET /api/notifications/unsubscribe?token=...` (Phase 12, public)
-A signed token turns `alerts_enabled` off and returns a small HTML confirmation.
+### `GET` · `POST /api/notifications/unsubscribe?token=...` (Phase 12, public)
+The digest email's unsubscribe link. It's opened in a browser from a mailbox, so both answer with small **`text/html`** pages (Thymeleaf), not JSON. No JWT, cookie or CSRF token: the signed token is the authorization.
+- `GET` → **200**, a confirm page with a form that POSTs to the same URL with the token. It **changes nothing**: mail scanners prefetch links.
+- `POST` → **200**, "Digest emails are off": sets `alerts_enabled = false`. Idempotent, and the same page for an account deleted since the email went out. Any form body is accepted (RFC 8058 sends `List-Unsubscribe=One-Click`).
+- A missing, forged or expired token, or a login JWT → **400** `text/html` for both.
+- Rate limit `unsubscribe`: 10/min per IP, GET and POST together. Its 429 is the interceptor's `application/problem+json` with `Retry-After`.
+- Each page links to `${FRONTEND_URL}/settings`, where alerts can be turned back on (`alerts_enabled` in `/preferences` is the same flag).
+
+**The token:** HS256 with a key derived from `JWT_SECRET`, `aud = unsubscribe`, `sub` = GitHub id, valid 1 year. Rotating `JWT_SECRET` invalidates every mailed link.
+
+**Every digest email** has `List-Unsubscribe: <${BACKEND_URL}/api/notifications/unsubscribe?token=…>` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, so mail clients show their own unsubscribe button.
 
 ---
 

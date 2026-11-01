@@ -23,6 +23,7 @@ Mock mode plays the fixture story (Friday 16 Oct 2026, 18:20 in Asia/Kolkata) an
 **Once:**
 - The root `.env` (git-ignored) has `DB_USER`, `DB_PASSWD`, `REDIS_HOST`, `REDIS_PASSWD`, `JWT_SECRET`, `ENCRYPTION_KEY`, `GROQ_API_KEY`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and for local runs `FRONTEND_URL=http://localhost:3000` and `BACKEND_URL=http://localhost:8080`.
 - The GitHub OAuth App's callback URL is `http://localhost:8080/api/auth/callback`.
+- Optional, the daily digest email (Phase 12; off by default, and the app runs without SMTP): `DIGEST_ENABLED=true`, `DIGEST_FROM="Insight Hub <digest@example.com>"`, `MAIL_HOST`, `MAIL_PORT` (587, STARTTLS), `MAIL_USERNAME`, `MAIL_PASSWORD`. When on, the digest job runs hourly at :35 UTC and mails users from 08:00 their local time; each email makes at most one fast-tier LLM call on your Groq key (static intro as fallback).
 - `web/.env.local`:
   ```bash
   NEXT_PUBLIC_MOCK=0
