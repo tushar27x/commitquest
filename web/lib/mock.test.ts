@@ -129,6 +129,48 @@ describe("mockFetch: class change and preferences (B5/B6 rules)", () => {
   });
 });
 
+describe("mockFetch: ?mock_error (B38)", () => {
+  async function load(search: string) {
+    vi.resetModules();
+    vi.stubGlobal("window", { location: { search } });
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify(heroFixture), { status: 200 }));
+    return (await import("./mock")).mockFetch;
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("fails the first call of the page load only", async () => {
+    const mockFetch = await load("?mock_error=401");
+    expect((await mockFetch("/api/user/hero")).status).toBe(401);
+    expect((await mockFetch("/api/user/hero")).status).toBe(200);
+  });
+
+  it("keeps the error for the refetch when the first fetch is aborted (StrictMode double mount)", async () => {
+    const mockFetch = await load("?mock_error=429");
+    const first = new AbortController();
+    const cancelled = mockFetch("/api/user/hero", { signal: first.signal });
+    // The cleanup aborts in the same task, before the response is delivered; the remount fetches again.
+    first.abort();
+    await expect(cancelled).rejects.toBeDefined();
+
+    const again = await mockFetch("/api/user/hero", { signal: new AbortController().signal });
+    expect(again.status).toBe(429);
+    expect(again.headers.get("Retry-After")).toBe("451");
+    expect((await mockFetch("/api/user/hero")).status).toBe(200);
+  });
+
+  it("fails only one of two concurrent calls", async () => {
+    const mockFetch = await load("?mock_error=502");
+    const statuses = (await Promise.all([mockFetch("/api/user/hero"), mockFetch("/api/user/insights")])).map((r) => r.status);
+    expect(statuses).toEqual([502, 200]);
+  });
+
+  it("ignores a status outside 400-599", async () => {
+    const mockFetch = await load("?mock_error=200");
+    expect((await mockFetch("/api/user/hero")).status).toBe(200);
+  });
+});
+
 describe("isIanaZone (mock of the backend's @IanaTimeZone)", () => {
   it("accepts region ids, aliases and Etc zones", () => {
     for (const zone of ["Europe/Berlin", "Asia/Kolkata", "Asia/Calcutta", "Etc/GMT+5", "UTC"]) expect(isIanaZone(zone)).toBe(true);
