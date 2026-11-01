@@ -14,14 +14,14 @@ Example payloads live in `docs/api/fixtures/` and follow the fixture story in `d
 - **Auth:** `Authorization: Bearer <jwt>` (HS256, 24 h, `sub` = GitHub id). The user is always taken from the JWT, never from a parameter.
 - **JSON:** snake_case keys. Timestamps are ISO-8601 UTC (`Instant`). Calendar dates are `YYYY-MM-DD` in the **user's timezone**.
 - **Enums** are UPPER_CASE strings: archetypes `PALADIN BARBARIAN WIZARD ARTIFICER CLERIC BARD MONK ROGUE`; weekdays `MONDAY…SUNDAY`.
-- **Errors (Phase 9, B2):** RFC 9457 `application/problem+json` on every error, always with all five keys: `{ "type": "about:blank", "title": <HTTP reason phrase>, "status", "detail", "instance": <request path, no query string> }`. `type` is always `about:blank`: tell errors apart by **status and endpoint**, never by `type`, `title` or `detail` text.
+- **Errors (Phase 9, B2):** RFC 9457 `application/problem+json` on every error, always with all five keys: `{ "type": "about:blank", "title": <HTTP reason phrase>, "status", "detail", "instance": <request path, no query string> }`. `type` is always `about:blank`: tell errors apart by **status and endpoint**, never by `type`, `title` or `detail` text. **One exception:** `GET /user/rank`'s two 404s are told apart by `title` (see that endpoint).
 - **Validation 400s** add `errors: [{ "field", "message" }]`, where `field` is the snake_case JSON name (a rule across fields, like "at most 2 rest days", uses that field's name, e.g. `rest_days`). `detail` is then "The request is invalid; see 'errors'". Spring's own 400s (malformed JSON, missing parameter) have no `errors`.
-- **429:** always carries `Retry-After` in whole seconds, rounded up, at least 1. `X-RateLimit-Limit` and `X-RateLimit-Remaining` come **only** from the `@RateLimit` endpoints, on success and on 429: `/auth/login`, `/auth/callback` (5/min per IP each), `GET /user/insights` (20/min per user), `GET /user/hero` + `GET /user/hero/events` (policy `hero`, 60/min per user, shared), `GET` + `PUT /user/preferences` (policy `preferences`, 20/min per user, shared) and `PUT /user/hero/class` (policy `hero-class`, 10/min per user). The `/sync` 429s don't carry them; the UI reads only `Retry-After`.
+- **429:** always carries `Retry-After` in whole seconds, rounded up, at least 1. `X-RateLimit-Limit` and `X-RateLimit-Remaining` come **only** from the `@RateLimit` endpoints, on success and on 429: `/auth/login`, `/auth/callback` (5/min per IP each), `GET /user/insights` (20/min per user), `GET /user/hero` + `GET /user/hero/events` (policy `hero`, 60/min per user, shared), `GET` + `PUT /user/preferences` (policy `preferences`, 20/min per user, shared), `PUT /user/hero/class` (policy `hero-class`, 10/min per user), `GET /leaderboard` + `GET /user/rank` (policy `arena`, 30/min per user, shared) and the unsubscribe pages (policy `unsubscribe`, 10/min per IP). The `/sync` 429s don't carry them; the UI reads only `Retry-After`.
 
 | Status | Meaning for the UI |
 |---|---|
 | 401 | Missing or expired JWT → clear the token, go to the title screen (keep cached data readable when offline) |
-| 404 | No insights yet → "NEW GAME" (start a sync) |
+| 404 | No insights yet → "NEW GAME" (start a sync). On `/user/rank` with `title` "Not in the Arena": the hero isn't ranked → point to Settings |
 | 409 | The context explains it: on `/sync`, the GitHub token was revoked → "Reconnect GitHub"; on `/hero/class`, the class isn't qualified |
 | 429 | Cooldown or rate limit → countdown from `Retry-After` |
 | 400 | Validation: show `errors[].message` next to `errors[].field` |
@@ -137,8 +137,30 @@ Body and response: `fixtures/preferences.json`, `{timezone, rest_days[], alerts_
 
 A `rest_days` change takes effect **from the next local day**: the hero job uses the value that applied on the day it evaluates. **Browser zone on login (I4):** after the `#token` hand-off, the web app reads `GET /preferences`. If the stored `timezone` is still the default `UTC` and the browser's zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`) resolves to a different zone, it sends one `PUT /preferences` with the full object and only `timezone` changed. A zone the user picked in Settings (anything but `UTC`) is never overwritten, and a failed PUT is ignored (Settings can fix it). Compare zones by what `Intl` resolves them to: Chrome reports `Asia/Calcutta` for `Asia/Kolkata`.
 
-### `GET /api/leaderboard?archetype=MONK&page=0&size=20` · `GET /api/user/rank` (Phase 13, JWT)
-Shape to be defined by the integration agent when Phase 13 starts. Ranking is by `level DESC, xp DESC`, within the **current class**, for users with `public_profile = true`.
+### `GET /api/leaderboard?archetype=MONK&page=0&size=20` (Phase 13, JWT)
+Fixture: `leaderboard.json`. One page of a class's board, best first.
+
+**Who is on a board:** heroes whose **current** class (`class.current` of `GET /hero`: `chosen ?? scored`) is that class, with `public_profile = true` (opt-in: it starts **off**) and GitHub access that works (not `needs_reauth`: the hero job skips those, so their hero would sit frozen). Ranked by `level DESC, xp DESC`; ties share a rank (1, 2, 2, 4, as SQL `RANK()`) and are listed by GitHub id, so pages never overlap. Computed per request.
+
+- `archetype`: optional; without it, the caller's own current class. Any signed-in user can read any class's board, public or not.
+- `page` (default 0) and `size` (default **20**, at most **50**).
+- Response: `archetype`, `page`, `size`, `total` (heroes on the whole board; pages = `ceil(total / size)`), `entries[]`. `entries` is `[]` past the last page.
+- Each entry: `rank`, `login`, `avatar_url` (`https://avatars.githubusercontent.com/u/<github id>?v=4`), `level`, `xp` (progress inside the level, as in `/hero`), `lives`, `tier` (`/hero`'s enum), `is_you` (true only on the caller's row).
+
+| Result | Meaning |
+|---|---|
+| 200 | The page |
+| 400 | `page < 0` or `size` outside 1–50: validation problem with `errors[{field: "page"\|"size"}]`. Not a number, or an unknown or lower-case class: Spring's own 400, no `errors[]` |
+| 404 | No `archetype` given and the caller has no hero yet (before the first sync) |
+| 401 / 429 | As everywhere; policy `arena` |
+
+### `GET /api/user/rank` (Phase 13, JWT)
+Fixtures: `rank.json` (200), `rank-not-in-arena.json` (404). The caller's place on their current class's board.
+
+- 200: `archetype` (the caller's current class), `rank`, `total` (heroes on that board, the caller included), `top_percent` = `ceil(100 × rank / total)`, 1–100. Only sent when the caller is on the board, so nothing is null. The caller's page on the leaderboard is `floor((rank − 1) / size)`.
+- **404, `title` "Not in the Arena"**: the caller has a hero but isn't on the board: a private profile, or GitHub access to renew (`needs_reauth`). `detail`: "Your profile isn't ranked. Turn on "Show me in the Arena" in Settings, then log in again to refresh your stats." (decided by the developer on 2026-11-01). The UI shows this as a state of the Arena, not as an error.
+- **404, `title` "Not Found"**: no hero yet (before the first sync) → NEW GAME, as elsewhere.
+- These two are told apart **by `title`**, the one exception to the convention above (`NOT_IN_ARENA_TITLE` in `web/lib/api/types.ts`). 401 / 429 as everywhere; policy `arena`, shared with `/leaderboard`.
 
 ### `GET` · `POST /api/notifications/unsubscribe?token=...` (Phase 12, public)
 The digest email's unsubscribe link. It's opened in a browser from a mailbox, so both answer with small **`text/html`** pages (Thymeleaf), not JSON. No JWT, cookie or CSRF token: the signed token is the authorization.
@@ -158,6 +180,7 @@ The digest email's unsubscribe link. It's opened in a browser from a mailbox, so
 
 `NEXT_PUBLIC_MOCK=1` serves:
 - `insights.json`, `hero.json`, `hero-events.json` and `preferences.json` for the matching GETs;
+- `leaderboard.json` and `rank.json` for the Arena (once the UI serves them; `rank-not-in-arena.json` is the 404 body for a mock of the private state);
 - `hero-variants.json` merged over `hero.json` with `?mock=<variant>` (`happy okay weak sleeping level_up fainted tier_campfire tier_keep tier_citadel class_cooldown`).
 
 Mock `POST /sync` waits 3 s, then returns `insights.json`. To exercise the error states, `?mock_error=401|404|409|429|502` forces that status on the next call.
