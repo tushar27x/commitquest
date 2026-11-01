@@ -2,7 +2,8 @@
 //
 // - NEXT_PUBLIC_MOCK=1 serves every endpoint from fixtures.
 // - `?mock=<variant>` merges that entry of hero-variants.json over hero.json.
-// - `?mock_error=<status>` forces that status on the next call (once per page load).
+// - `?mock_error=<status>` forces that status on the next call (once per page load; an aborted call
+//   doesn't use it up, B38).
 
 import type { Archetype, FieldError, Hero, HeroEvent, HeroEvents, Preferences, ProblemDetail, ValidationProblem } from "./api/types";
 
@@ -70,13 +71,26 @@ function searchParam(name: string): string | null {
   return new URLSearchParams(window.location.search).get(name);
 }
 
-let forcedErrorUsed = false;
+/**
+ * `?mock_error` fails one call per page load. A call only claims it; the error counts as used
+ * once its response is delivered. If the call is aborted first, the claim is released for the
+ * next one: React StrictMode's double mount in `next dev` cancels the first fetch of every
+ * query and fetches again (B38).
+ */
+let forcedError: "unused" | "claimed" | "used" = "unused";
 
-function takeForcedError(): number | null {
-  if (forcedErrorUsed) return null;
+function claimForcedError(signal?: AbortSignal | null): number | null {
+  if (forcedError !== "unused" || signal?.aborted) return null;
   const status = Number(searchParam("mock_error"));
   if (!Number.isInteger(status) || status < 400 || status > 599) return null;
-  forcedErrorUsed = true;
+  forcedError = "claimed";
+  signal?.addEventListener(
+    "abort",
+    () => {
+      if (forcedError === "claimed") forcedError = "unused";
+    },
+    { once: true },
+  );
   return status;
 }
 
@@ -197,8 +211,13 @@ export async function mockFetch(path: string, init: RequestInit = {}): Promise<R
     await delay(SYNC_DELAY_MS, init.signal);
   }
 
-  const forced = takeForcedError();
-  if (forced !== null) return problem(forced, `forced by ?mock_error=${forced}`, pathname);
+  const forced = claimForcedError(init.signal);
+  if (forced !== null) {
+    // Let a StrictMode cleanup abort this call before the error is spent (rejects if aborted).
+    await delay(0, init.signal);
+    forcedError = "used";
+    return problem(forced, `forced by ?mock_error=${forced}`, pathname);
+  }
 
   switch (`${method} ${pathname}`) {
     case "GET /api/user/insights":
