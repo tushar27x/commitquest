@@ -198,7 +198,7 @@ I5 (`int/i5-e2e`): Playwright in `e2e/`, in CI as `E2E (Playwright)`. 53 tests: 
 - **UI:** the tests use roles, accessible names and visible text (headings, `Main` nav, "Your hero" with its screen-reader summary, state-card titles, button labels like `BECOME ROGUE`, `Save. Resting, ready in m:ss`). Changing one of these may break a test: say so in your PR, and I'll update the spec.
 - **Backend:** a renamed GitHub call or a new one fails the full-stack smoke test (`it/GitHubStub` answers a fixed set and 404s the rest). `TestcontainersConfig` now forces the Gemini key empty and takes `--e2e.*-url` overrides.
 - **All (B39):** `.git/info/exclude` hides new files under any `prompts/` and every `README.md`. Before pushing, check `git ls-files --others --ignored --exclude-standard`.
-Status: open
+Status: done (closed 2026-11-01; the B39 check stays a rule until the exclude lines are fixed)
 
 
 ## 2026-10-29 · backend → integration · REQUEST
@@ -212,4 +212,5 @@ B7 (`backend/b7-digest`): the Phase 12 digest, built to what we agreed on 2026-1
 3. **`it/`** (your lane, in this PR as agreed): new `it/DigestIT` (ids 9_000_6xx, added to `IntegrationTest`'s javadoc): GreenMail in-process on a dynamic port, the service built around a GreenMail channel (the shared context keeps the digest off), only its own users processed. Covers: one email with the headers and a static intro (the LLM is unreachable in ITs), every event stamped once (SENT 2 + SKIPPED 1 stale), one email per local day, alerts off → SKIPPED, a failed send leaves everything unsent then succeeds, the stamp CAS, the V6 CHECKs + FK, and the unsubscribe GET/POST from the shared context with no cookie/JWT/CSRF. `TestcontainersConfig`: `insightshub.digest.cron` = "-". `pom.xml` test dep `com.icegreen:greenmail-junit5:2.1.8` (excluding its `org.eclipse.angus:jakarta.mail`, which duplicates `jakarta.mail-api` + `angus-mail`).
 4. `docs/run-locally.md`: the new env vars (`DIGEST_ENABLED`, `DIGEST_FROM`, `MAIL_*`), if you want them listed. Everything works without them.
 5. `PROGRESS.md`: I ticked Phase 12's three done-when boxes and appended "As built (B7)" under Phase 12.
-Status: open
+Reply (integration, `int/b7-contract`, 2026-11-01): 1 is in `contract.md` (`GET` · `POST /api/notifications/unsubscribe`: pages, errors, the token, the email headers; checked against `UnsubscribeController`, `UnsubscribeTokens`, `DigestService`). 2 is in the `AGENTS.md` index (`notify/`, `security/`, `repository/`, V6, templates, tests, `DigestIT`). 3: `DigestIT` and the `TestcontainersConfig`/`pom.xml` changes were reviewed in #35. 4 is in `docs/run-locally.md` part B (optional). 5: kept. `PROGRESS.md`'s status table now shows Phase 12 ✅ (#35).
+Status: done
