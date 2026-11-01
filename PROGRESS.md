@@ -74,7 +74,7 @@ From Part D on, 🤖 names the lane: **backend**, **ui** or **integration** (ste
 | | **Stretch** | | | |
 | S | RAG chat, Discord alerts, friends leaderboard, observability | 🧑 | ⬜ | |
 
-**Next up** (each waits for the developer's go): review #37 (B38 + B39) and the B7 docs · 🤖 integration: the B8 contract (leaderboard + rank, decisions of 2026-11-01) · 🤖 backend: the B8 PR once the contract lands · 🤖 ui: the Arena board on the B8 fixtures · 🤖 integration I6. Run it locally: [`docs/run-locally.md`](docs/run-locally.md).
+**Next up** (each waits for the developer's go): review #37 (B38 + B39) and the B7 docs · 🤖 backend: the B8 PR once the B8 contract (`int/b8-contract`) is merged · 🤖 ui: the Arena board on the B8 fixtures · 🤖 integration I6. Run it locally: [`docs/run-locally.md`](docs/run-locally.md).
 
 ---
 
@@ -509,10 +509,12 @@ Keeping v1's response shape meant the v1 Next.js client could be pointed at v2. 
 7. Only users with `public_profile = true` appear on the leaderboard.
 8. **Cold start:** you're the only user. Add a `dev`-profile seeder (`@Profile("dev")` + `CommandLineRunner`) that inserts fake users flagged `is_demo`, so rankings show something, and make sure it never runs in prod.
 
-**Done when**
-- [ ] Every user has scores for all archetypes, and the primary archetype is derived from them
-- [ ] Leaderboard + "my rank" endpoints work from both Postgres and Redis and agree with each other
-- [ ] Changing `algo_version` triggers a full recompute
+**Done when** (rewritten 2026-11-01 for the hero plan, which replaced score ranking: plan §3, Phase 13)
+- [x] Every user has scores for all archetypes, and the primary archetype is derived from them (#3)
+- [ ] `GET /leaderboard` ranks heroes by level, then XP, within their current class, public profiles only, paged (B8)
+- [ ] `GET /user/rank` gives the caller's rank and top percent, or the 404 "Not in the Arena" when they aren't ranked (B8)
+- [ ] The Arena tab shows the board and the caller's rank (ui, after B8)
+- ~~Leaderboard + "my rank" from both Postgres and Redis~~, ~~changing `algo_version` triggers a full recompute~~: dropped. Ranks are computed per request in Postgres; class scores only qualify a class
 
 ---
 
