@@ -516,6 +516,13 @@ Keeping v1's response shape meant the v1 Next.js client could be pointed at v2. 
 - [ ] The Arena tab shows the board and the caller's rank (ui, after B8)
 - ~~Leaderboard + "my rank" from both Postgres and Redis~~, ~~changing `algo_version` triggers a full recompute~~: dropped. Ranks are computed per request in Postgres; class scores only qualify a class
 
+**As built (B8, `backend/b8-arena`, before the contract):** the plan wins over hints 5–6 here: the board ranks **heroes**, not class scores.
+- `GET /api/leaderboard?archetype=&page=&size=` and `GET /api/user/rank` (JWT, policy `arena`, 30/min per user, shared). Shapes and the four open questions are in the 2026-11-01 HANDOFF REQUEST; the defaults live in `arena/Arena` (page size 20, max 50, a private caller's rank is `null` with a 200) and V1's `public_profile DEFAULT FALSE`.
+- `repository/ArenaRepository`: one native query, `RANK() OVER (ORDER BY level DESC, xp DESC)` over the heroes whose user is public, not `needs_reauth` (the hero job skips them, so their hero would be frozen on the board), and whose **current** class `COALESCE(chosen_archetype, insights.archetype)` is the board's. Ties share a rank (1, 2, 2, 4) and are listed by GitHub id, so pages are stable. Computed per request: no stored rank, no Redis mirror (hint 6). The hourly hero job changes levels, the tables are small, and one source of truth can't disagree with itself. Revisit with a cache or sorted set if `EXPLAIN` gets slow at thousands of public heroes.
+- No migration: no index helps much yet (the filter is on `users`, the sort on `hero_state`). The avatar is derived from the GitHub id (`avatars.githubusercontent.com/u/{id}`), so there's no new column.
+- Not done: hint 8's `dev` seeder (the ITs seed their own boards), hints 2–3 (score breakdown, `algo_version` column).
+- Tests: `ArenaTest`, `ArenaRepositoryTest`, `ArenaServiceTest`, `ArenaApiTest` (slice, strict JSON of the proposed shapes), `it/ArenaIT` (the window query on Postgres, ids 9_000_7xx).
+
 ---
 
 # Part C: Ship it

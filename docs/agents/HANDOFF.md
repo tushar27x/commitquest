@@ -235,3 +235,51 @@ Status: open
 - I5: the e2e tests key on roles, names and text, not on sprites. Keep `role="img"` + the labels (e.g. "Your hero" and its summary). If one changes, say so in the PR and I'll update the spec.
 - `docs/design/png/` is from the old canvases; there are no new renders yet. Compare your screenshots with the boards' sources (and the canvas, if the developer exports PNGs).
 Status: open
+
+## 2026-11-01 · backend → integration · REQUEST
+B8 (`backend/b8-arena`, pushed, **no PR yet**): Phase 13 Arena, built to the defaults below. The PR opens once the developer answers the four questions and you land the contract. Please write the leaderboard section of `contract.md`, fixtures `leaderboard.json` + `rank.json` (and a private `rank` variant), the types, and the `PENDING_ENDPOINTS` note for the UI. I'll switch `ArenaApiTest` to strict fixture comparison and change whatever the developer decides.
+
+**Ranking (plan §3, Phase 13):** `level DESC, xp DESC` within the hero's **current** class (`chosen ?? scored`, = `class.current` of `GET /hero`). On a board: users with a hero, `public_profile = true` and not `needs_reauth` (the hero job skips revoked tokens, so their hero would sit frozen on the board). Ties share a rank (`RANK()`: 1, 2, 2, 4) and are listed by GitHub id (older account first), so pages never overlap. Computed per request in Postgres; no Redis mirror.
+
+**1. `GET /api/leaderboard?archetype=MONK&page=0&size=20`** (JWT, policy `arena`)
+```json
+{
+  "archetype": "MONK", "page": 0, "size": 20, "total": 2,
+  "entries": [
+    {"rank": 1, "login": "other", "avatar_url": "https://avatars.githubusercontent.com/u/1000001?v=4",
+     "level": 12, "xp": 300, "lives": 3, "tier": "KEEP", "is_you": false},
+    {"rank": 2, "login": "octocat", "avatar_url": "https://avatars.githubusercontent.com/u/583231?v=4",
+     "level": 7, "xp": 140, "lives": 2, "tier": "VILLAGE", "is_you": true}
+  ]
+}
+```
+- `archetype` optional: without it, the caller's current class. `total` = heroes on the whole board; the UI computes pages as `ceil(total / size)`. `xp` is progress inside the level (as in `/hero`). `tier` uses `/hero`'s enum. `avatar_url` is derived from the GitHub id (no stored column). `entries` is `[]` past the last page.
+- Any signed-in user can read any class's board, whether or not their own profile is public; `is_you` is true only on the caller's row.
+
+| Result | Meaning |
+|---|---|
+| 200 | The page above |
+| 400 | `page < 0` or `size` outside 1–50: validation problem with `errors[{field: "page"\|"size"}]`. Not a number, or an unknown / lower-case class: Spring's own 400 (no `errors[]`) |
+| 404 | No `archetype` given and the caller has no hero yet (before the first sync) |
+| 401 / 429 | As everywhere; `X-RateLimit-*` headers on success and 429 |
+
+**2. `GET /api/user/rank`** (JWT, same `arena` policy)
+```json
+{"archetype": "MONK", "public_profile": true, "rank": 4, "total": 37, "top_percent": 11}
+```
+Private caller (or a revoked token): `{"archetype": "MONK", "public_profile": false, "rank": null, "total": 36, "top_percent": null}`.
+- `archetype` = the caller's current class, the board they're ranked on. `total` = heroes on that board, not counting a caller who isn't on it. `top_percent` = `ceil(100 × rank / total)`, 1–100 (rank 1 of 40 → 3). The UI can find the caller's page as `floor((rank − 1) / size)`.
+- 404 before the first sync; 401/429 as above.
+
+**3. Open questions for the developer** (my default, built; where to change it):
+1. **`public_profile` default:** **off** (opt-in), as V1 already has it (`DEFAULT FALSE`). Reason: the board shows a GitHub login and activity-derived stats to every other user, so showing it should be a choice; the Arena screen can nudge with "Show me in the Arena". On would need a new migration (and a decision about existing users).
+2. **`/user/rank` for a private caller:** **200 with `rank: null`** (and `public_profile: false`, the board's `total`), not 404 and not a "you would be #5" rank. Reason: it isn't an error, the UI gets one shape to render ("Show me in the Arena to get ranked"), and "private" never means "ranked quietly". Flip: `Arena.RANK_200_WHEN_PRIVATE` (false → 404).
+3. **Row fields:** **`rank, login, avatar_url, level, xp, lives, tier, is_you`**. Reason: what the board needs to draw a hero card and highlight you, all already public on GitHub or shown in-game; no streak, rest days, timezone or class scores (habit details people may not want ranked). Change: `LeaderboardResponse.Entry`.
+4. **Page size:** **20 by default, at most 50**. Reason: 20 fits a phone screen or two; 50 caps the query and payload. Change: `Arena.DEFAULT_PAGE_SIZE`, `Arena.MAX_PAGE_SIZE`.
+
+**4. `AGENTS.md` index:** new `arena/` package: `Arena` (the open-question defaults, `topPercent`, `avatarUrl`), `ArenaService`, `ArenaController` (`GET /api/leaderboard`, `GET /api/user/rank`), DTOs `LeaderboardResponse`, `RankResponse`. `repository/ArenaRepository` (JdbcTemplate, schema-qualified: `page`, `count`, `rankOf`, `standing`). Policy `arena` (30/min per user, shared). No migration. Tests: `ArenaTest`, `ArenaRepositoryTest`, `ArenaServiceTest`, `ArenaApiTest`. No new bugs (still B1–B39).
+
+**5. `it/`** (your lane, written in this branch, please review): new `it/ArenaIT` (ids **9_000_7xx**, added to `IntegrationTest`'s javadoc). The board is global and the DB is shared, so its heroes sit at levels 900+ and totals are compared with `count`. Covers: level-then-XP order, a shared rank with the GitHub-id tie-break, a chosen class moving a hero to another board, private / `needs_reauth` / hero-less users left off, paging, `rankOf` agreeing with the board, and the service end to end. For `ApiContractIT`, once the fixtures exist: the two endpoints by shape, plus `size=51` → 400.
+
+**6. `PROGRESS.md`:** I appended "As built (B8)" under Phase 13 (done-when boxes left alone: they describe the older score-ranking plan; yours to rewrite).
+Status: open
