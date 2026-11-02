@@ -3,7 +3,7 @@
 
 /* Extras the generated theme doesn't carry. */
 @theme {
-  /* sprites.json basePalette.k: dark text on gold buttons. */
+  /* Dark text on gold buttons. */
   --color-ink: #1A1410;
   /* Small buttons and chips: 3 px ring + 3 px drop (docs/design/source). */
   --shadow-btn: 0 0 0 3px var(--color-outline), 3px 3px 0 3px var(--color-outline);
@@ -87,6 +87,105 @@
   transform-origin: bottom;
 }
 
+/* The hi-res art (docs/design/README.md "Art", lib/art.ts). Sheets animate with steps() on
+   background-position; integer scales only (--s), always pixelated. */
+@layer components {
+  .art {
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+  }
+
+  /* A hero: 60 frames of 96×128 per row, one loop every 2π s. --row picks the mood row. */
+  .hero-sprite {
+    --s: 1;
+    --row: 0;
+    --rows: 1;
+    display: block;
+    flex-shrink: 0;
+    width: calc(96px * var(--s));
+    height: calc(128px * var(--s));
+    background-size: calc(5760px * var(--s)) calc(128px * var(--rows) * var(--s));
+    background-position: 0 calc(-128px * var(--row) * var(--s));
+    animation: art-hero 6.2832s steps(60) infinite;
+  }
+
+  /* 13 frames of 24×22: 0–11 the beat, 12 the empty heart. */
+  .heart {
+    width: 24px;
+    height: 22px;
+    background-size: 312px 22px;
+    background-position: -288px 0;
+  }
+  .heart-full {
+    background-position: 0 0;
+    animation: art-heart 1.2s steps(12) infinite;
+  }
+
+  .nav-icon {
+    width: 24px;
+    height: 24px;
+    background-size: 120px 48px;
+  }
+
+  .portrait {
+    display: block;
+    flex-shrink: 0;
+    width: 40px;
+    height: 48px;
+    background-size: 320px 48px;
+  }
+
+  /* 8 frames of 32×48. */
+  .campfire {
+    --s: 1;
+    width: calc(32px * var(--s));
+    height: calc(48px * var(--s));
+    background-size: calc(256px * var(--s)) calc(48px * var(--s));
+    animation: art-fire 0.8s steps(8) infinite;
+  }
+  .fire-glow {
+    background: radial-gradient(ellipse, rgba(255, 150, 60, 0.38), transparent 66%);
+    animation: art-flick 1.4s ease-in-out infinite;
+  }
+
+  .star {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: var(--color-bone);
+    animation: art-twinkle 3s ease-in-out infinite;
+  }
+
+  /* Level up: gold rays behind the hop. */
+  .level-rays {
+    background: repeating-conic-gradient(rgba(242, 182, 50, 0.32) 0 9deg, transparent 9deg 18deg);
+    mask-image: radial-gradient(circle, #000 22%, transparent 66%);
+  }
+}
+
+@keyframes art-hero {
+  from { background-position-x: 0; }
+  to { background-position-x: calc(-5760px * var(--s)); }
+}
+@keyframes art-heart {
+  from { background-position: 0 0; }
+  to { background-position: -288px 0; }
+}
+@keyframes art-fire {
+  from { background-position: 0 0; }
+  to { background-position: calc(-256px * var(--s)) 0; }
+}
+@keyframes art-twinkle {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+@keyframes art-flick {
+  0%, 100% { opacity: 0.75; }
+  30% { opacity: 1; }
+  60% { opacity: 0.6; }
+  80% { opacity: 0.95; }
+}
+
 /* Every animation is off for users who ask for less motion. */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -96,5 +195,14 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0s !important;
     scroll-behavior: auto !important;
+  }
+
+  /* The art stops on its first frame. */
+  .hero-sprite,
+  .heart-full,
+  .campfire,
+  .fire-glow,
+  .star {
+    animation: none !important;
   }
 }

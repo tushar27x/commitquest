@@ -5,7 +5,8 @@ import { useEffect, useRef, useState, type KeyboardEvent, type Ref } from "react
 import { MobileHeader } from "@/components/game/MobileHeader";
 import { Screen } from "@/components/game/Screen";
 import { Parchment } from "@/components/Parchment";
-import { PixelSprite } from "@/components/PixelSprite";
+import { HeroSprite } from "@/components/art/HeroSprite";
+import { Portrait } from "@/components/art/Portrait";
 import { Arrow } from "@/components/ui/Arrow";
 import { SegmentBar } from "@/components/ui/SegmentBar";
 import { buttonClass } from "@/components/ui/pixel-button";
@@ -13,9 +14,9 @@ import type { Archetype, Hero, Insights } from "@/lib/api/types";
 import { CLASS_INFO, CLASS_SCORING, classSuggestion } from "@/lib/classes";
 import { className, scoreRows } from "@/lib/journal";
 import { useHero, useInsights } from "@/lib/queries";
-import { classAccent, classSprite } from "@/lib/sprites";
+import { classAccent, classGlow } from "@/lib/art";
 
-/** Hero: the character sheet (docs/design/png/character-sheet-*.png). */
+/** Hero: the character sheet (docs/design/source/SheetMobile.dc.html, SheetDesktop.dc.html). */
 export function HeroSheetScreen() {
   const level = useHero().data?.level;
   return (
@@ -41,13 +42,9 @@ export function HeroSheetScreen() {
   );
 }
 
-function Pedestal({ size }: { size: "phone" | "desktop" }) {
-  return (
-    <div
-      aria-hidden
-      className={`bg-pedestal shadow-[0_4px_0_var(--color-outline),inset_0_4px_0_#5c5580] ${size === "phone" ? "h-3.5 w-[150px]" : "h-4 w-[190px]"}`}
-    />
-  );
+/** The sprite's stage: a glow in the class accent over a floor line. */
+function stage(archetype: Archetype): string {
+  return `radial-gradient(ellipse 55% 45% at 50% 68%, ${classGlow(archetype, 23)}, transparent 70%), linear-gradient(#2a2540, #2a2540 76%, #1a1727 76%)`;
 }
 
 function HeroSheet() {
@@ -55,27 +52,26 @@ function HeroSheet() {
   const insights = useInsights().data;
   if (!hero || !insights) return null;
   const current = hero.class.current;
+  const spriteLabel = `Your ${className(current)}, idle animation`;
 
   return (
-    <div className="flex flex-col gap-5 md:flex-row md:flex-wrap md:items-start md:gap-8">
-      <section aria-label="Your character" className="flex min-w-0 flex-col gap-5 md:flex-[1_1_420px] md:gap-[22px] md:bg-stone md:p-7 md:shadow-px-drop">
-        {/* Phone: centred stack. */}
-        <div className="flex flex-col items-center gap-2.5 md:hidden">
-          <div className="flex flex-col items-center pt-1.5">
-            <PixelSprite {...classSprite(current)} scale={8} label={`${className(current)} sprite`} />
-            <Pedestal size="phone" />
+    <div className="flex flex-col gap-3.5 md:flex-row md:flex-wrap md:items-start md:gap-8">
+      <section aria-label="Your character" className="flex min-w-0 flex-col gap-3.5 md:flex-[1_1_520px] md:gap-[22px] md:bg-stone md:p-6 md:shadow-px-drop">
+        {/* Phone: a stage with the name in its corner, the habit line below. */}
+        <div className="flex flex-col gap-3.5 md:hidden">
+          <div className="relative h-[288px] overflow-hidden shadow-px" style={{ background: stage(current) }}>
+            <HeroSprite archetype={current} scale={2} label={spriteLabel} className="absolute bottom-[22px] left-1/2 -ml-24" />
+            <p className="absolute top-3 left-3 font-display text-[18px] [text-shadow:3px_3px_0_var(--color-outline)]" style={{ color: classAccent(current) }}>
+              {current}
+            </p>
           </div>
-          <p className="mt-1.5 font-display text-[18px] [text-shadow:3px_3px_0_var(--color-outline)]" style={{ color: classAccent(current) }}>
-            {current}
-          </p>
-          <p className="max-w-[300px] text-center text-[22px] leading-[1.05] text-muted">{CLASS_INFO[current].habit}</p>
+          <p className="text-center text-[22px] leading-[1.05] text-muted">{CLASS_INFO[current].habit}</p>
           <ClassNote hero={hero} insights={insights} />
         </div>
-        {/* Desktop: sprite beside the name. */}
-        <div className="hidden flex-wrap items-end gap-7 md:flex">
-          <div className="flex flex-col items-center">
-            <PixelSprite {...classSprite(current)} scale={10} label={`${className(current)} sprite`} />
-            <Pedestal size="desktop" />
+        {/* Desktop: the sprite at ×3 beside the name. */}
+        <div className="hidden flex-wrap items-end gap-[26px] md:flex">
+          <div className="relative h-[384px] w-[288px] shrink-0 overflow-hidden shadow-btn-flat" style={{ background: stage(current) }}>
+            <HeroSprite archetype={current} scale={3} label={spriteLabel} className="absolute bottom-0 left-0" />
           </div>
           <div className="flex flex-[1_1_200px] flex-col gap-2.5 pb-2">
             <span className="font-display text-[9px] text-muted-2">YOUR CLASS · SCORE {insights.archetype_scores[current] ?? 0}</span>
@@ -136,7 +132,7 @@ function ScoresCard({ current, scores }: { current: Archetype; scores: Insights[
   };
 
   return (
-    <section aria-labelledby="scores-title" className="flex min-w-0 flex-col gap-3 md:flex-[1_1_420px] md:gap-[18px] md:bg-stone md:p-7 md:shadow-px-drop">
+    <section aria-labelledby="scores-title" className="flex min-w-0 flex-col gap-3 md:flex-[1_1_420px] md:gap-4 md:bg-stone md:p-6 md:shadow-px-drop">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="scores-title" className="shrink-0 font-display text-[10px] md:text-[12px]">
           CLASS SCORES
@@ -154,11 +150,11 @@ function ScoresCard({ current, scores }: { current: Archetype; scores: Insights[
           return (
             <li key={row.archetype} className="flex flex-col gap-2" onKeyDown={onKeyDown(row.archetype)}>
               <div
-                className={`grid grid-cols-[32px_84px_minmax(0,1fr)_28px_24px] items-center gap-2 px-1.5 py-1 md:grid-cols-[40px_120px_minmax(0,1fr)_40px_28px] md:gap-3 md:px-2 md:py-1.5 ${
+                className={`grid grid-cols-[40px_84px_minmax(0,1fr)_28px_24px] items-center gap-2 px-1.5 py-1 md:grid-cols-[40px_118px_minmax(0,1fr)_40px_28px] md:gap-3 md:px-2 ${
                   row.top ? "bg-stone-lit shadow-[0_0_0_2px_var(--color-gold)]" : ""
                 }`}
               >
-                <PixelSprite {...classSprite(row.archetype)} scale={2} className="md:m-1" />
+                <Portrait archetype={row.archetype} />
                 <span className="font-display text-[8px] md:text-[10px]" style={{ color: accent }}>
                   {row.archetype}
                   {row.top && <span className="sr-only"> (top score)</span>}

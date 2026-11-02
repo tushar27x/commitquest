@@ -1,8 +1,5 @@
-// Typed access to the sprite kit. `design/sprites.json` is a copy of docs/design/sprites.json
-// made by scripts/sync-design.mjs: never edit grids or colours by hand.
-
-import type { Archetype } from "./api/types";
-import kit from "./design/sprites.json";
+// Tiny one-colour icons drawn as grids (the "FED TODAY" tick). The heroes, hearts, nav icons and
+// portraits are PNG art now: see lib/art.ts.
 
 export type Palette = Readonly<Record<string, string>>;
 
@@ -11,53 +8,7 @@ export interface Sprite {
   palette: Palette;
 }
 
-export type IconName = "heart" | "heartEmpty" | "tree" | "sparkle" | "sweat";
-
-/** Roster order: also the tie-break order for class scores. */
-export const CLASS_ORDER = Object.keys(kit.classes) as Archetype[];
-
-export function classAccent(archetype: Archetype): string {
-  return kit.classes[archetype].accent;
-}
-
-interface EyesRow {
-  row: number;
-  value: string;
-}
-
-/**
- * The closed-eyes row for a class (`variants.sleepingEyes`), or undefined when it has none:
- * the Paladin's visor already hides its eyes. Read through `unknown` because `_doc` sits
- * next to the rows.
- */
-function sleepingEyes(archetype: Archetype): EyesRow | undefined {
-  const eyes = (kit.variants.sleepingEyes as unknown as Record<string, unknown>)[archetype];
-  return eyes && typeof eyes === "object" ? (eyes as EyesRow) : undefined;
-}
-
-/** A class sprite on the shared palette. `sleeping` closes the eyes where the kit has a variant. */
-export function classSprite(archetype: Archetype, { sleeping = false } = {}): Sprite {
-  const { grid, palette } = kit.classes[archetype];
-  const eyes = sleeping ? sleepingEyes(archetype) : undefined;
-  return {
-    grid: eyes ? grid.map((row, y) => (y === eyes.row ? eyes.value : row)) : grid,
-    palette: { ...kit.basePalette, ...palette },
-  };
-}
-
-export function iconSprite(name: IconName): Sprite {
-  const { icons } = kit;
-  switch (name) {
-    case "heart":
-      return { grid: icons.heart.grid, palette: icons.heart.full };
-    case "heartEmpty":
-      return { grid: icons.heart.grid, palette: icons.heart.empty };
-    default:
-      return { grid: icons[name].grid, palette: icons[name].palette };
-  }
-}
-
-/** Horizontal runs of one colour per row, so a sprite is a handful of rects, not 256. */
+/** Horizontal runs of one colour per row, so a sprite is a handful of rects, not one per pixel. */
 export interface PixelRun {
   x: number;
   y: number;

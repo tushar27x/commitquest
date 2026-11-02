@@ -1,8 +1,9 @@
 import { HeartRow } from "@/components/HeartRow";
-import type { Hero, HeroEvent } from "@/lib/api/types";
+import { Campfire, PixelScene, Stars } from "@/components/art/SceneArt";
+import type { Hero, HeroEvent, Tier } from "@/lib/api/types";
+import { SCENE, sceneUrl } from "@/lib/art";
 import { TIER_LEVELS, faintLabel } from "@/lib/hero";
-import { Backdrop } from "./Backdrop";
-import { HeroFigure } from "./HeroFigure";
+import { HeroFigure, type HeroFigureProps } from "./HeroFigure";
 
 const MOOD_WORDS: Record<Hero["mood"], string> = {
   HAPPY: "happy",
@@ -14,35 +15,69 @@ const MOOD_WORDS: Record<Hero["mood"], string> = {
   FAINTED: "fainted, hearts refilled",
 };
 
-const BADGE = "absolute bg-night/80 shadow-btn-flat";
+// Where things stand in each backdrop, in the art's pixels at its drawn scale
+// (docs/design/source/HomeMobile, HomeDesktop, TierHome). The campfire hero stands left of the fire.
+const LAYOUT = {
+  phone: {
+    centre: 147,
+    hero: (tier: Tier) => ({ left: tier === "CAMPFIRE" ? 176 : 147, bottom: 20 }),
+    fire: { fire: [304, 188], glow: [230, 120, 190, 150] },
+    stars: [[40, 18, 0], [188, 34, 1.2], [310, 14, 2.1], [120, 52, 0.6]],
+    starSize: 3,
+  },
+  desktop: {
+    centre: 284,
+    hero: (tier: Tier) => ({ left: tier === "CAMPFIRE" ? 330 : 284, bottom: 34 }),
+    fire: { fire: [592, 328], glow: [470, 220, 330, 260] },
+    stars: [[90, 40, 0], [380, 70, 1.1], [620, 30, 2], [240, 110, 0.5]],
+    starSize: 4,
+  },
+} as const;
+
+/** Night tiers twinkle. */
+const STARRY: Record<Tier, boolean> = { CAMPFIRE: true, VILLAGE: true, KEEP: false, CITADEL: false };
+
+const BADGE = "absolute bg-night/78 shadow-btn-flat";
+
+function Backdrop({ tier, size, figure }: { tier: Tier; size: "phone" | "desktop"; figure: Omit<HeroFigureProps, "scale" | "hungryText"> }) {
+  const { width, height, scale } = SCENE[size];
+  const layout = LAYOUT[size];
+  const at = layout.hero(tier);
+  return (
+    <PixelScene url={sceneUrl(tier, size)} width={width} height={height} scale={scale} className={size === "phone" ? "md:hidden" : "hidden md:block"}>
+      {STARRY[tier] && <Stars stars={layout.stars} size={layout.starSize} />}
+      {tier === "CAMPFIRE" && <Campfire scale={scale} fire={[...layout.fire.fire]} glow={[...layout.fire.glow]} />}
+      <div className="absolute" style={at}>
+        <HeroFigure
+          {...figure}
+          scale={scale}
+          hungryText={size === "phone" ? "Getting rusty" : "We're getting rusty. No code today."}
+          bubbleShift={layout.centre - at.left}
+        />
+      </div>
+    </PixelScene>
+  );
+}
 
 /** The pet: tier backdrop, the hero with its mood, hearts and streak (phone 292 px, desktop 520 px). */
 export function HeroScene({ hero, events, className = "" }: { hero: Hero; events: HeroEvent[] | undefined; className?: string }) {
   const cls = hero.class.current;
   const name = cls.charAt(0) + cls.slice(1).toLowerCase();
   const levelLabel = hero.mood === "FAINTED" ? faintLabel(hero, events) : `LV ${hero.level}!`;
-  const figure = { archetype: cls, mood: hero.mood, baseMood: hero.base_mood, levelLabel };
+  const figure = { archetype: cls, mood: hero.mood, levelLabel };
 
   return (
-    <section
-      aria-label="Your hero"
-      className={`relative h-[292px] min-w-0 overflow-hidden [--u:1] md:h-[520px] md:shadow-px-drop md:[--u:1.65] ${className}`}
-    >
-      <Backdrop tier={hero.tier} />
+    <section aria-label="Your hero" className={`relative h-[292px] min-w-0 overflow-hidden bg-[#1a1636] md:h-[520px] md:shadow-px-drop ${className}`}>
+      <div aria-hidden className="absolute inset-0">
+        <Backdrop tier={hero.tier} size="phone" figure={figure} />
+        <Backdrop tier={hero.tier} size="desktop" figure={figure} />
+      </div>
       <p className="sr-only">
         {name}, level {hero.level}, {hero.lives} of {hero.max_lives} hearts, streak {hero.streak}, {MOOD_WORDS[hero.mood]}.
       </p>
 
-      <div className="absolute bottom-[16%] left-1/2 -translate-x-1/2 md:hidden">
-        <HeroFigure {...figure} scale={6} hungryText="Hungry" />
-      </div>
-      <div className="absolute bottom-[17%] left-1/2 hidden -translate-x-1/2 md:block">
-        <HeroFigure {...figure} scale={8} hungryText="I'm hungry…" />
-      </div>
-
-      <div aria-hidden className={`${BADGE} top-3 left-3 flex items-center gap-2.5 px-2.5 py-2 md:top-5 md:left-5 md:px-3 md:py-2.5`}>
-        <HeartRow lives={hero.lives} max={hero.max_lives} scale={3} className="md:hidden" />
-        <HeartRow lives={hero.lives} max={hero.max_lives} scale={4} className="hidden gap-2 md:flex" />
+      <div aria-hidden className={`${BADGE} top-3 left-3 flex items-center gap-2.5 px-2 py-1.5 md:top-5 md:left-5 md:px-3 md:py-2.5`}>
+        <HeartRow lives={hero.lives} max={hero.max_lives} className="gap-1 md:gap-1.5" />
         <span className="hidden font-display text-[10px] md:inline">
           {hero.lives}/{hero.max_lives}
         </span>

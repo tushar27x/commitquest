@@ -8,7 +8,7 @@ Spec: `../docs/v2-hero-plan.md` §4–5. API shapes: `../docs/api/contract.md`.
 ```bash
 npm install
 cp .env.example .env.local   # NEXT_PUBLIC_MOCK=1 runs without a backend
-npm run dev                  # http://localhost:3000, sprite kit at /dev/sprites
+npm run dev                  # http://localhost:3000, art kit at /dev/sprites
 npm run lint
 npm test                     # vitest unit tests (lib/)
 npm run build
@@ -19,9 +19,10 @@ npm run build
 | Path | What |
 |---|---|
 | `app/theme.css` | Tailwind `@theme`, **generated** from `docs/design/tokens.json` (`npm run design`; `predev`/`prebuild` run it, `design:check` fails on drift) |
-| `lib/design/sprites.json` | Copy of `docs/design/sprites.json`, made by the same script |
-| `components/PixelSprite.tsx` | Renders a sprite grid as crisp SVG rects at an integer scale |
-| `lib/sprites.ts` | Class and icon sprites with palettes resolved |
+| `public/art/` | Byte copy of `docs/design/art/` (the PNG sheets), made by the same script and checked by `design:check` |
+| `lib/art.ts` | Art paths and frame layout: hero sheet per class and mood, scenes, UI sheets; `CLASS_ORDER`, `classAccent` |
+| `components/art/` | `HeroSprite` (animated sheet at ×1–3), `Portrait`, `PixelScene` (backdrop at an integer scale), `Stars`, `Campfire` |
+| `components/PixelSprite.tsx`, `lib/sprites.ts` | Tiny one-colour grid icons (the FED TODAY tick) as SVG rects |
 | `lib/api.ts` | `fetch` wrapper, throws `ApiError{status, retryAfter, problem}` (`status` 0 = network) |
 | `lib/auth.ts` | JWT in localStorage (guarded), expiry check, `#token=` reader |
 | `lib/queries.ts` | `useInsights`, `useHero`, `useHeroEvents`, `usePreferences`, `useSync`, `useChangeClass`, `useSavePreferences`; `sendBrowserZone` after login |
