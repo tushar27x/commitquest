@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { RoadBlockedCard } from "@/components/game/StateCards";
-import { PixelSprite } from "@/components/PixelSprite";
+import { HeroSprite } from "@/components/art/HeroSprite";
+import { Portrait } from "@/components/art/Portrait";
 import { buttonClass } from "@/components/ui/pixel-button";
 import { Switch } from "@/components/ui/Switch";
 import type { Archetype, Hero, Insights } from "@/lib/api/types";
@@ -11,7 +12,7 @@ import { clockNow, useNow } from "@/lib/clock";
 import { formatClock, formatWait } from "@/lib/format";
 import { className, localDate, longDate } from "@/lib/journal";
 import { useChangeClass, useHero, useInsights } from "@/lib/queries";
-import { classAccent, classSprite } from "@/lib/sprites";
+import { classAccent, classGlow } from "@/lib/art";
 
 /** Change class (docs/design/png/change-class-phone.png). Rendered inside <Screen flush>. */
 export function ChangeClass() {
@@ -146,24 +147,22 @@ function ChangeClassForm({ hero, insights }: { hero: Hero; insights: Insights })
   );
 }
 
-/** The picked class, big, with its habit line. Phone: a 176 px band; desktop: a panel. */
+/** The picked class with its habit line. Phone: a 150 px band (×1 sprite); desktop: a panel (×2). */
 function Preview({ archetype, following }: { archetype: Archetype; following: boolean }) {
   const accent = classAccent(archetype);
+  const stage = `radial-gradient(ellipse 55% 45% at 50% 68%, ${classGlow(archetype, 23)}, transparent 70%), linear-gradient(#2a2540, #2a2540 76%, #1a1727 76%)`;
   return (
     <section
       aria-live="polite"
       aria-label="Picked class"
-      className="flex h-[176px] items-center gap-[18px] bg-[linear-gradient(#1a1630,#1a1630_74%,#241e40_74%)] px-5 md:h-auto md:flex-col md:items-start md:gap-5 md:bg-stone md:bg-none md:p-7 md:shadow-px-drop"
+      className="flex h-[150px] items-center gap-3.5 overflow-hidden bg-(image:--stage) px-4 md:h-auto md:bg-none md:flex-col md:items-start md:gap-5 md:bg-stone md:p-7 md:shadow-px-drop"
+      style={{ ["--stage" as string]: stage }}
     >
-      <div className="flex shrink-0 flex-col items-center">
-        {/* PixelSprite sets display inline, so the breakpoints go on wrappers. */}
-        <div className="md:hidden">
-          <PixelSprite {...classSprite(archetype)} scale={6} />
-        </div>
-        <div className="hidden md:block">
-          <PixelSprite {...classSprite(archetype)} scale={10} />
-        </div>
-        <div aria-hidden className="h-2.5 w-28 bg-pedestal shadow-bar-down md:h-4 md:w-[190px]" />
+      <div className="shrink-0 md:hidden">
+        <HeroSprite archetype={archetype} scale={1} label={`${className(archetype)} preview, animated`} className="mt-[22px]" />
+      </div>
+      <div className="hidden h-[288px] w-full shrink-0 justify-center overflow-hidden shadow-btn-flat md:flex" style={{ background: stage }}>
+        <HeroSprite archetype={archetype} scale={2} label={`${className(archetype)} preview, animated`} className="mt-auto mb-[22px]" />
       </div>
       <div className="flex min-w-0 flex-col gap-2">
         {following && <span className="font-display text-[7px] leading-normal text-success md:text-[9px]">FOLLOWING TOP SCORE</span>}
@@ -193,13 +192,13 @@ function ClassRow({ option, selected, onPick }: { option: ClassOption; selected:
       aria-pressed={selected}
       aria-label={label}
       onClick={onPick}
-      className={`grid h-11 w-full grid-cols-[32px_minmax(0,104px)_minmax(0,1fr)_auto] items-center gap-2.5 px-2.5 text-left disabled:cursor-not-allowed disabled:opacity-55 md:h-12 ${
+      className={`grid h-[50px] w-full grid-cols-[40px_minmax(0,104px)_minmax(0,1fr)_auto] items-center gap-2.5 px-2.5 text-left disabled:cursor-not-allowed disabled:opacity-55 ${
         selected
           ? "bg-stone-lit shadow-[0_0_0_3px_var(--color-gold)]"
           : "bg-stone shadow-[0_0_0_2px_var(--color-outline)] hover:bg-stone-lit active:bg-stone-lit disabled:hover:bg-stone"
       }`}
     >
-      <PixelSprite {...classSprite(archetype)} scale={2} />
+      <Portrait archetype={archetype} dimmed={!selectable} />
       <span className="truncate font-display text-[9px]" style={{ color: selectable ? classAccent(archetype) : "var(--color-faint)" }}>
         {archetype}
       </span>

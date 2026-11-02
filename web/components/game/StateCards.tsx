@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/pixel-button";
 import { loginUrl } from "@/lib/auth";
 import { formatCountdown } from "@/lib/format";
 import { useGameState } from "./GameState";
+import { PortraitRoll, StateHero } from "./StateArt";
 
 const ACTION = "px-4 py-3 text-[10px]";
 
@@ -17,6 +18,7 @@ export function NewGameCard() {
       tone="gold"
       title="NEW GAME"
       titleId="new-game-title"
+      footer={<PortraitRoll />}
       action={
         <button type="button" onClick={save} disabled={saving || resting} className={buttonClass("primary", ACTION)}>
           {resting ? `RESTING ${formatCountdown(restSeconds)}` : "ROLL CHARACTER"}
@@ -37,6 +39,7 @@ export function ReconnectBanner() {
       tone="ember"
       title="YOUR GITHUB SEAL BROKE"
       titleId="reconnect-title"
+      art={<StateHero mood="WEAK" />}
       role="alert"
       action={
         <a href={loginUrl()} className={buttonClass("primary", ACTION)}>
@@ -56,6 +59,7 @@ export function RoadBlockedCard({ onRetry, retrying = false }: { onRetry: () => 
       tone="ember"
       title="THE ROAD IS BLOCKED"
       titleId="road-blocked-title"
+      art={<StateHero mood="HUNGRY" />}
       role="alert"
       action={
         <button type="button" onClick={onRetry} disabled={retrying} className={buttonClass("primary", ACTION)}>

@@ -6,7 +6,7 @@ import { buttonClass } from "@/components/ui/pixel-button";
 import type { Hero, HeroEvents } from "@/lib/api/types";
 import { useNow } from "@/lib/clock";
 import { activeDaysToHeart, activeDaysToLevel, heartsAtStake, isRestDay, recentLog, timeLeft, weekCells, type LogTone, type WeekCell } from "@/lib/hero";
-import { classAccent } from "@/lib/sprites";
+import { classAccent } from "@/lib/art";
 
 // Cards set their own shadow: two box-shadow utilities on one element fight over the order.
 const PANEL = "flex flex-col bg-stone px-3.5 py-3 md:px-5 md:py-[18px]";

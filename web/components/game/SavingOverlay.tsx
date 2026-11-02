@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { SegmentBar } from "@/components/ui/SegmentBar";
 import { StateCard } from "@/components/ui/StateCard";
+import { StateHero } from "./StateArt";
 import { buttonClass } from "@/components/ui/pixel-button";
 import type { Archetype } from "@/lib/api/types";
 import { CLASS_INFO } from "@/lib/classes";
-import { CLASS_ORDER } from "@/lib/sprites";
+import { CLASS_ORDER } from "@/lib/art";
 import { useHero } from "@/lib/queries";
 
 const CELLS = 12;
@@ -59,6 +60,7 @@ export function SavingOverlay() {
         tone="gold"
         title="SAVING YOUR QUEST…"
         titleId="saving-title"
+        art={<StateHero />}
         role="status"
         className="w-full max-w-[420px]"
         meter={<SegmentBar filled={filled} cells={CELLS} label="Saving" className="h-3.5 gap-[3px]" />}

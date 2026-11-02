@@ -4,6 +4,7 @@ import { useRef, useState, type KeyboardEvent } from "react";
 import { MobileHeader } from "@/components/game/MobileHeader";
 import { Screen } from "@/components/game/Screen";
 import { Parchment } from "@/components/Parchment";
+import { Portrait } from "@/components/art/Portrait";
 import { Arrow } from "@/components/ui/Arrow";
 import type { Insights } from "@/lib/api/types";
 import { calendarDays, longDate, repoBars, shortDate, type CalendarDay } from "@/lib/journal";
@@ -21,6 +22,7 @@ const SUBTITLE = "Your last 12 months";
 /** Journal: the yearly insights, in STATS / REPOS / REVIEWS tabs. */
 export function JournalScreen() {
   const [tab, setTab] = useState<TabId>("stats");
+  const archetype = useHero().data?.class.current;
   const tabRefs = useRef<Record<TabId, HTMLButtonElement | null>>({ stats: null, repos: null, reviews: null });
 
   const select = (id: TabId, focus = false) => {
@@ -42,7 +44,8 @@ export function JournalScreen() {
       title="JOURNAL"
       actions={<span className="text-muted-2">{SUBTITLE}</span>}
       header={
-        <MobileHeader flat className="pt-4">
+        <MobileHeader flat className="pt-2">
+          {archetype && <Portrait archetype={archetype} className="hidden min-[360px]:block" />}
           <h1 className="font-display text-[14px] text-gold">JOURNAL</h1>
           <span className="ml-auto text-muted-2">{SUBTITLE}</span>
         </MobileHeader>

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import heroFixture from "../public/fixtures/hero.json";
 import insightsFixture from "../public/fixtures/insights.json";
 import type { Hero, HeroClass, Insights } from "./api/types";
-import { CLASS_ORDER } from "./sprites";
+import { CLASS_ORDER } from "./art";
 import { CLASS_SCORING, classAction, classOptions, classSuggestion, cooldownLeft, qualifiedClasses } from "./classes";
 
 const hero = heroFixture as Hero;
