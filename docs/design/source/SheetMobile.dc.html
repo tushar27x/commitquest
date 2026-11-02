@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Character sheet, phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f2b632}a:hover{color:#ffd36b}
+.sp{display:block;background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges;width:96px;height:128px;background-size:5760px 128px;animation:spA 6.2832s steps(60) infinite}
+.sp2{width:192px;height:256px;background-size:11520px 256px;animation-name:spB}
+.sp3{width:288px;height:384px;background-size:17280px 384px;animation-name:spC}
+@keyframes spA{from{background-position:0 0}to{background-position:-5760px 0}}
+@keyframes spB{from{background-position:0 0}to{background-position:-11520px 0}}
+@keyframes spC{from{background-position:0 0}to{background-position:-17280px 0}}
+.k-paladin{background-image:url(/_blob/f18954a9ff14bedd31f6b8cf06347f8c)}
+.k-barbarian{background-image:url(/_blob/8ed10d55447cb8ff45dc57775d210f1c)}
+.k-wizard{background-image:url(/_blob/0e4e4ce85931c11f4649005e17d91700)}
+.k-artificer{background-image:url(/_blob/773d1670aaa0c025f37789495b0da93e)}
+.k-cleric{background-image:url(/_blob/5da7644303d94b752cc1294a2e7d7239)}
+.k-bard{background-image:url(/_blob/81732435a286f84828afe49650b3172a)}
+.k-monk{background-image:url(/_blob/abcc55103df7689ae00353055ee21137)}
+.k-rogue{background-image:url(/_blob/aa0ac593a6177f4dffac476b3b642082)}
+.k-monk-happy{background-image:url(/_blob/0a47e55b2effbac564afdcfec0380645)}
+.k-monk-weak{background-image:url(/_blob/bf494fffb444ff2fdb3c6f1e4309dbb1)}
+.k-monk-hungry{background-image:url(/_blob/72913c88536ed130612b3caeff535a32)}
+.k-monk-hungry-nb{background-image:url(/_blob/0cb331181bc6f97b494596f229c9b4b9)}
+.k-monk-sleeping{background-image:url(/_blob/4f5904c1250d204389fb4aee96e15406)}
+.k-monk-levelup{background-image:url(/_blob/f95aab396a36f6091d54695d7a542712)}
+.k-monk-fainted{background-image:url(/_blob/c4ebdb61302b2dfe66f315107abe73c9)}
+.ht{width:24px;height:22px;background-image:url(/_blob/1206abce59a5df5a2649f07831cf377c);background-size:312px 22px;background-position:-288px 0;image-rendering:pixelated;image-rendering:crisp-edges}
+.ht.on{animation:htA 1.2s steps(12) infinite}
+@keyframes htA{from{background-position:0 0}to{background-position:-288px 0}}
+.ic{width:24px;height:24px;background-image:url(/_blob/71aa271d046ce726befce13fb5e983d5);background-size:120px 48px;image-rendering:pixelated;image-rendering:crisp-edges}
+.pt{width:40px;height:48px;background-image:url(/_blob/43b2b41e579af60d6cfe8444acca4e9d);background-size:320px 48px;image-rendering:pixelated;image-rendering:crisp-edges}
+.fire{width:32px;height:48px;background-image:url(/_blob/93bf0f74cfc4f7f9ffa52199390fa6b5);background-size:256px 48px;image-rendering:pixelated;animation:fireA .8s steps(8) infinite}
+@keyframes fireA{from{background-position:0 0}to{background-position:-256px 0}}
+.tw{position:absolute;width:3px;height:3px;background:#f4ecd8;animation:twA 3s ease-in-out infinite}
+@keyframes twA{0%,100%{opacity:.2}50%{opacity:1}}
+.flick{animation:flA 1.4s ease-in-out infinite}
+@keyframes flA{0%,100%{opacity:.75}30%{opacity:1}60%{opacity:.6}80%{opacity:.95}}
+.sc-vphone{background-image:url(/_blob/2a0d8b13b7905af2e8f19fbf97afd361);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-vdesk{background-image:url(/_blob/1bd60d6caa530c58256c87681878c65c);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-camp{background-image:url(/_blob/c0ce4c6770d25dae187af4dbdc4efa31);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-vill{background-image:url(/_blob/8dbcf996e2a37eb61f18340777ab2823);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-keep{background-image:url(/_blob/e7560be3a31ab446d8064639b843fc1f);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-cita{background-image:url(/_blob/2490dc0af2fa3ef6b7f3bf900908adc7);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-title{background-image:url(/_blob/de49c3db297bb01a8f27ff941c55b3ec);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+@media (prefers-reduced-motion:reduce){.sp,.ht.on,.tw,.fire,.flick{animation:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #13111c; font-family: 'VT323', monospace; color: #f4ecd8; display: flex; flex-direction: column; overflow: hidden">
+  <header style="height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: #221e33; box-shadow: 0 4px 0 #0a0910">
+    <span style="font-family: 'Press Start 2P', monospace; font-size: 9px; color: #a69dbd">LV 7</span>
+    <h1 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 11px; color: #f4ecd8">HERO</h1>
+    <a href="#" style="font-family: 'Press Start 2P', monospace; font-size: 8px; text-decoration: none; padding: 12px 0">CHANGE ▶</a>
+  </header>
+  <main style="flex: 1; overflow-y: auto; padding: 14px 14px 20px; display: flex; flex-direction: column; gap: 14px">
+    <section style="position: relative; height: 288px; flex-shrink: 0; overflow: hidden; background: {{hero.stage}}; box-shadow: 0 0 0 4px #0a0910, inset 2px 2px 0 rgba(255,255,255,.07), inset -2px -2px 0 rgba(0,0,0,.3)">
+      <div class="sp sp2 {{hero.k}}" role="img" aria-label="Your hero, idle animation" style="position: absolute; left: 50%; margin-left: -96px; bottom: 22px"></div>
+      <span style="position: absolute; left: 12px; top: 12px; font-family: 'Press Start 2P', monospace; font-size: 18px; color: {{hero.accent}}; text-shadow: 3px 3px 0 #0a0910">{{hero.name}}</span>
+    </section>
+    <p style="margin: 0; font-size: 22px; line-height: 1.05; color: #c9c0dc; text-align: center">{{hero.habit}}</p>
+    <section aria-label="Character lore" style="background: #efe0bb; color: #2a1d12; padding: 14px 16px 16px; box-shadow: 0 0 0 4px #0a0910, inset 0 0 0 4px #c9b48a; display: flex; flex-direction: column; gap: 6px">
+      <h2 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 10px; line-height: 1.6; color: #6b3d16">THE PATIENT COMMITTER</h2>
+      <p style="margin: 0; font-size: 21px; line-height: 1.08">[AI lore, 2–3 sentences. Sample:] Trained in the quiet halls of small diffs, this monk writes each commit like a vow. Their next trial: carry the same calm into larger quests.</p>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <h2 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 10px; color: #f4ecd8">CLASS SCORES</h2>
+        <span style="font-size: 18px; color: #a69dbd">0–100 · ALGO v1</span>
+      </div>
+      <ol style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{scores}}" as="r" hint-placeholder-count="8">
+          <li style="display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 8px; padding: 4px 6px; background: {{r.rowBg}}; box-shadow: {{r.rowRing}}">
+            <span class="pt" aria-hidden="true" style="background-position: {{r.pos}}"></span>
+            <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+              <div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-family: 'Press Start 2P', monospace; font-size: 7px; color: {{r.accent}}">{{r.name}}</span><span style="font-size: 20px; line-height: 1">{{r.score}}</span></div>
+              <div role="img" aria-label="{{r.name}} {{r.score}} out of 100" style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 2px; height: 8px">
+                <sc-for list="{{r.segs}}" as="s"><div style="background: {{s.fill}}"></div></sc-for>
+              </div>
+            </div>
+          </li>
+        </sc-for>
+      </ol>
+    </section>
+  </main>
+  <nav aria-label="Main" style="height: 64px; flex-shrink: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: #221e33; box-shadow: 0 -4px 0 #0a0910">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+      <a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-decoration: none; color: {{t.color}}; background: {{t.bg}}; box-shadow: inset 0 3px 0 {{t.line}}; font-family: 'Press Start 2P', monospace; font-size: 7px">
+        <span class="ic" aria-hidden="true" style="background-position: {{t.pos}}"></span>
+        {{t.label}}
+      </a>
+    </sc-for>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+var ORDER = ['PALADIN','BARBARIAN','WIZARD','ARTIFICER','CLERIC','BARD','MONK','ROGUE'];
+var ACCENT = { PALADIN: '#6c9cf0', BARBARIAN: '#ef7a52', WIZARD: '#a98cf0', ARTIFICER: '#e3a15a', CLERIC: '#4fcfc1', BARD: '#ef7099', MONK: '#f5c04a', ROGUE: '#9fc39f' };
+var HABIT = {
+  PALADIN: 'Keeps an oath of daily commits: consistent, unbroken streaks', BARBARIAN: 'Charges in with huge pull requests and bursts of activity',
+  WIZARD: 'Masters many languages across their projects', ARTIFICER: 'Builds the machinery: Docker, CI, infrastructure as code',
+  CLERIC: 'Heals codebases: reports issues and lands fixes', BARD: 'Works through pull requests, documents well and draws an audience',
+  MONK: 'Disciplined: small pull requests and descriptive commit messages', ROGUE: 'Strikes from the shadows, doing much of their work on weekends'
+};
+var SIGNALS = { PALADIN: 'streaks, active days', BARBARIAN: 'PR size, bursts', WIZARD: 'languages used', ARTIFICER: 'infra files in repos', CLERIC: 'issues, fix commits', BARD: 'PRs, stars, READMEs', MONK: 'small PRs, message quality', ROGUE: 'weekend share' };
+var SCORES = { MONK: 52, ROGUE: 47, PALADIN: 44, BARBARIAN: 44, WIZARD: 33, ARTIFICER: 33, BARD: 10, CLERIC: 0 };
+function kcls(n) { return 'k-' + n.toLowerCase(); }
+function ptPos(n) { return '-' + (ORDER.indexOf(n) * 40) + 'px 0'; }
+function stageBg(n) { return 'radial-gradient(ellipse 55% 45% at 50% 68%, ' + ACCENT[n] + '3a, transparent 70%), linear-gradient(#2a2540, #2a2540 76%, #1a1727 76%)'; }
+function sortedByScore() { return ORDER.slice().sort(function (a, b) { return (SCORES[b] - SCORES[a]) || (ORDER.indexOf(a) - ORDER.indexOf(b)); }); }
+function hearts(n) { var a = []; for (var i = 0; i < 3; i++) a.push({ cls: i < n ? 'ht on' : 'ht', delay: '-' + (i * 0.3).toFixed(1) + 's' }); return a; }
+function tabsFor(active) {
+  var L = ['HOME', 'JOURNAL', 'HERO', 'ARENA', 'SETTINGS'];
+  return L.map(function (l, i) { var on = i === active; return { label: l, color: on ? '#f2b632' : '#a69dbd', bg: on ? '#2e2945' : 'transparent', line: on ? '#f2b632' : 'transparent', pos: '-' + (i * 24) + 'px ' + (on ? '-24px' : '0') }; });
+}
+function xpSegs(n, filled) { var o = []; for (var i = 0; i < n; i++) o.push({ fill: i < filled ? 'linear-gradient(#ffe48f,#f2b632 52%,#b87a1c)' : '#2e2945' }); return o; }
+class Component extends DCLogic {
+  renderVals() {
+    var sorted = sortedByScore(), top = sorted[0];
+    return {
+      hero: { name: top, k: kcls(top), accent: ACCENT[top], habit: HABIT[top], stage: stageBg(top) },
+      scores: sorted.map(function (n) {
+        var filled = Math.round(SCORES[n] / 10), segs = [];
+        for (var i = 0; i < 10; i++) segs.push({ fill: i < filled ? ACCENT[n] : '#2e2945' });
+        var isTop = n === top;
+        return { name: n, score: SCORES[n], accent: ACCENT[n], pos: ptPos(n), segs: segs, rowBg: isTop ? '#2e2945' : '#1b1829', rowRing: isTop ? '0 0 0 2px #f2b632' : '0 0 0 2px #0a0910' };
+      }),
+      tabs: tabsFor(2)
+    };
+  }
+}
+</script>
+</body>
+</html>

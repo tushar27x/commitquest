@@ -1,0 +1,243 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "MoodMatrix.dc.html": {"h": 1560, "title": "Every class, every mood", "w": 1440, "x": 0, "y": 7944},
+    "TierHome.dc.html": {"h": 1760, "title": "Home backdrops by tier, both sizes", "w": 1752, "x": 0, "y": 9756},
+    "ClassSwitch.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Change class, phone",
+      "w": 390,
+      "x": 1520,
+      "y": 2604
+    },
+    "HomeDesktop.dc.html": {
+      "expand": "fill",
+      "h": 844,
+      "title": "Home, desktop",
+      "w": 1280,
+      "x": 0,
+      "y": 5088
+    },
+    "HomeMobile.dc.html": {
+      "h": 844,
+      "title": "Home, phone",
+      "w": 390,
+      "x": 0,
+      "y": 3884
+    },
+    "JournalMobile.dc.html": {
+      "h": 844,
+      "title": "Journal, phone",
+      "w": 390,
+      "x": 470,
+      "y": 3884
+    },
+    "Main.dc.html": {
+      "h": 1200,
+      "title": "Class roster",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Moods.dc.html": {
+      "h": 1040,
+      "title": "Moods (Monk)",
+      "w": 1440,
+      "x": 0,
+      "y": 2604
+    },
+    "SettingsMobile.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Settings, phone",
+      "w": 390,
+      "x": 940,
+      "y": 3884
+    },
+    "SheetDesktop.dc.html": {
+      "expand": "fill",
+      "h": 844,
+      "title": "Character sheet, desktop",
+      "w": 1280,
+      "x": 470,
+      "y": 1520
+    },
+    "SheetMobile.dc.html": {
+      "h": 844,
+      "title": "Character sheet, phone",
+      "w": 390,
+      "x": 0,
+      "y": 1520
+    },
+    "States.dc.html": {
+      "h": 800,
+      "title": "System states",
+      "w": 1440,
+      "x": 0,
+      "y": 6892
+    },
+    "Tiers.dc.html": {
+      "h": 480,
+      "title": "Home backdrop by level tier",
+      "w": 1440,
+      "x": 0,
+      "y": 6172
+    },
+    "Title.dc.html": {
+      "h": 844,
+      "title": "Title screen, phone",
+      "w": 390,
+      "x": 1410,
+      "y": 3884
+    },
+    "Tokens.dc.html": {
+      "h": 1280,
+      "title": "Palette and type",
+      "w": 640,
+      "x": 1520,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-01T17:40:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "noteOrder": [
+    "t1",
+    "t2",
+    "t3",
+    "t4",
+    "t5",
+    "t6",
+    "t7",
+    "n1",
+    "n2",
+    "n3",
+    "n4",
+    "n5",
+    "t8",
+    "t9",
+    "n6"
+  ],
+  "notes": {
+    "t8": {"kind": "title1", "maxW": 1440, "text": "Every class, every mood", "w": 240, "x": 0, "y": 7704},
+    "t9": {"kind": "title1", "maxW": 1752, "text": "Home backdrops: every tier, both sizes", "w": 240, "x": 0, "y": 9516},
+    "n6": {"fill": "orange", "text": "All 8 classes now have all 7 moods. The Monk row uses its own sheets; the other 7 classes use one packed file each. Level up adds light rays behind the hop; fainted lies the sprite down with its stars circling. Same rules for every class.", "w": 330, "x": 1520, "y": 7944},
+    "n1": {
+      "fill": "orange",
+      "text": "v2 art direction: higher pixel density (96×128 sprites, 1 art pixel = 1 CSS pixel), 4-step shaded ramps lit from the top left, a cool rim light on the right edge, dark tinted outlines, dithered glows. Every hero idles in a 60-frame loop that repeats without a seam. Backdrops, hearts and nav icons are drawn with the same engine so everything shares one light.",
+      "w": 330,
+      "x": 2240,
+      "y": 0
+    },
+    "n2": {
+      "fill": "orange",
+      "text": "Scores on the sheet are tushar27x's real Phase 4 calibration (Monk 52 ... Cleric 0). Title and lore are sample text: in the app the LLM writes them, and the static fallback is the class label + habit. Hero level 7 is fixture data.",
+      "w": 330,
+      "x": 1830,
+      "y": 1520
+    },
+    "n3": {
+      "fill": "orange",
+      "text": "Moods are now full animated sprite loops from one shared engine, so all 8 classes get all moods (Monk shown here; the matrix further down shows every class). Level up adds light rays behind the hop; fainted lies the sprite down with stars circling.\n\nQualified = score 40+ or the top class. Switching keeps level and lives; 7-day cooldown.",
+      "w": 330,
+      "x": 1990,
+      "y": 2604
+    },
+    "n4": {
+      "fill": "orange",
+      "text": "One fixture story across every board: Monk, LV 7, 140/350 XP, 2 of 3 hearts. Mon and Tue active, Wed missed (lost a heart), Thu active (streak 1). It is Friday 18:20 local with no contribution yet, so the hero is Hungry. Sunday is a chosen rest day.\n\nStats and repo names are fixture data, not your real numbers.",
+      "w": 340,
+      "x": 1880,
+      "y": 3884
+    },
+    "n5": {
+      "fill": "orange",
+      "text": "Campfire flames flicker, stars twinkle and the hero idles in every tier. Scenes are static pixel art; only those overlays move.",
+      "w": 330,
+      "x": 1520,
+      "y": 6172
+    },
+    "t1": {
+      "kind": "title1",
+      "maxW": 2160,
+      "text": "Characters: 8 classes, 96×128 animated sprites",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    },
+    "t2": {
+      "kind": "title1",
+      "maxW": 1750,
+      "text": "Character sheet (Hero tab)",
+      "w": 240,
+      "x": 0,
+      "y": 1292
+    },
+    "t3": {
+      "kind": "title1",
+      "maxW": 1910,
+      "text": "Moods and changing class",
+      "w": 240,
+      "x": 0,
+      "y": 2376
+    },
+    "t4": {
+      "kind": "title1",
+      "maxW": 1800,
+      "text": "Phone: Home, Journal, Settings, Title",
+      "w": 240,
+      "x": 0,
+      "y": 3644
+    },
+    "t5": {
+      "kind": "title1",
+      "maxW": 1280,
+      "text": "Home on desktop",
+      "w": 240,
+      "x": 0,
+      "y": 4848
+    },
+    "t6": {
+      "kind": "title1",
+      "maxW": 1440,
+      "text": "Level tiers change the backdrop",
+      "w": 240,
+      "x": 0,
+      "y": 5952
+    },
+    "t7": {
+      "kind": "title1",
+      "maxW": 1440,
+      "text": "System states",
+      "w": 240,
+      "x": 0,
+      "y": 6672
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Tokens.dc.html",
+    "SheetMobile.dc.html",
+    "SheetDesktop.dc.html",
+    "Moods.dc.html",
+    "ClassSwitch.dc.html",
+    "HomeMobile.dc.html",
+    "JournalMobile.dc.html",
+    "SettingsMobile.dc.html",
+    "Title.dc.html",
+    "HomeDesktop.dc.html",
+    "Tiers.dc.html",
+    "States.dc.html",
+    "MoodMatrix.dc.html",
+    "TierHome.dc.html"
+  ],
+  "pages": [],
+  "title": "Insight Hub v2: Hero Design (hi-res)"
+}
