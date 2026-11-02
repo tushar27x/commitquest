@@ -1,7 +1,7 @@
 // Pure display logic for the Journal and the Hero sheet.
 
 import type { Archetype, Insights, LocalDate, RepoCount } from "./api/types";
-import { CLASS_ORDER } from "./sprites";
+import { CLASS_ORDER } from "./art";
 
 const DAY_MS = 86_400_000;
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];

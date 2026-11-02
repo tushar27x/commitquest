@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { StateCard } from "@/components/ui/StateCard";
+import { StateHero } from "./StateArt";
 import { buttonClass } from "@/components/ui/pixel-button";
 import { useGameState } from "./GameState";
 
@@ -34,6 +35,7 @@ export function SessionEndedDialog() {
         tone="bone"
         title="SESSION ENDED"
         titleId="session-ended-title"
+        art={<StateHero archetype="ROGUE" />}
         action={
           <button type="button" onClick={backToTitle} autoFocus className={buttonClass("primary", "px-4 py-3 text-[10px]")}>
             BACK TO TITLE
