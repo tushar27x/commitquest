@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import static com.tushar27x.insightshub.it.ContractShape.ARCHETYPES;
 import static com.tushar27x.insightshub.it.ContractShape.DATE;
@@ -54,6 +55,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * <p>
  * The hero lives through a 14-day story built so that the rules emit every event type B5 can produce, then
  * switches class ({@code PUT /hero/class}, B6) for {@code CLASS_CHANGED}.
+ * <p>
+ * B8: the Arena ({@code GET /leaderboard}, {@code GET /user/rank}) on the shared board, and {@code /user/rank}'s two
+ * 404s, told apart by {@code title}.
  */
 @IntegrationTest
 class ApiContractIT {
@@ -66,6 +70,7 @@ class ApiContractIT {
     static final Set<String> TIERS = Set.of("CAMPFIRE", "VILLAGE", "KEEP", "CITADEL");
     static final Set<String> WEEK_STATUSES = Set.of("active", "missed", "rest", "today", "future");
     static final Set<String> PROBLEM_KEYS = Set.of("type", "title", "status", "detail", "instance");
+    static final Pattern AVATAR_URL = Pattern.compile("https://avatars\\.githubusercontent\\.com/u/\\d+\\?v=4");
 
     @Autowired
     WebApplicationContext context;
@@ -236,6 +241,95 @@ class ApiContractIT {
         });
     }
 
+    // ---- GET /leaderboard, GET /user/rank (B8) ----
+
+    @Test
+    void rankAndLeaderboardHaveTheFixtureShape() throws Exception {
+        long user = newUser(9, "it-contract-arena");
+        saveInsights(user);
+        heroService.seedIfMissing(user);
+        jdbc.update("UPDATE v2.users SET public_profile = true WHERE github_id = ?", user);
+        String current = body(call(get("/api/user/hero"), user)).at("/class/current").stringValue();
+
+        MvcResult rankResponse = call(get("/api/user/rank"), user);
+        assertJson(rankResponse, 200);
+        assertRateLimitHeaders(rankResponse);
+        JsonNode rank = body(rankResponse);
+        assertFits(rank, "rank.json", new Spec(Set.of(), Set.of(), Set.of(), List.of(Rule.oneOf("$.archetype", ARCHETYPES))));
+        assertThat(rank.get("archetype").stringValue()).isEqualTo(current);
+        int mine = rank.get("rank").intValue();
+        int total = rank.get("total").intValue();
+        assertThat(mine).isBetween(1, total);
+        assertThat(rank.get("top_percent").intValue()).isEqualTo((100 * mine + total - 1) / total).isBetween(1, 100);
+
+        // The caller's page, as the contract tells the UI to find it; no archetype = the caller's current class.
+        int page = (mine - 1) / 20;
+        MvcResult boardResponse = call(get("/api/leaderboard?page=" + page), user);
+        assertJson(boardResponse, 200);
+        assertRateLimitHeaders(boardResponse);
+        JsonNode board = body(boardResponse);
+        assertFits(board, "leaderboard.json", leaderboardSpec());
+        assertThat(board.get("archetype").stringValue()).isEqualTo(current);
+        assertThat(board.get("page").intValue()).isEqualTo(page);
+        assertThat(board.get("size").intValue()).isEqualTo(20);
+        assertThat(board.get("total").intValue()).isEqualTo(total);
+        List<JsonNode> you = board.get("entries").valueStream().filter(e -> e.get("is_you").booleanValue()).toList();
+        assertThat(you).singleElement().satisfies(e -> {
+            assertThat(e.get("rank").intValue()).isEqualTo(mine);
+            assertThat(e.get("login").stringValue()).isEqualTo("it-contract-arena");
+            assertThat(e.get("avatar_url").stringValue()).isEqualTo("https://avatars.githubusercontent.com/u/" + user + "?v=4");
+        });
+
+        // Any class's board can be read; past the last page, entries is [].
+        String other = ARCHETYPES.stream().filter(c -> !c.equals(current)).findFirst().orElseThrow();
+        JsonNode otherBoard = body(call(get("/api/leaderboard?archetype=" + other + "&size=50"), user));
+        assertThat(otherBoard.get("archetype").stringValue()).isEqualTo(other);
+        assertThat(otherBoard.get("entries").valueStream().noneMatch(e -> e.get("is_you").booleanValue())).isTrue();
+        JsonNode past = body(call(get("/api/leaderboard?page=" + (total / 20 + 1)), user));
+        assertThat(past.get("entries").isArray()).isTrue();
+        assertThat(past.get("entries")).isEmpty();
+    }
+
+    @Test
+    void leaderboardRejectsPageAndSizeOutsideTheRangeWithAFieldError() throws Exception {
+        long user = newUser(10, "it-contract-arena-400");
+
+        JsonNode size = assertProblem(call(get("/api/leaderboard?archetype=MONK&size=51"), user), 400,
+                "/api/leaderboard", true);
+        assertThat(size.get("errors").valueStream().map(e -> e.get("field").stringValue())).containsExactly("size");
+        JsonNode page = assertProblem(call(get("/api/leaderboard?archetype=MONK&page=-1"), user), 400,
+                "/api/leaderboard", true);
+        assertThat(page.get("errors").valueStream().map(e -> e.get("field").stringValue())).containsExactly("page");
+        assertProblem(call(get("/api/leaderboard?archetype=monk"), user), 400, "/api/leaderboard", false);
+    }
+
+    @Test
+    void aPrivateHeroIsNotInTheArena() throws Exception {
+        long user = newUser(11, "it-contract-arena-private"); // public_profile starts off
+        saveInsights(user);
+        heroService.seedIfMissing(user);
+
+        MvcResult response = call(get("/api/user/rank"), user);
+        JsonNode problem = assertProblem(response, 404, "/api/user/rank", false);
+        assertThat(problem).isEqualTo(ContractShape.fixture("rank-not-in-arena.json"));
+        // Its own board can still be read, without it.
+        JsonNode board = body(call(get("/api/leaderboard"), user));
+        assertThat(board.get("entries").valueStream().noneMatch(e -> e.get("is_you").booleanValue())).isTrue();
+    }
+
+    @Test
+    void beforeTheFirstSyncTheArenaIsThePlain404() throws Exception {
+        long user = newUser(12, "it-contract-arena-new");
+        jdbc.update("UPDATE v2.users SET public_profile = true WHERE github_id = ?", user);
+
+        JsonNode rank = assertProblem(call(get("/api/user/rank"), user), 404, "/api/user/rank", false);
+        assertThat(rank.get("title").stringValue()).isEqualTo("Not Found");
+        JsonNode board = assertProblem(call(get("/api/leaderboard"), user), 404, "/api/leaderboard", false);
+        assertThat(board.get("title").stringValue()).isEqualTo("Not Found");
+        // With a class, any board can be read before the first sync.
+        assertJson(call(get("/api/leaderboard?archetype=MONK"), user), 200);
+    }
+
     // ---- Errors every screen handles ----
 
     @Test
@@ -250,7 +344,7 @@ class ApiContractIT {
     @Test
     void withoutATokenEveryUserEndpointIs401() throws Exception {
         for (String path : List.of("/api/user/insights", "/api/user/hero", "/api/user/hero/events",
-                "/api/user/preferences")) {
+                "/api/user/preferences", "/api/leaderboard", "/api/user/rank")) {
             assertProblem(mvc.perform(get(path)).andReturn(), 401, path, false);
         }
     }
@@ -310,6 +404,11 @@ class ApiContractIT {
                         Rule.oneOf("$.class.chosen", ARCHETYPES), Rule.oneOf("$.class.current", ARCHETYPES),
                         Rule.oneOf("$.class.scored", ARCHETYPES), Rule.oneOf("$.class.qualified[]", ARCHETYPES),
                         Rule.format("$.class.can_switch_at", INSTANT)));
+    }
+
+    private static Spec leaderboardSpec() {
+        return new Spec(Set.of(), Set.of(), Set.of(), List.of(Rule.oneOf("$.archetype", ARCHETYPES),
+                Rule.oneOf("$.entries[].tier", TIERS), Rule.format("$.entries[].avatar_url", AVATAR_URL)));
     }
 
     /** The contract's {@code details} table, per event type. */
