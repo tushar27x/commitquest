@@ -4,7 +4,6 @@ import com.tushar27x.insightshub.auth.AuthProperties;
 import com.tushar27x.insightshub.config.ClockConfig;
 import com.tushar27x.insightshub.config.InsightsHubProperties;
 import com.tushar27x.insightshub.entity.Archetype;
-import com.tushar27x.insightshub.hero.Tier;
 import com.tushar27x.insightshub.ratelimit.InMemoryRateLimiter;
 import com.tushar27x.insightshub.ratelimit.RateLimitConfig;
 import com.tushar27x.insightshub.ratelimit.RateLimitInterceptor;
@@ -13,6 +12,7 @@ import com.tushar27x.insightshub.security.JwtConfig;
 import com.tushar27x.insightshub.security.JwtService;
 import com.tushar27x.insightshub.security.SecurityConfig;
 import com.tushar27x.insightshub.security.SecurityTestData;
+import com.tushar27x.insightshub.user.Fixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +27,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 import java.util.Optional;
@@ -47,8 +48,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * {@code GET /api/leaderboard} and {@code GET /api/user/rank} behind the real security chain and rate-limit
- * interceptor; the service is mocked. The JSON below is the shape proposed to integration on 2026-11-01
- * ({@code HANDOFF.md}); once {@code docs/api/fixtures/} has leaderboard and rank fixtures, compare with those.
+ * interceptor; the service is mocked. Payloads and the "Not in the Arena" problem are compared strictly with the
+ * contract's fixtures ({@code leaderboard.json}, {@code rank.json}, {@code rank-not-in-arena.json}).
  */
 @WebMvcTest(controllers = ArenaController.class, properties = {
         "insightshub.frontend-url=http://localhost:3000/",
@@ -80,6 +81,8 @@ class ArenaApiTest {
     private JwtService jwtService;
     @Autowired
     private InMemoryRateLimiter limiter;
+    @Autowired
+    private JsonMapper jsonMapper;
 
     @MockitoBean
     private ArenaService arenaService;
@@ -92,26 +95,16 @@ class ArenaApiTest {
     // --- GET /api/leaderboard ---
 
     @Test
-    void theLeaderboardIsServedInTheProposedShape() throws Exception {
-        when(arenaService.leaderboard(ID, Archetype.MONK, 0, 20)).thenReturn(Optional.of(new LeaderboardResponse(
-                Archetype.MONK, 0, 20, 2, List.of(
-                new LeaderboardResponse.Entry(1, "other", Arena.avatarUrl(1_000_001L), 12, 300, 3, Tier.KEEP, false),
-                new LeaderboardResponse.Entry(2, "octocat", Arena.avatarUrl(ID), 7, 140, 2, Tier.VILLAGE, true)))));
+    void theLeaderboardIsServedInTheContractShape() throws Exception {
+        String fixture = Fixtures.read("leaderboard.json");
+        when(arenaService.leaderboard(ID, Archetype.MONK, 0, Arena.DEFAULT_PAGE_SIZE))
+                .thenReturn(Optional.of(jsonMapper.readValue(fixture, LeaderboardResponse.class)));
 
         mvc.perform(as(get("/api/leaderboard").param("archetype", "MONK")))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(header().string("X-RateLimit-Limit", "1000"))
-                .andExpect(content().json("""
-                        {
-                          "archetype": "MONK", "page": 0, "size": 20, "total": 2,
-                          "entries": [
-                            {"rank": 1, "login": "other", "avatar_url": "https://avatars.githubusercontent.com/u/1000001?v=4",
-                             "level": 12, "xp": 300, "lives": 3, "tier": "KEEP", "is_you": false},
-                            {"rank": 2, "login": "octocat", "avatar_url": "https://avatars.githubusercontent.com/u/583231?v=4",
-                             "level": 7, "xp": 140, "lives": 2, "tier": "VILLAGE", "is_you": true}
-                          ]
-                        }""", JsonCompareMode.STRICT));
+                .andExpect(content().json(fixture, JsonCompareMode.STRICT));
     }
 
     @Test
@@ -164,21 +157,22 @@ class ArenaApiTest {
         mvc.perform(as(get("/api/leaderboard")))
                 .andExpect(status().isNotFound())
                 .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                .andExpect(jsonPath("$.title").value("Not Found"))
                 .andExpect(jsonPath("$.instance").value("/api/leaderboard"));
     }
 
     // --- GET /api/user/rank ---
 
     @Test
-    void theRankIsServedInTheProposedShape() throws Exception {
-        when(arenaService.rank(ID)).thenReturn(Optional.of(new RankResponse(Archetype.MONK, 4, 37, 11)));
+    void theRankIsServedInTheContractShape() throws Exception {
+        String fixture = Fixtures.read("rank.json");
+        when(arenaService.rank(ID)).thenReturn(Optional.of(jsonMapper.readValue(fixture, RankResponse.class)));
 
         mvc.perform(as(get("/api/user/rank")))
                 .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(header().string("X-RateLimit-Limit", "1000"))
-                .andExpect(content().json("""
-                        {"archetype": "MONK", "rank": 4, "total": 37, "top_percent": 11}
-                        """, JsonCompareMode.STRICT));
+                .andExpect(content().json(fixture, JsonCompareMode.STRICT));
     }
 
     @Test
@@ -188,11 +182,7 @@ class ArenaApiTest {
         mvc.perform(as(get("/api/user/rank")))
                 .andExpect(status().isNotFound())
                 .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
-                .andExpect(content().json("""
-                        {"type": "about:blank", "title": "Not in the Arena", "status": 404,
-                         "detail": "Your profile isn't ranked. Turn on \\"Show me in the Arena\\" in Settings, then log in again to refresh your stats.",
-                         "instance": "/api/user/rank"}
-                        """, JsonCompareMode.STRICT));
+                .andExpect(content().json(Fixtures.read("rank-not-in-arena.json"), JsonCompareMode.STRICT));
     }
 
     @Test
