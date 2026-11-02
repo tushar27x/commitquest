@@ -82,6 +82,7 @@ insightshub:
       hero: { requests: 60, per: 1m }      # per user, GET /hero and /hero/events together
       preferences: { requests: 20, per: 1m }  # per user, GET and PUT /preferences together
       hero-class: { requests: 10, per: 1m }   # per user, PUT /hero/class (the 7-day cooldown is separate)
+      arena: { requests: 30, per: 1m }        # per user, GET /api/leaderboard and /api/user/rank together
       unsubscribe: { requests: 10, per: 1m }  # per IP, GET and POST /api/notifications/unsubscribe together
       sync-global: { requests: 30, per: 1m }  # all users together: protects the shared Groq key; tune to the plan
   sync:
