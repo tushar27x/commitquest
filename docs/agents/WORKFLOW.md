@@ -61,6 +61,7 @@ I0 docs (merge FIRST: commits the kit, updates PROGRESS/AGENTS)
 | U4 | ui | Journal + Hero sheet | U3 |
 | U5 | ui | Change class + Settings (rest-day picker at most 2, timezone, toggles) | U4 |
 | U6 | ui | Arena "under construction" shell, then the real board after B8 | U5 |
+| U7 | ui | Hi-res art (2026-11-02): heroes, moods, backdrops, hearts, nav icons and portraits from the PNG sheets in `docs/design/art/` instead of the 16×16 grids; every screen matched to `docs/design/source/` | U5, the art import (integration) |
 | I1 | integration | Write `web/lib/api/types.ts` from the contract (the UI then imports from it). Add a test that fails if `web/public/fixtures/` drifts from `docs/api/fixtures/`, and a web test that validates every fixture against the types | U1 |
 | I2 | integration | **Testcontainers** (Postgres + Redis, `@ServiceConnection`) so `./mvnw verify` never touches Neon (fixes B23). Fix `contextLoads`. Add a GitHub Actions CI workflow: backend `./mvnw verify`, web lint + build + tests | B1 |
 | I3 | integration | Backend contract tests: MockMvc responses for `/insights`, `/hero`, `/hero/events`, `/preferences` match the fixture shapes (keys, types, enums) | B5 |

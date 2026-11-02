@@ -6,6 +6,8 @@ You'll build Insight Hub v2 end to end: the Spring Boot backend and a new Next.j
 
 The approved UI designs are two claude.ai design canvases. If you can't open them, §5 below contains everything needed to rebuild them: tokens, sprite grids, moods and backdrops.
 
+**Update 2026-11-02:** the hi-res canvas https://claude.ai/artifact/WpSMuuZevpRYoK9M99honc replaces both for the art: PNG sprite sheets (96×128, 60-frame loops, every class in every mood) and PNG backdrops, in `docs/design/art/`. Where §5 describes 16×16 grids, CSS mood overlays or CSS-drawn backdrops, `docs/design/README.md` wins. Layout, tokens and rules are unchanged (step U7).
+
 | Canvas | Link | Boards |
 |---|---|---|
 | **Insight Hub: Character Design** | https://claude.ai/artifact/1qrPrfpjU94UCYh2c2C2Nb | Class roster (8 sprites) · Palette and type · Character sheet (phone, desktop) · Moods (Monk, 7 states) · Change class (phone, interactive) |
@@ -197,7 +199,7 @@ v2's purpose is a **habit tracker**, and the yearly "GitHub Wrapped" insights ar
 
 ## 5. Visual spec ("Pixel Realm")
 
-This section is the written form of the two mockup canvases linked at the top. Build from it when you can't open them.
+This section is the written form of the two mockup canvases linked at the top. Build from it when you can't open them. **Since 2026-11-02 the sprites, moods and backdrops come from `docs/design/art/` (see `docs/design/README.md`); the grid and overlay parts below are history.**
 
 **Fonts** (`next/font/google`): `Press Start 2P` for headings, HUD, buttons and short labels (10–24 px; 7–9 px only for tiny tags). `VT323` for body and AI text, **minimum 20 px**.
 
