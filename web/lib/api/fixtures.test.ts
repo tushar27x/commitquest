@@ -3,8 +3,9 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  ARCHETYPES, BASE_MOODS, HERO_EVENT_TYPES, MOODS, TIERS, WEEK_STATUSES, WEEKDAYS,
-  type Hero, type HeroEvent, type HeroEventDetails, type HeroEventType, type HeroEvents, type Insights, type Preferences,
+  ARCHETYPES, BASE_MOODS, HERO_EVENT_TYPES, LEADERBOARD_MAX_SIZE, MOODS, NOT_IN_ARENA_TITLE, TIERS, WEEK_STATUSES, WEEKDAYS,
+  type Hero, type HeroEvent, type HeroEventDetails, type HeroEventType, type HeroEvents, type Insights, type Leaderboard,
+  type Preferences, type ProblemDetail, type Rank,
 } from "./types";
 
 const DOCS = join(__dirname, "../../../docs/api/fixtures");
@@ -95,6 +96,18 @@ const preferences = obj<Preferences>({
   timezone: str, rest_days: array(weekday), alerts_enabled: bool, public_profile: bool,
 });
 
+const leaderboard = obj<Leaderboard>({
+  archetype, page: int, size: int, total: int,
+  entries: array(obj({
+    rank: int, login: str, avatar_url: str, level: int, xp: int, lives: int, tier: oneOf(TIERS), is_you: bool,
+  })),
+});
+
+const rank = obj<Rank>({ archetype, rank: int, total: int, top_percent: int });
+
+// The backend sends all five problem keys; the interface marks them optional only for bodiless proxy errors.
+const problem = obj<Required<ProblemDetail>>({ type: str, title: str, status: int, detail: str, instance: str });
+
 const tierFor = (level: number) => (level >= 15 ? "CITADEL" : level >= 10 ? "KEEP" : level >= 5 ? "VILLAGE" : "CAMPFIRE");
 const baseMoodFor = (lives: number) => (lives >= 3 ? "HAPPY" : lives === 2 ? "OKAY" : "WEAK");
 
@@ -144,6 +157,9 @@ describe("fixtures", () => {
     ["hero.json", hero],
     ["hero-events.json", heroEvents],
     ["preferences.json", preferences],
+    ["leaderboard.json", leaderboard],
+    ["rank.json", rank],
+    ["rank-not-in-arena.json", problem],
   ] as const)("%s matches the types", (name, check) => {
     expect(check(load(name), name)).toEqual([]);
   });
@@ -183,6 +199,45 @@ describe("fixtures", () => {
       }
     });
     expect(errs).toEqual([]);
+  });
+
+  it("leaderboard.json is a ranked page: order, shared ranks, sane rows", () => {
+    const b = load("leaderboard.json") as Leaderboard;
+    const errs: string[] = [];
+    const check = (cond: boolean, msg: string) => cond || errs.push(msg);
+    check(b.size >= 1 && b.size <= LEADERBOARD_MAX_SIZE && b.page >= 0, "page/size out of range");
+    check(b.entries.length <= b.size && b.page * b.size + b.entries.length <= b.total, "more rows than page or total");
+    check(b.entries.filter((e) => e.is_you).length <= 1, "at most one is_you row");
+    b.entries.forEach((e, i) => {
+      check(e.xp >= 0 && e.xp < 50 * e.level, `${e.login}: xp ${e.xp} outside level ${e.level}`);
+      check(e.lives >= 1 && e.lives <= 3, `${e.login}: lives ${e.lives} outside 1..3`);
+      check(e.tier === tierFor(e.level), `${e.login}: tier ${e.tier} != ${tierFor(e.level)}`);
+      check(/^https:\/\/avatars\.githubusercontent\.com\/u\/\d+\?v=4$/.test(e.avatar_url), `${e.login}: avatar_url`);
+      const prev = b.entries[i - 1];
+      if (!prev) return check(e.rank === b.page * b.size + 1 || b.page > 0, "the first page starts at rank 1");
+      const tie = prev.level === e.level && prev.xp === e.xp;
+      check(prev.level > e.level || (prev.level === e.level && prev.xp >= e.xp), `${e.login}: not sorted by level, xp`);
+      // RANK(): a tie shares the rank, the next distinct row skips to its position.
+      check(e.rank === (tie ? prev.rank : b.page * b.size + i + 1), `${e.login}: rank ${e.rank}`);
+    });
+    expect(errs).toEqual([]);
+  });
+
+  it("rank.json agrees with the board and with hero.json", () => {
+    const h = load("hero.json") as Hero;
+    const r = load("rank.json") as Rank;
+    const b = load("leaderboard.json") as Leaderboard;
+    const me = b.entries.find((e) => e.is_you)!;
+    expect(r.archetype).toBe(h.class.current);
+    expect(b.archetype).toBe(r.archetype);
+    expect([r.rank, r.total]).toEqual([me.rank, b.total]);
+    expect(r.top_percent).toBe(Math.ceil((100 * r.rank) / r.total));
+    expect([me.level, me.xp, me.lives, me.tier]).toEqual([h.level, h.xp, h.lives, h.tier]);
+  });
+
+  it("rank-not-in-arena.json is the 404 told apart by title", () => {
+    const p = load("rank-not-in-arena.json") as Required<ProblemDetail>;
+    expect([p.type, p.status, p.title, p.instance]).toEqual(["about:blank", 404, NOT_IN_ARENA_TITLE, "/api/user/rank"]);
   });
 
   const variants = Object.entries(load("hero-variants.json") as Record<string, object>).filter(([k]) => k !== "_doc");

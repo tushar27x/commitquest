@@ -1,0 +1,7 @@
+{
+  "type": "about:blank",
+  "title": "Not in the Arena",
+  "status": 404,
+  "detail": "Your profile isn't ranked. Turn on \"Show me in the Arena\" in Settings, then log in again to refresh your stats.",
+  "instance": "/api/user/rank"
+}

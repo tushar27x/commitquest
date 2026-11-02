@@ -236,3 +236,50 @@ export interface Preferences {
   alerts_enabled: boolean;
   public_profile: boolean;
 }
+
+// GET /api/leaderboard?archetype=&page=&size= and GET /api/user/rank (Phase 13, B8)
+
+/** Rows per page when `size` is left out, and the largest `size` accepted (more is a validation 400). */
+export const LEADERBOARD_DEFAULT_SIZE = 20;
+export const LEADERBOARD_MAX_SIZE = 50;
+
+/** One hero on a class's board. Ties share a rank (1, 2, 2, 4) and are listed by GitHub id. */
+export interface LeaderboardEntry {
+  rank: number;
+  login: string;
+  avatar_url: string;
+  level: number;
+  /** Progress inside the level, as in `Hero.xp`. */
+  xp: number;
+  lives: number;
+  tier: Tier;
+  /** True only on the caller's own row. */
+  is_you: boolean;
+}
+
+/** One page of a class's board, best first. `entries` is `[]` past the last page. */
+export interface Leaderboard {
+  archetype: Archetype;
+  page: number;
+  size: number;
+  /** Heroes on the whole board; pages = `ceil(total / size)`. */
+  total: number;
+  entries: LeaderboardEntry[];
+}
+
+/** The caller's place on their current class's board. Only sent when they're on it. */
+export interface Rank {
+  /** The caller's current class (`Hero.class.current`). */
+  archetype: Archetype;
+  rank: number;
+  total: number;
+  /** `ceil(100 × rank / total)`, 1–100. The caller's page is `floor((rank − 1) / size)`. */
+  top_percent: number;
+}
+
+/**
+ * `GET /user/rank` answers 404 in two cases, told apart by `title` (the one exception to "never by title"):
+ * this title means the caller has a hero but isn't ranked (a private profile, or GitHub access to renew);
+ * any other 404 means no hero yet (NEW GAME).
+ */
+export const NOT_IN_ARENA_TITLE = "Not in the Arena";

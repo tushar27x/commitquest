@@ -1,0 +1,68 @@
+{
+  "archetype": "MONK",
+  "page": 0,
+  "size": 20,
+  "total": 6,
+  "entries": [
+    {
+      "rank": 1,
+      "login": "ironvow",
+      "avatar_url": "https://avatars.githubusercontent.com/u/9100001?v=4",
+      "level": 14,
+      "xp": 500,
+      "lives": 3,
+      "tier": "KEEP",
+      "is_you": false
+    },
+    {
+      "rank": 2,
+      "login": "quietfist",
+      "avatar_url": "https://avatars.githubusercontent.com/u/9100002?v=4",
+      "level": 9,
+      "xp": 300,
+      "lives": 3,
+      "tier": "VILLAGE",
+      "is_you": false
+    },
+    {
+      "rank": 2,
+      "login": "stillwater",
+      "avatar_url": "https://avatars.githubusercontent.com/u/9100003?v=4",
+      "level": 9,
+      "xp": 300,
+      "lives": 2,
+      "tier": "VILLAGE",
+      "is_you": false
+    },
+    {
+      "rank": 4,
+      "login": "tushar27x",
+      "avatar_url": "https://avatars.githubusercontent.com/u/9100004?v=4",
+      "level": 7,
+      "xp": 140,
+      "lives": 2,
+      "tier": "VILLAGE",
+      "is_you": true
+    },
+    {
+      "rank": 5,
+      "login": "dawnkick",
+      "avatar_url": "https://avatars.githubusercontent.com/u/9100005?v=4",
+      "level": 4,
+      "xp": 120,
+      "lives": 1,
+      "tier": "CAMPFIRE",
+      "is_you": false
+    },
+    {
+      "rank": 6,
+      "login": "novice-monk",
+      "avatar_url": "https://avatars.githubusercontent.com/u/9100006?v=4",
+      "level": 1,
+      "xp": 10,
+      "lives": 3,
+      "tier": "CAMPFIRE",
+      "is_you": false
+    }
+  ]
+}
