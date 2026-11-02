@@ -1,23 +1,21 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { PixelSprite } from "@/components/PixelSprite";
+import { HeartRow } from "@/components/HeartRow";
+import { HeroSprite } from "@/components/art/HeroSprite";
+import { Portrait } from "@/components/art/Portrait";
+import { HeroFigure } from "@/components/home/HeroFigure";
+import type { Mood } from "@/lib/api/types";
+import { CLASS_ORDER, NAV_ICON, UI_ART, classAccent } from "@/lib/art";
 import { CLASS_INFO } from "@/lib/classes";
-import { CLASS_ORDER, classAccent, classSprite, iconSprite, type IconName } from "@/lib/sprites";
+import { TABS } from "@/lib/nav";
 
 export const metadata: Metadata = {
-  title: "Sprite kit · Insight Hub",
+  title: "Art kit · Insight Hub",
   robots: { index: false },
 };
 
-const SCALES = [2, 3, 4, 6, 8, 10];
-
-const ICONS: { name: IconName; label: string }[] = [
-  { name: "heart", label: "Heart" },
-  { name: "heartEmpty", label: "Empty heart" },
-  { name: "tree", label: "Tree" },
-  { name: "sparkle", label: "Sparkle" },
-  { name: "sweat", label: "Sweat drop" },
-];
+const MOODS: Mood[] = ["OKAY", "HAPPY", "WEAK", "HUNGRY", "SLEEPING", "LEVEL_UP", "FAINTED"];
+const CELL = "relative flex h-[156px] items-end justify-center overflow-hidden bg-[linear-gradient(#2a2540,#2a2540_76%,#1a1727_76%)] pb-3.5 shadow-btn-flat";
 
 function Section({ title, note, children }: { title: string; note: string; children: ReactNode }) {
   return (
@@ -35,94 +33,95 @@ function Tag({ children }: { children: ReactNode }) {
   return <span className="font-display text-[9px] tracking-[1px] text-faint">{children}</span>;
 }
 
-export default function SpritesPage() {
-  const monk = classSprite("MONK");
-
+/** Every piece of art from public/art/ (docs/design/art/), as the app draws it. */
+export default function ArtKitPage() {
   return (
     <main className="mx-auto flex max-w-[1312px] flex-col gap-12 px-4 py-10 sm:px-8 md:px-16 md:py-14">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-3">
           <h1 className="font-display text-[20px] leading-[1.3] text-gold [text-shadow:4px_4px_0_var(--color-outline)] sm:text-[24px]">
-            SPRITE KIT
+            ART KIT
           </h1>
-          <p className="text-[22px] text-muted sm:text-[26px]">
-            Every sprite in docs/design/sprites.json, drawn by PixelSprite.
-          </p>
+          <p className="text-[22px] text-muted sm:text-[26px]">Every sheet in docs/design/art, drawn by the app&apos;s components.</p>
         </div>
-        <Tag>DEV · 16×16 SPRITES</Tag>
+        <Tag>DEV · HI-RES ART</Tag>
       </header>
 
-      <Section title="CLASSES" note="×8 on a pedestal, roster order">
+      <Section title="CLASSES" note="Idle loop at ×2, roster order">
         <ul className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {CLASS_ORDER.map((archetype, i) => (
+          {CLASS_ORDER.map((archetype) => (
             <li key={archetype} className="flex flex-col bg-stone shadow-px-drop">
-              <div className="h-2.5" style={{ background: classAccent(archetype) }} />
-              <div className="relative flex h-44 items-end justify-center bg-[linear-gradient(#2a2540,#2a2540_70%,#1a1727_70%)] pb-3.5">
-                <div className="flex flex-col items-center">
-                  <PixelSprite {...classSprite(archetype)} scale={8} label={`${archetype} sprite`} />
-                  <div aria-hidden className="mt-0.5 h-3 w-28 bg-pedestal shadow-[0_4px_0_var(--color-outline)]" />
-                </div>
-                <span className="absolute top-3.5 right-3.5">
-                  <Tag>NO.{i + 1}</Tag>
-                </span>
+              <div className="relative flex h-[290px] items-end justify-center bg-[linear-gradient(#2a2540,#2a2540_78%,#1a1727_78%)] pb-[30px]">
+                <HeroSprite archetype={archetype} scale={2} label={`${archetype}, idle animation`} />
               </div>
               <div className="flex flex-col gap-2.5 px-5 pt-[18px] pb-[22px]">
                 <h3 className="font-display text-[14px]" style={{ color: classAccent(archetype) }}>
                   {archetype}
                 </h3>
                 <p className="text-[22px] leading-[1.05]">{CLASS_INFO[archetype].habit}</p>
-                <p className="leading-[1.1] text-muted-2">SCORED ON · {CLASS_INFO[archetype].signals}</p>
               </div>
             </li>
           ))}
         </ul>
       </Section>
 
-      <Section title="SCALES" note="Integer scales only: ×2 lists, ×3–4 small, ×6–10 hero">
-        <ul className="flex flex-wrap items-end gap-8 bg-stone p-6 shadow-px">
-          {SCALES.map((scale) => (
-            <li key={scale} className="flex flex-col items-center gap-3">
-              <PixelSprite {...monk} scale={scale} />
-              <Tag>×{scale}</Tag>
-            </li>
-          ))}
-        </ul>
+      <Section title="EVERY CLASS, EVERY MOOD" note="8 classes × 7 moods at ×1, as Home draws them">
+        <div className="overflow-x-auto">
+          <table className="min-w-[960px] border-separate border-spacing-2.5">
+            <thead>
+              <tr>
+                <th />
+                {MOODS.map((mood) => (
+                  <th key={mood} scope="col" className="font-display text-[9px] font-normal text-muted">
+                    {mood.replace("_", " ")}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {CLASS_ORDER.map((archetype) => (
+                <tr key={archetype}>
+                  <th scope="row" className="w-[120px] bg-[#1b1829] px-2.5 py-2 text-left font-normal shadow-btn-flat">
+                    <Portrait archetype={archetype} />
+                    <span className="font-display text-[8px]" style={{ color: classAccent(archetype) }}>
+                      {archetype}
+                    </span>
+                  </th>
+                  {MOODS.map((mood) => (
+                    <td key={mood} className="p-0">
+                      <div className={CELL}>
+                        <HeroFigure archetype={archetype} mood={mood} scale={1} levelLabel="" hungryText="…" />
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Section>
 
-      <Section title="ICONS" note="×4 and ×8">
-        <ul className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-6">
-          {ICONS.map(({ name, label }) => (
-            <li key={name} className="flex flex-col items-center gap-4 bg-stone p-5 shadow-px">
-              <div className="flex h-16 items-end gap-4">
-                <PixelSprite {...iconSprite(name)} scale={4} />
-                <PixelSprite {...iconSprite(name)} scale={8} label={label} />
-              </div>
-              <Tag>{label.toUpperCase()}</Tag>
-            </li>
-          ))}
-          <li className="flex flex-col items-center gap-4 bg-stone p-5 shadow-px">
-            <div className="flex h-16 items-end gap-2" role="img" aria-label="2 of 3 hearts">
-              <PixelSprite {...iconSprite("heart")} scale={4} />
-              <PixelSprite {...iconSprite("heart")} scale={4} />
-              <PixelSprite {...iconSprite("heartEmpty")} scale={4} />
-            </div>
-            <Tag>HEART ROW 2/3</Tag>
-          </li>
-        </ul>
-      </Section>
-
-      <Section title="SLEEPING" note="Closed-eyes rows from the kit; classes without one keep their face">
-        <ul className="grid grid-cols-2 gap-6 sm:grid-cols-4 lg:grid-cols-8">
-          {CLASS_ORDER.map((archetype) => (
-            <li key={archetype} className="flex flex-col items-center gap-3 bg-stone p-4 shadow-px">
-              <div className="flex gap-2">
-                <PixelSprite {...classSprite(archetype)} scale={4} label={`${archetype}, awake`} />
-                <PixelSprite {...classSprite(archetype, { sleeping: true })} scale={4} label={`${archetype}, sleeping`} />
-              </div>
-              <Tag>{archetype}</Tag>
-            </li>
-          ))}
-        </ul>
+      <Section title="UI" note="Hearts, tab icons (idle and active), class portraits">
+        <div className="flex flex-wrap items-center gap-8 bg-stone p-6 shadow-px">
+          <HeartRow lives={2} max={3} className="gap-1.5" />
+          <ul className="flex gap-3">
+            {TABS.flatMap((tab) =>
+              [0, -24].map((y) => (
+                <li
+                  key={`${tab.href}${y}`}
+                  aria-label={`${tab.label}${y ? ", active" : ""}`}
+                  className="art nav-icon"
+                  style={{ backgroundImage: `url(${UI_ART.navIcons})`, backgroundPosition: `${-24 * NAV_ICON[tab.href]}px ${y}px` }}
+                />
+              )),
+            )}
+          </ul>
+          <div className="flex">
+            {CLASS_ORDER.map((archetype) => (
+              <Portrait key={archetype} archetype={archetype} />
+            ))}
+          </div>
+        </div>
       </Section>
     </main>
   );

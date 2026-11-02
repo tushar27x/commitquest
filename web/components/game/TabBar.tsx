@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PixelSprite } from "@/components/PixelSprite";
 import { TABS, isActiveTab } from "@/lib/nav";
-import { tabIcon } from "@/lib/tab-icons";
+import { NAV_ICON, UI_ART } from "@/lib/art";
 
 /** Phone navigation (below md): a bottom bar with 64 px tabs above the safe area. */
 export function TabBar() {
@@ -21,11 +20,15 @@ export function TabBar() {
             key={tab.href}
             href={tab.href}
             aria-current={active ? "page" : undefined}
-            className={`flex h-16 flex-col items-center justify-center gap-[7px] font-display text-[7px] ${
-              active ? "bg-stone-lit text-gold" : "text-muted-2 active:text-gold"
+            className={`flex h-16 flex-col items-center justify-center gap-1.5 font-display text-[7px] ${
+              active ? "bg-stone-lit text-gold shadow-[inset_0_3px_0_var(--color-gold)]" : "text-muted-2 active:text-gold"
             }`}
           >
-            <PixelSprite {...tabIcon(tab.href)} scale={2} />
+            <span
+              aria-hidden
+              className="art nav-icon block"
+              style={{ backgroundImage: `url(${UI_ART.navIcons})`, backgroundPosition: `${-24 * NAV_ICON[tab.href]}px ${active ? -24 : 0}px` }}
+            />
             {tab.label}
           </Link>
         );

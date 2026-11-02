@@ -1,10 +1,62 @@
-import { Block, GROUND, Ground, Stars, u } from "@/components/home/Backdrop";
-import { PixelSprite } from "@/components/PixelSprite";
-import { classAccent, classSprite } from "@/lib/sprites";
+import type { CSSProperties, ReactNode } from "react";
+import { HeroSprite } from "@/components/art/HeroSprite";
+import { classAccent } from "@/lib/art";
 
 // The Arena while Phase 13 is being built: a half-finished arena wall, scaffolding and the
-// Artificer at work. Same technique as the tier backdrops (stepped gradients and blocks, no
-// images). Deliberately no padlock: padlocks mean "unlock it by playing", and this isn't that.
+// Artificer at work. The design has no Arena art yet, so the scene stays CSS blocks (stepped
+// gradients, no images) until it does; only the Artificer is the PNG sprite.
+// Deliberately no padlock: padlocks mean "unlock it by playing", and this isn't that.
+
+/** `n` pixels in scene units (`--u`: 1 on phone, larger on desktop). */
+const u = (n: number) => `calc(var(--u) * ${n}px)`;
+
+/** Ground and path height; the builder stands just above the ground line. */
+const GROUND = "23%";
+
+function Block({ style, className = "", children }: { style: CSSProperties; className?: string; children?: ReactNode }) {
+  return (
+    <div className={`absolute ${className}`} style={style}>
+      {children}
+    </div>
+  );
+}
+
+function Ground() {
+  return (
+    <>
+      <Block
+        style={{
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: GROUND,
+          backgroundColor: "var(--color-meadow)",
+          backgroundImage:
+            "conic-gradient(var(--color-meadow-alt) 90deg, var(--color-meadow) 90deg 180deg, var(--color-meadow-alt) 180deg 270deg, var(--color-meadow) 270deg)",
+          backgroundSize: `${u(24)} ${u(24)}`,
+          boxShadow: `inset 0 ${u(5)} 0 var(--color-meadow-edge)`,
+        }}
+      />
+      <Block
+        style={{
+          left: "50%",
+          bottom: 0,
+          width: u(84),
+          height: GROUND,
+          marginLeft: u(-42),
+          background: "#c9a46a",
+          boxShadow: `inset ${u(5)} 0 0 #a8844e, inset ${u(-5)} 0 0 #a8844e`,
+        }}
+      />
+    </>
+  );
+}
+
+function Stars({ stars }: { stars: [number, number, number][] }) {
+  return stars.map(([x, y, size]) => (
+    <Block key={`${x},${y}`} style={{ left: `${x}%`, top: `${y}%`, width: size, height: size, background: "var(--color-bone)" }} />
+  ));
+}
 
 const at = (x: number) => `calc(50% + ${u(x)})`;
 const above = (y: number) => `calc(${GROUND} + ${u(y)})`;
@@ -101,21 +153,13 @@ export function ArenaScene({ className = "" }: { className?: string }) {
         <Stars stars={[[10, 10, 3], [34, 18, 2], [58, 8, 3], [80, 14, 2], [92, 26, 3]]} />
         <Wall />
         <Scaffold />
-        <Ground fill="var(--color-meadow)" edge="var(--color-meadow-edge)" checker />
+        <Ground />
         <Sign />
       </div>
       <p className="sr-only">A half-built arena with scaffolding. An Artificer is building it.</p>
       {/* The builder: the Artificer, on the path in front of the gate. */}
-      <div aria-hidden className="absolute bottom-[16%] left-1/2 -translate-x-1/2 md:hidden">
-        <div className="anim-bob" style={{ ["--bob" as string]: "-6px" }}>
-          <PixelSprite {...classSprite("ARTIFICER")} scale={6} />
-        </div>
-      </div>
-      <div aria-hidden className="absolute bottom-[17%] left-1/2 hidden -translate-x-1/2 md:block">
-        <div className="anim-bob" style={{ ["--bob" as string]: "-8px" }}>
-          <PixelSprite {...classSprite("ARTIFICER")} scale={8} />
-        </div>
-      </div>
+      <HeroSprite archetype="ARTIFICER" className="absolute bottom-[14%] left-1/2 -ml-12 md:hidden" />
+      <HeroSprite archetype="ARTIFICER" scale={2} className="absolute bottom-[15%] left-1/2 -ml-24 hidden md:block" />
     </section>
   );
 }

@@ -12,7 +12,7 @@ export function HomeView() {
 
   return (
     <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:gap-8">
-      <HeroScene hero={hero} events={events.data?.events} className="md:flex-[999_1_560px]" />
+      <HeroScene hero={hero} events={events.data?.events} className="md:flex-[1_1_760px]" />
       <div className="flex min-w-0 flex-col gap-3.5 px-3 md:flex-[1_1_340px] md:gap-6 md:px-0">
         <LevelPanel hero={hero} />
         <TodayCard hero={hero} />

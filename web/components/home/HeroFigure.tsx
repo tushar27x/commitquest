@@ -1,123 +1,85 @@
-import type { CSSProperties } from "react";
-import { PixelSprite } from "@/components/PixelSprite";
-import type { Archetype, BaseMood, Mood } from "@/lib/api/types";
-import { classSprite, iconSprite } from "@/lib/sprites";
+import { HeroSprite } from "@/components/art/HeroSprite";
+import type { Archetype, Mood } from "@/lib/api/types";
 
-// The hero sprite with its mood overlays (plan §5, docs/design/source/character-Moods.dc.html).
-// Overlay positions are fractions of the sprite size S, taken from the 96 px board sprite.
+// The hero on Home with its mood (docs/design/source/HomeMobile, HomeDesktop, Moods). Every mood is
+// its own animated loop in the sprite sheets; only the speech bubble, the level label and the
+// level-up rays are drawn here. Sizes are the boards' pixels at ×1 (phone) and ×2 (desktop).
 
 export interface HeroFigureProps {
   archetype: Archetype;
   mood: Mood;
-  baseMood: BaseMood;
-  scale: number;
+  scale: 1 | 2;
   /** "LV 8!" over LEVEL_UP, "LV 7 → 6" over FAINTED. */
   levelLabel: string;
   /** Speech bubble text when HUNGRY. */
   hungryText: string;
+  /** Moves the bubble sideways, so it stays over the middle of the scene when the hero doesn't. */
+  bubbleShift?: number;
 }
 
-const SPARKLE = iconSprite("sparkle");
-const SWEAT = iconSprite("sweat");
+// Offsets from the sprite frame, per scale (the boards don't scale these linearly).
+const RAYS = { 1: { size: 190, drop: 7 }, 2: { size: 300, drop: 38 } } as const;
+const BUBBLE = { 1: { left: 78, bottom: 130 }, 2: { left: 136, bottom: 218 } } as const;
+/** The level label sits just above the frame, clear of the head. */
+const LABEL_TOP = { 1: -18, 2: -10 } as const;
 
-export function HeroFigure({ archetype, mood, baseMood, scale, levelLabel, hungryText }: HeroFigureProps) {
-  const S = 16 * scale;
-  const at = (x: number, y: number): CSSProperties => ({ position: "absolute", left: x * S, top: y * S });
-
-  const oneOff = mood === "LEVEL_UP" || mood === "FAINTED";
-  const sleeping = mood === "SLEEPING";
-  const weak = !oneOff && baseMood === "WEAK";
-  const sparkles = !oneOff && !sleeping && baseMood === "HAPPY";
-  const still = sleeping || mood === "FAINTED";
-
-  const filter = mood === "FAINTED" ? "saturate(0.6)" : weak ? "saturate(0.45) brightness(0.85)" : undefined;
-  const transform = mood === "FAINTED" ? `rotate(90deg) translateX(${0.31 * S}px)` : undefined;
+/** A 96×128 × scale box, anchored by its parent; the extras overflow it. */
+export function HeroFigure({ archetype, mood, scale, levelLabel, hungryText, bubbleShift = 0 }: HeroFigureProps) {
+  const w = 96 * scale;
+  const h = 128 * scale;
+  const rays = RAYS[scale];
+  const bubble = BUBBLE[scale];
 
   return (
-    <div className="relative" style={{ width: S, height: S }}>
+    <div className="relative" style={{ width: w, height: h }}>
       {mood === "LEVEL_UP" && (
         <div
           aria-hidden
-          className="anim-turn absolute"
-          style={{
-            left: -0.125 * S,
-            top: -0.35 * S,
-            width: 1.25 * S,
-            height: 1.25 * S,
-            background: "repeating-conic-gradient(rgba(242, 182, 50, 0.35) 0 15deg, transparent 15deg 30deg)",
-          }}
+          className="level-rays absolute"
+          style={{ left: (w - rays.size) / 2, top: (h - rays.size) / 2 + rays.drop, width: rays.size, height: rays.size }}
         />
       )}
 
-      {/* Ground shadow */}
-      <div aria-hidden className="absolute bg-outline/40" style={{ left: 0.125 * S, top: S, width: 0.75 * S, height: Math.round(scale * 1.33) }} />
-
-      <div className={still ? "relative" : "anim-bob relative"} style={{ ["--bob" as string]: `${-scale}px`, transform, filter }}>
-        <PixelSprite {...classSprite(archetype, { sleeping })} scale={scale} />
-        {weak && (
+      {mood === "FAINTED" ? (
+        <>
+          {/* Lying down: the fainted loop turned on its side, on a ground shadow. */}
           <div
             aria-hidden
-            className="absolute bg-bone"
-            style={{ left: 0.31 * S, top: 0.083 * S, width: 0.375 * S, height: 0.083 * S, boxShadow: "0 0 0 2px var(--color-ink)", rotate: "-14deg" }}
+            className="absolute"
+            style={{
+              left: -11 * scale,
+              bottom: 2 * scale,
+              width: 118 * scale,
+              height: 7 * scale,
+              background: "radial-gradient(ellipse, rgba(5, 4, 10, 0.7) 0 50%, transparent 72%)",
+            }}
           />
-        )}
-      </div>
-
-      {weak && (
-        <div aria-hidden className="anim-twinkle" style={{ ...at(0.885, -0.02), animationDuration: "1.4s" }}>
-          <PixelSprite {...SWEAT} scale={Math.round((scale * 2) / 3)} />
-        </div>
-      )}
-
-      {sparkles && (
-        <>
-          <div aria-hidden className="anim-twinkle" style={at(-0.18, -0.4)}>
-            <PixelSprite {...SPARKLE} scale={Math.max(2, Math.round(scale / 2))} />
-          </div>
-          <div aria-hidden className="anim-twinkle" style={{ ...at(1.05, -0.08), animationDelay: "0.45s" }}>
-            <PixelSprite {...SPARKLE} scale={Math.max(2, Math.round(scale / 2))} />
+          <div className="absolute" style={{ left: -16 * scale, bottom: 2 * scale, width: 128 * scale, height: 96 * scale }}>
+            <HeroSprite archetype={archetype} mood="FAINTED" scale={scale} className="absolute rotate-90" style={{ left: 16 * scale, top: -16 * scale }} />
           </div>
         </>
+      ) : (
+        <HeroSprite archetype={archetype} mood={mood} scale={scale} className="relative" />
       )}
 
       {mood === "HUNGRY" && (
         <div
-          className="absolute flex items-center gap-1.5 bg-bone px-2 py-1.5 whitespace-nowrap text-ink shadow-btn-flat md:gap-2.5 md:px-3 md:py-2.5"
-          style={{ left: 0.89 * S, bottom: 0.94 * S }}
+          className="absolute flex items-center gap-1.5 bg-bone px-[9px] py-1.5 whitespace-nowrap text-ink shadow-btn md:gap-2.5 md:px-3 md:py-2.5"
+          style={{ left: bubble.left + bubbleShift, bottom: bubble.bottom }}
         >
           <span aria-hidden className="font-display text-[11px] text-ember-glyph md:text-[14px]">
             !
           </span>
-          <span className="text-[20px] leading-none">{hungryText}</span>
+          <span className="text-[18px] leading-none md:text-[20px]">{hungryText}</span>
         </div>
       )}
 
-      {sleeping && (
+      {(mood === "LEVEL_UP" || mood === "FAINTED") && (
         <span
-          aria-hidden
-          className="absolute font-display text-[12px] leading-[1.2] whitespace-pre text-muted md:text-[14px]"
-          style={at(0.95, -0.45)}
-        >
-          {"Z\n  z"}
-        </span>
-      )}
-
-      {mood === "FAINTED" && (
-        <span
-          aria-hidden
-          className="anim-twinkle absolute inset-x-[-50%] text-center font-display text-[12px] tracking-[10px] text-gold"
-          style={{ top: 0.19 * S }}
-        >
-          + * +
-        </span>
-      )}
-
-      {oneOff && (
-        <span
-          className={`absolute inset-x-[-100%] text-center font-display text-[11px] whitespace-nowrap [text-shadow:2px_2px_0_var(--color-outline)] md:text-[14px] ${
+          className={`absolute inset-x-[-100%] text-center font-display text-[11px] whitespace-nowrap [text-shadow:3px_3px_0_var(--color-outline)] md:text-[13px] ${
             mood === "LEVEL_UP" ? "text-gold" : "text-ember"
           }`}
-          style={{ top: -0.62 * S }}
+          style={{ top: LABEL_TOP[scale] }}
         >
           {levelLabel}
         </span>

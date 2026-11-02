@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { PixelSprite } from "@/components/PixelSprite";
+import { Portrait } from "@/components/art/Portrait";
 import { Arrow } from "@/components/ui/Arrow";
 import type { Archetype, Hero } from "@/lib/api/types";
 import { className } from "@/lib/journal";
 import { useHero, usePreferences } from "@/lib/queries";
-import { classAccent, classSprite } from "@/lib/sprites";
+import { classAccent } from "@/lib/art";
 import { ArenaScene } from "./ArenaScene";
 
 const CARD = "flex flex-col gap-2.5 bg-stone px-3.5 py-3 shadow-px md:px-5 md:py-[18px]";
@@ -51,9 +51,7 @@ function EntryCard({ hero }: { hero: Hero }) {
         WHEN THE GATES OPEN
       </h2>
       <div className="flex items-center gap-3.5">
-        <div className="shrink-0">
-          <PixelSprite {...classSprite(cls)} scale={3} />
-        </div>
+        <Portrait archetype={cls} />
         <p className="text-muted">
           You&apos;d enter the{" "}
           <span className="font-display text-[10px]" style={{ color: classAccent(cls) }}>

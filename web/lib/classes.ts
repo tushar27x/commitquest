@@ -2,7 +2,7 @@
 
 import type { Archetype, HeroClass } from "./api/types";
 import { scoreRows } from "./journal";
-import { CLASS_ORDER } from "./sprites";
+import { CLASS_ORDER } from "./art";
 
 export interface ClassInfo {
   /** The one-line habit shown under the class name. */

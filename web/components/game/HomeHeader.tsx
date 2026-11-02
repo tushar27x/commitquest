@@ -2,7 +2,7 @@
 
 import { SegmentBar } from "@/components/ui/SegmentBar";
 import { useHero } from "@/lib/queries";
-import { classAccent } from "@/lib/sprites";
+import { classAccent } from "@/lib/art";
 import { MobileHeader } from "./MobileHeader";
 import { SaveButton } from "./SaveButton";
 
