@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Title screen, phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f2b632}a:hover{color:#ffd36b}
+.sp{display:block;background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges;width:96px;height:128px;background-size:5760px 128px;animation:spA 6.2832s steps(60) infinite}
+.sp2{width:192px;height:256px;background-size:11520px 256px;animation-name:spB}
+.sp3{width:288px;height:384px;background-size:17280px 384px;animation-name:spC}
+@keyframes spA{from{background-position:0 0}to{background-position:-5760px 0}}
+@keyframes spB{from{background-position:0 0}to{background-position:-11520px 0}}
+@keyframes spC{from{background-position:0 0}to{background-position:-17280px 0}}
+.k-paladin{background-image:url(/_blob/f18954a9ff14bedd31f6b8cf06347f8c)}
+.k-barbarian{background-image:url(/_blob/8ed10d55447cb8ff45dc57775d210f1c)}
+.k-wizard{background-image:url(/_blob/0e4e4ce85931c11f4649005e17d91700)}
+.k-artificer{background-image:url(/_blob/773d1670aaa0c025f37789495b0da93e)}
+.k-cleric{background-image:url(/_blob/5da7644303d94b752cc1294a2e7d7239)}
+.k-bard{background-image:url(/_blob/81732435a286f84828afe49650b3172a)}
+.k-monk{background-image:url(/_blob/abcc55103df7689ae00353055ee21137)}
+.k-rogue{background-image:url(/_blob/aa0ac593a6177f4dffac476b3b642082)}
+.k-monk-happy{background-image:url(/_blob/0a47e55b2effbac564afdcfec0380645)}
+.k-monk-weak{background-image:url(/_blob/bf494fffb444ff2fdb3c6f1e4309dbb1)}
+.k-monk-hungry{background-image:url(/_blob/72913c88536ed130612b3caeff535a32)}
+.k-monk-hungry-nb{background-image:url(/_blob/0cb331181bc6f97b494596f229c9b4b9)}
+.k-monk-sleeping{background-image:url(/_blob/4f5904c1250d204389fb4aee96e15406)}
+.k-monk-levelup{background-image:url(/_blob/f95aab396a36f6091d54695d7a542712)}
+.k-monk-fainted{background-image:url(/_blob/c4ebdb61302b2dfe66f315107abe73c9)}
+.ht{width:24px;height:22px;background-image:url(/_blob/1206abce59a5df5a2649f07831cf377c);background-size:312px 22px;background-position:-288px 0;image-rendering:pixelated;image-rendering:crisp-edges}
+.ht.on{animation:htA 1.2s steps(12) infinite}
+@keyframes htA{from{background-position:0 0}to{background-position:-288px 0}}
+.ic{width:24px;height:24px;background-image:url(/_blob/71aa271d046ce726befce13fb5e983d5);background-size:120px 48px;image-rendering:pixelated;image-rendering:crisp-edges}
+.pt{width:40px;height:48px;background-image:url(/_blob/43b2b41e579af60d6cfe8444acca4e9d);background-size:320px 48px;image-rendering:pixelated;image-rendering:crisp-edges}
+.fire{width:32px;height:48px;background-image:url(/_blob/93bf0f74cfc4f7f9ffa52199390fa6b5);background-size:256px 48px;image-rendering:pixelated;animation:fireA .8s steps(8) infinite}
+@keyframes fireA{from{background-position:0 0}to{background-position:-256px 0}}
+.tw{position:absolute;width:3px;height:3px;background:#f4ecd8;animation:twA 3s ease-in-out infinite}
+@keyframes twA{0%,100%{opacity:.2}50%{opacity:1}}
+.flick{animation:flA 1.4s ease-in-out infinite}
+@keyframes flA{0%,100%{opacity:.75}30%{opacity:1}60%{opacity:.6}80%{opacity:.95}}
+.sc-vphone{background-image:url(/_blob/2a0d8b13b7905af2e8f19fbf97afd361);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-vdesk{background-image:url(/_blob/1bd60d6caa530c58256c87681878c65c);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-camp{background-image:url(/_blob/c0ce4c6770d25dae187af4dbdc4efa31);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-vill{background-image:url(/_blob/8dbcf996e2a37eb61f18340777ab2823);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-keep{background-image:url(/_blob/e7560be3a31ab446d8064639b843fc1f);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-cita{background-image:url(/_blob/2490dc0af2fa3ef6b7f3bf900908adc7);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-title{background-image:url(/_blob/de49c3db297bb01a8f27ff941c55b3ec);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+@media (prefers-reduced-motion:reduce){.sp,.ht.on,.tw,.fire,.flick{animation:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #13111c; font-family: 'VT323', monospace; color: #f4ecd8">
+  <div aria-hidden="true" class="sc-title" style="position: absolute; left: 0; top: 0; width: 390px; height: 600px; background-size: 390px 600px"></div>
+  <span class="tw" aria-hidden="true" style="left: 60px; top: 90px"></span><span class="tw" aria-hidden="true" style="left: 150px; top: 40px; animation-delay: -1.4s"></span><span class="tw" aria-hidden="true" style="left: 332px; top: 150px; animation-delay: -0.7s"></span><span class="tw" aria-hidden="true" style="left: 240px; top: 110px; animation-delay: -2.2s"></span>
+  <div style="position: absolute; left: 0; top: 96px; width: 390px; display: flex; flex-direction: column; align-items: center; gap: 16px">
+    <h1 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 34px; line-height: 1.25; text-align: center; color: #f2b632; text-shadow: 4px 4px 0 #8a5a1a, 8px 8px 0 #0a0910">INSIGHT<br>HUB</h1>
+    <p style="margin: 0; font-size: 26px; color: #e6e0f4; text-align: center; text-shadow: 2px 2px 0 #0a0910">Keep your hero alive with your commits</p>
+  </div>
+  <div style="position: absolute; left: 0; top: 458px; width: 390px; display: flex; justify-content: center; gap: 0">
+    <sc-for list="{{party}}" as="c"><div class="sp {{c.k}}" role="img" aria-label="{{c.name}}, animated" style="margin: 0 -3px"></div></sc-for>
+  </div>
+  <div style="position: absolute; left: 0; top: 600px; width: 390px; height: 244px; box-sizing: border-box; padding: 36px 24px 28px; background: #13111c; display: flex; flex-direction: column; align-items: center; gap: 20px">
+    <a href="#" style="display: block; width: 100%; box-sizing: border-box; text-align: center; padding: 20px 0; text-decoration: none; font-family: 'Press Start 2P', monospace; font-size: 14px; color: #1a1410; background: linear-gradient(#ffe48f, #f2b632 55%, #c98a1e); box-shadow: 0 0 0 4px #0a0910, 6px 6px 0 4px #0a0910">PRESS START</a>
+    <p style="margin: 0; font-size: 22px; line-height: 1.1; color: #c9c0dc; text-align: center">Sign in with GitHub. Insight Hub reads public activity only, never your private repos.</p>
+    <p style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 8px; color: #a69dbd">ENTER ALSO STARTS</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { party: [['Paladin', 'k-paladin'], ['Wizard', 'k-wizard'], ['Bard', 'k-bard'], ['Rogue', 'k-rogue']].map(function (p) { return { name: p[0], k: p[1] }; }) };
+  }
+}
+</script>
+</body>
+</html>
