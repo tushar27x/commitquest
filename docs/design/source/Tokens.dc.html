@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Palette and type</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f2b632}a:hover{color:#ffd36b}
+.sp{display:block;background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges;width:96px;height:128px;background-size:5760px 128px;animation:spA 6.2832s steps(60) infinite}
+.sp2{width:192px;height:256px;background-size:11520px 256px;animation-name:spB}
+.sp3{width:288px;height:384px;background-size:17280px 384px;animation-name:spC}
+@keyframes spA{from{background-position:0 0}to{background-position:-5760px 0}}
+@keyframes spB{from{background-position:0 0}to{background-position:-11520px 0}}
+@keyframes spC{from{background-position:0 0}to{background-position:-17280px 0}}
+.k-paladin{background-image:url(/_blob/f18954a9ff14bedd31f6b8cf06347f8c)}
+.k-barbarian{background-image:url(/_blob/8ed10d55447cb8ff45dc57775d210f1c)}
+.k-wizard{background-image:url(/_blob/0e4e4ce85931c11f4649005e17d91700)}
+.k-artificer{background-image:url(/_blob/773d1670aaa0c025f37789495b0da93e)}
+.k-cleric{background-image:url(/_blob/5da7644303d94b752cc1294a2e7d7239)}
+.k-bard{background-image:url(/_blob/81732435a286f84828afe49650b3172a)}
+.k-monk{background-image:url(/_blob/abcc55103df7689ae00353055ee21137)}
+.k-rogue{background-image:url(/_blob/aa0ac593a6177f4dffac476b3b642082)}
+.k-monk-happy{background-image:url(/_blob/0a47e55b2effbac564afdcfec0380645)}
+.k-monk-weak{background-image:url(/_blob/bf494fffb444ff2fdb3c6f1e4309dbb1)}
+.k-monk-hungry{background-image:url(/_blob/72913c88536ed130612b3caeff535a32)}
+.k-monk-hungry-nb{background-image:url(/_blob/0cb331181bc6f97b494596f229c9b4b9)}
+.k-monk-sleeping{background-image:url(/_blob/4f5904c1250d204389fb4aee96e15406)}
+.k-monk-levelup{background-image:url(/_blob/f95aab396a36f6091d54695d7a542712)}
+.k-monk-fainted{background-image:url(/_blob/c4ebdb61302b2dfe66f315107abe73c9)}
+.ht{width:24px;height:22px;background-image:url(/_blob/1206abce59a5df5a2649f07831cf377c);background-size:312px 22px;background-position:-288px 0;image-rendering:pixelated;image-rendering:crisp-edges}
+.ht.on{animation:htA 1.2s steps(12) infinite}
+@keyframes htA{from{background-position:0 0}to{background-position:-288px 0}}
+.ic{width:24px;height:24px;background-image:url(/_blob/71aa271d046ce726befce13fb5e983d5);background-size:120px 48px;image-rendering:pixelated;image-rendering:crisp-edges}
+.pt{width:40px;height:48px;background-image:url(/_blob/43b2b41e579af60d6cfe8444acca4e9d);background-size:320px 48px;image-rendering:pixelated;image-rendering:crisp-edges}
+.fire{width:32px;height:48px;background-image:url(/_blob/93bf0f74cfc4f7f9ffa52199390fa6b5);background-size:256px 48px;image-rendering:pixelated;animation:fireA .8s steps(8) infinite}
+@keyframes fireA{from{background-position:0 0}to{background-position:-256px 0}}
+.tw{position:absolute;width:3px;height:3px;background:#f4ecd8;animation:twA 3s ease-in-out infinite}
+@keyframes twA{0%,100%{opacity:.2}50%{opacity:1}}
+.flick{animation:flA 1.4s ease-in-out infinite}
+@keyframes flA{0%,100%{opacity:.75}30%{opacity:1}60%{opacity:.6}80%{opacity:.95}}
+.sc-vphone{background-image:url(/_blob/2a0d8b13b7905af2e8f19fbf97afd361);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-vdesk{background-image:url(/_blob/1bd60d6caa530c58256c87681878c65c);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-camp{background-image:url(/_blob/c0ce4c6770d25dae187af4dbdc4efa31);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-vill{background-image:url(/_blob/8dbcf996e2a37eb61f18340777ab2823);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-keep{background-image:url(/_blob/e7560be3a31ab446d8064639b843fc1f);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-cita{background-image:url(/_blob/2490dc0af2fa3ef6b7f3bf900908adc7);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-title{background-image:url(/_blob/de49c3db297bb01a8f27ff941c55b3ec);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+@media (prefers-reduced-motion:reduce){.sp,.ht.on,.tw,.fire,.flick{animation:none}}
+</style>
+</helmet>
+<div style="width: 640px; height: 1280px; box-sizing: border-box; padding: 48px; background: #0f0d18; font-family: 'VT323', monospace; color: #f4ecd8; display: flex; flex-direction: column; gap: 28px">
+  <h1 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 16px; color: #f2b632">REALM PALETTE</h1>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+    <sc-for list="{{swatches}}" as="s" hint-placeholder-count="12">
+      <div style="display: flex; flex-direction: column; gap: 5px">
+        <div style="height: 48px; background: {{s.hex}}; box-shadow: 0 0 0 3px #0a0910, 4px 4px 0 3px #0a0910"></div>
+        <span style="font-size: 20px; line-height: 1; margin-top: 6px">{{s.name}}</span>
+        <span style="font-size: 18px; line-height: 1; color: #a69dbd">{{s.hex}}</span>
+      </div>
+    </sc-for>
+  </div>
+  <div style="height: 4px; background: #2e2945"></div>
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <span style="font-size: 18px; color: #a69dbd">MATERIAL RAMPS · 4 STEPS · SHADOW → BASE → LIGHT → HIGHLIGHT</span>
+    <sc-for list="{{ramps}}" as="r" hint-placeholder-count="6">
+      <div style="display: grid; grid-template-columns: 96px repeat(4, minmax(0, 1fr)); gap: 4px; align-items: center">
+        <span style="font-family: 'Press Start 2P', monospace; font-size: 8px; color: #c9c0dc">{{r.name}}</span>
+        <sc-for list="{{r.steps}}" as="c"><div style="height: 28px; background: {{c.hex}}; box-shadow: 0 0 0 2px #0a0910"></div></sc-for>
+      </div>
+    </sc-for>
+  </div>
+  <div style="height: 4px; background: #2e2945"></div>
+  <div style="display: flex; flex-direction: column; gap: 10px">
+    <span style="font-size: 18px; color: #a69dbd">LIGHTING RULES · SAME FOR EVERY SPRITE AND SCENE</span>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+      <div style="background: #221e33; box-shadow: 0 0 0 3px #0a0910, inset 2px 2px 0 rgba(255,255,255,.06), inset -2px -2px 0 rgba(0,0,0,.28); padding: 10px 12px; font-size: 20px; line-height: 1.05">KEY LIGHT<br><span style="color: #a69dbd">top left. Highlight edge up and left, shadow edge down and right.</span></div>
+      <div style="background: #221e33; box-shadow: 0 0 0 3px #0a0910, inset 2px 2px 0 rgba(255,255,255,.06), inset -2px -2px 0 rgba(0,0,0,.28); padding: 10px 12px; font-size: 20px; line-height: 1.05"><span style="color: #86cdd6">RIM LIGHT #86CDD6</span><br><span style="color: #a69dbd">cool 1 px edge on the right so heroes separate from dark backdrops.</span></div>
+      <div style="background: #221e33; box-shadow: 0 0 0 3px #0a0910, inset 2px 2px 0 rgba(255,255,255,.06), inset -2px -2px 0 rgba(0,0,0,.28); padding: 10px 12px; font-size: 20px; line-height: 1.05">OUTLINE #120B12<br><span style="color: #a69dbd">1 px dark tint, never pure black. Skipped on glows.</span></div>
+      <div style="background: #221e33; box-shadow: 0 0 0 3px #0a0910, inset 2px 2px 0 rgba(255,255,255,.06), inset -2px -2px 0 rgba(0,0,0,.28); padding: 10px 12px; font-size: 20px; line-height: 1.05"><span style="color: #f2b632">GLOW</span><br><span style="color: #a69dbd">dithered additive halos, 4 alpha steps. No smooth blur.</span></div>
+    </div>
+  </div>
+  <div style="height: 4px; background: #2e2945"></div>
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <span style="font-size: 18px; color: #a69dbd">HEADINGS, HUD, BUTTONS · PRESS START 2P · 10–24 PX</span>
+    <span style="font-family: 'Press Start 2P', monospace; font-size: 20px; color: #f2b632">LEVEL 1-3</span>
+    <span style="font-family: 'Press Start 2P', monospace; font-size: 11px">PLAYER TUSHAR27X · CLASS MONK</span>
+    <span style="font-size: 18px; color: #a69dbd; margin-top: 6px">BODY AND AI TEXT · VT323 · 20 PX MINIMUM</span>
+    <span style="font-size: 26px; line-height: 1.15">The elder unrolls the scroll. "Sit, traveller. Here is what your week of commits says about you."</span>
+  </div>
+  <div style="height: 4px; background: #2e2945"></div>
+  <div style="display: flex; flex-direction: column; gap: 14px">
+    <span style="font-size: 18px; color: #a69dbd">PIXEL RULES · SPRITES 96×128 · 1 ART PX = 1 CSS PX (OR 2× / 3×) · NO RADIUS · HARD 4 PX SHADOW</span>
+    <div style="display: flex; gap: 22px; align-items: center; flex-wrap: wrap">
+      <button type="button" style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #1a1410; background: linear-gradient(#ffe48f, #f2b632 55%, #c98a1e); border: 0; padding: 14px 18px; box-shadow: 0 0 0 4px #0a0910, 4px 4px 0 4px #0a0910; cursor: pointer">SAVE</button>
+      <button type="button" style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #1a1410; background: #c99a2a; border: 0; padding: 14px 18px; box-shadow: 0 0 0 4px #0a0910; transform: translate(4px, 4px)">PRESSED</button>
+      <button type="button" disabled style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #a69dbd; background: #2e2945; border: 0; padding: 14px 18px; box-shadow: 0 0 0 4px #0a0910">RESTING 7:31</button>
+    </div>
+    <div style="display: flex; align-items: center; gap: 14px">
+      <span class="ht on" aria-hidden="true"></span><span class="ht on" aria-hidden="true" style="animation-delay: -0.3s"></span><span class="ht" aria-hidden="true"></span>
+      <span style="font-size: 20px; color: #a69dbd">hearts beat while full; an empty heart is still</span>
+    </div>
+    <div style="background: #efe0bb; color: #2a1d12; padding: 16px 18px; box-shadow: 0 0 0 4px #0a0910, inset 0 0 0 4px #c9b48a; font-size: 22px; line-height: 1.1">Parchment box: every piece of AI-written text lives here, so data and narrative never blur.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":640,"height":1280}}'>
+class Component extends DCLogic {
+  renderVals() {
+    function ramp(n, a) { return { name: n, steps: a.map(function (h) { return { hex: h }; }) }; }
+    return {
+      swatches: [
+        { name: 'Night', hex: '#13111C' }, { name: 'Stone', hex: '#221E33' }, { name: 'Stone lit', hex: '#2E2945' }, { name: 'Outline', hex: '#0A0910' },
+        { name: 'Parchment', hex: '#EFE0BB' }, { name: 'Bone text', hex: '#F4ECD8' }, { name: 'Gold', hex: '#F2B632' }, { name: 'Ember', hex: '#E0603A' },
+        { name: 'Forest', hex: '#2F6B3A' }, { name: 'Meadow', hex: '#5E9E4E' }, { name: 'River', hex: '#3D7BBF' }, { name: 'Dusk', hex: '#6B5FA8' }
+      ],
+      ramps: [
+        ramp('SKIN', ['#B06A46', '#DCA070', '#F2C392', '#FFE5C0']), ramp('ROBE', ['#6F2A1C', '#C8601F', '#EE9A44', '#FFCC78']),
+        ramp('STEEL', ['#323A4E', '#76849C', '#B4C2D8', '#F0F6FF']), ramp('GOLD', ['#86560F', '#D99A1E', '#F5C542', '#FFF1A6']),
+        ramp('WOOD', ['#38200F', '#6A3F21', '#96653A', '#C79258']), ramp('NIGHT CLOAK', ['#0E1412', '#222F28', '#3C5144', '#648670'])
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

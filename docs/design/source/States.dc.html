@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>System states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#f2b632}a:hover{color:#ffd36b}
+.sp{display:block;background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges;width:96px;height:128px;background-size:5760px 128px;animation:spA 6.2832s steps(60) infinite}
+.sp2{width:192px;height:256px;background-size:11520px 256px;animation-name:spB}
+.sp3{width:288px;height:384px;background-size:17280px 384px;animation-name:spC}
+@keyframes spA{from{background-position:0 0}to{background-position:-5760px 0}}
+@keyframes spB{from{background-position:0 0}to{background-position:-11520px 0}}
+@keyframes spC{from{background-position:0 0}to{background-position:-17280px 0}}
+.k-paladin{background-image:url(/_blob/f18954a9ff14bedd31f6b8cf06347f8c)}
+.k-barbarian{background-image:url(/_blob/8ed10d55447cb8ff45dc57775d210f1c)}
+.k-wizard{background-image:url(/_blob/0e4e4ce85931c11f4649005e17d91700)}
+.k-artificer{background-image:url(/_blob/773d1670aaa0c025f37789495b0da93e)}
+.k-cleric{background-image:url(/_blob/5da7644303d94b752cc1294a2e7d7239)}
+.k-bard{background-image:url(/_blob/81732435a286f84828afe49650b3172a)}
+.k-monk{background-image:url(/_blob/abcc55103df7689ae00353055ee21137)}
+.k-rogue{background-image:url(/_blob/aa0ac593a6177f4dffac476b3b642082)}
+.k-monk-happy{background-image:url(/_blob/0a47e55b2effbac564afdcfec0380645)}
+.k-monk-weak{background-image:url(/_blob/bf494fffb444ff2fdb3c6f1e4309dbb1)}
+.k-monk-hungry{background-image:url(/_blob/72913c88536ed130612b3caeff535a32)}
+.k-monk-hungry-nb{background-image:url(/_blob/0cb331181bc6f97b494596f229c9b4b9)}
+.k-monk-sleeping{background-image:url(/_blob/4f5904c1250d204389fb4aee96e15406)}
+.k-monk-levelup{background-image:url(/_blob/f95aab396a36f6091d54695d7a542712)}
+.k-monk-fainted{background-image:url(/_blob/c4ebdb61302b2dfe66f315107abe73c9)}
+.ht{width:24px;height:22px;background-image:url(/_blob/1206abce59a5df5a2649f07831cf377c);background-size:312px 22px;background-position:-288px 0;image-rendering:pixelated;image-rendering:crisp-edges}
+.ht.on{animation:htA 1.2s steps(12) infinite}
+@keyframes htA{from{background-position:0 0}to{background-position:-288px 0}}
+.ic{width:24px;height:24px;background-image:url(/_blob/71aa271d046ce726befce13fb5e983d5);background-size:120px 48px;image-rendering:pixelated;image-rendering:crisp-edges}
+.pt{width:40px;height:48px;background-image:url(/_blob/43b2b41e579af60d6cfe8444acca4e9d);background-size:320px 48px;image-rendering:pixelated;image-rendering:crisp-edges}
+.fire{width:32px;height:48px;background-image:url(/_blob/93bf0f74cfc4f7f9ffa52199390fa6b5);background-size:256px 48px;image-rendering:pixelated;animation:fireA .8s steps(8) infinite}
+@keyframes fireA{from{background-position:0 0}to{background-position:-256px 0}}
+.tw{position:absolute;width:3px;height:3px;background:#f4ecd8;animation:twA 3s ease-in-out infinite}
+@keyframes twA{0%,100%{opacity:.2}50%{opacity:1}}
+.flick{animation:flA 1.4s ease-in-out infinite}
+@keyframes flA{0%,100%{opacity:.75}30%{opacity:1}60%{opacity:.6}80%{opacity:.95}}
+.sc-vphone{background-image:url(/_blob/2a0d8b13b7905af2e8f19fbf97afd361);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-vdesk{background-image:url(/_blob/1bd60d6caa530c58256c87681878c65c);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-camp{background-image:url(/_blob/c0ce4c6770d25dae187af4dbdc4efa31);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-vill{background-image:url(/_blob/8dbcf996e2a37eb61f18340777ab2823);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-keep{background-image:url(/_blob/e7560be3a31ab446d8064639b843fc1f);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-cita{background-image:url(/_blob/2490dc0af2fa3ef6b7f3bf900908adc7);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+.sc-title{background-image:url(/_blob/de49c3db297bb01a8f27ff941c55b3ec);background-repeat:no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+@media (prefers-reduced-motion:reduce){.sp,.ht.on,.tw,.fire,.flick{animation:none}}
+</style>
+</helmet>
+<div style="width: 1440px; height: 800px; box-sizing: border-box; padding: 40px 48px; background: #0b0a12; font-family: 'VT323', monospace; color: #f4ecd8; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px">
+  <sc-for list="{{states}}" as="s" hint-placeholder-count="6">
+    <article style="background: #221e33; box-shadow: 0 0 0 4px #0a0910, 6px 6px 0 4px #0a0910, inset 2px 2px 0 rgba(255,255,255,.07), inset -2px -2px 0 rgba(0,0,0,.3); padding: 20px 22px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+        <span style="font-family: 'Press Start 2P', monospace; font-size: 8px; color: #13111c; background: {{s.tagBg}}; padding: 6px 8px">{{s.trigger}}</span>
+        <span style="font-size: 18px; color: #a69dbd">{{s.where}}</span>
+      </div>
+      <div style="display: flex; gap: 14px; align-items: flex-end; flex: 1">
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+          <h2 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 14px; line-height: 1.5; color: {{s.titleInk}}">{{s.title}}</h2>
+          <sc-if value="{{s.showBar}}" hint-placeholder-val="{{ false }}">
+            <div role="img" aria-label="Saving, about 60 percent" style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; height: 14px; box-shadow: 0 0 0 2px #0a0910">
+              <sc-for list="{{s.segs}}" as="g"><span style="background: {{g.fill}}"></span></sc-for>
+            </div>
+          </sc-if>
+          <p style="margin: 0; font-size: 21px; line-height: 1.08; color: #c9c0dc">{{s.copy}}</p>
+        </div>
+        <sc-if value="{{s.hasSprite}}" hint-placeholder-val="{{ true }}">
+          <div class="sp {{s.k}}" role="img" aria-label="{{s.alt}}" style="flex-shrink: 0"></div>
+        </sc-if>
+      </div>
+      <sc-if value="{{s.roll}}" hint-placeholder-val="{{ false }}">
+        <div aria-hidden="true" style="display: flex; gap: 0; background: #1b1829; box-shadow: 0 0 0 2px #0a0910; width: 320px">
+          <sc-for list="{{rollItems}}" as="p"><span class="pt" style="background-position: {{p.pos}}"></span></sc-for>
+        </div>
+      </sc-if>
+      <button type="button" disabled="{{s.disabled}}" style="align-self: flex-start; font-family: 'Press Start 2P', monospace; font-size: 10px; color: {{s.btnInk}}; background: {{s.btnBg}}; border: 0; padding: 12px 16px; box-shadow: {{s.btnRing}}">{{s.action}}</button>
+    </article>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":800}}'>
+var LIVE = { btnBg: 'linear-gradient(#ffe48f, #f2b632 55%, #c98a1e)', btnInk: '#1a1410', btnRing: '0 0 0 3px #0a0910, 3px 3px 0 3px #0a0910', disabled: false };
+var OFF = { btnBg: '#2e2945', btnInk: '#a69dbd', btnRing: '0 0 0 3px #0a0910', disabled: true };
+var STATES = [
+  { trigger: 'POST /SYNC · 10–90 S', where: 'full-screen overlay', title: 'SAVING YOUR QUEST…', titleInk: '#f2b632', tagBg: '#f2b632', showBar: true, k: 'k-monk', alt: 'Monk waiting, animated',
+    copy: 'Reading GitHub, scoring your class, writing your lore. Tip: Monks score on small PRs.', action: 'SAVING', btn: OFF },
+  { trigger: '429 + RETRY-AFTER', where: 'SAVE and NEW GAME', title: 'RESTING 7:31', titleInk: '#f4ecd8', tagBg: '#e3c88f', showBar: false, k: 'k-monk-sleeping', alt: 'Monk sleeping, animated',
+    copy: 'One save every 10 minutes. The timer counts down from Retry-After; a failed save still starts it.', action: 'RESTING 7:31', btn: OFF },
+  { trigger: '404 ON INSIGHTS', where: 'first visit', title: 'NEW GAME', titleInk: '#f2b632', tagBg: '#f2b632', showBar: false, roll: true,
+    copy: 'No character yet. Rolling one runs your first save. If the login save already ran, this shows the rest timer instead.', action: 'ROLL CHARACTER', btn: LIVE },
+  { trigger: '409 NEEDS_REAUTH', where: 'banner, data stays', title: 'YOUR GITHUB SEAL BROKE', titleInk: '#efa07a', tagBg: '#efa07a', showBar: false, k: 'k-monk-weak', alt: 'Monk looking weak, animated',
+    copy: 'GitHub no longer accepts the stored token. Your session is fine: reconnect GitHub to keep saving.', action: 'RECONNECT GITHUB', btn: LIVE },
+  { trigger: '401 · EXPIRED JWT', where: 'back to title', title: 'SESSION ENDED', titleInk: '#f4ecd8', tagBg: '#c9c0dc', showBar: false, k: 'k-rogue', alt: 'Rogue slipping away, animated',
+    copy: 'Your 24-hour pass ran out. Offline, the cached world stays readable until you press SAVE.', action: 'BACK TO TITLE', btn: LIVE },
+  { trigger: '502 · NETWORK', where: 'inline card', title: 'THE ROAD IS BLOCKED', titleInk: '#efa07a', tagBg: '#efa07a', showBar: false, k: 'k-monk-hungry-nb', alt: 'Monk waiting, animated',
+    copy: 'GitHub or the server is not answering. Your last save is safe and still on screen.', action: 'RETRY', btn: LIVE }
+];
+class Component extends DCLogic {
+  renderVals() {
+    var segs = []; for (var i = 0; i < 12; i++) segs.push({ fill: i < 7 ? 'linear-gradient(#ffe48f, #f2b632 55%, #c98a1e)' : '#2e2945' });
+    var roll = []; for (var j = 0; j < 8; j++) roll.push({ pos: '-' + (j * 40) + 'px 0' });
+    return {
+      rollItems: roll,
+      states: STATES.map(function (s) { return Object.assign({ segs: segs, hasSprite: !!s.k, roll: !!s.roll, k: s.k || '', alt: s.alt || '' }, s, s.btn); })
+    };
+  }
+}
+</script>
+</body>
+</html>
