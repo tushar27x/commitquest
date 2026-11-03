@@ -5,6 +5,12 @@ import com.tushar27x.insightshub.ratelimit.RateLimit;
 import com.tushar27x.insightshub.ratelimit.RateLimit.KeyType;
 import com.tushar27x.insightshub.sync.SyncService;
 import com.tushar27x.insightshub.sync.SyncService.SyncResult;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -18,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
  * Endpoints for the signed-in user. The JWT's {@code sub} is the GitHub id; the user is
  * never taken from a request parameter, so nobody can read someone else's data.
  */
+@Tag(name = "Insights", description = "The GitHub stats, class scores and AI reviews from the last sync.")
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
@@ -31,6 +38,11 @@ public class UserController {
     }
 
     /** The insights from the last sync, served from Redis after the first read. 404 until the first sync. */
+    @Operation(summary = "The insights from the last sync",
+            description = "Cached for 24 h, evicted on sync. heatmap_labels cover only the 7-day week. "
+                    + "repo_details holds README text meant as AI input: not for display.")
+    @ApiResponse(responseCode = "200", useReturnTypeSchema = true, description = "The insights")
+    @ApiResponse(responseCode = "404", description = "No insights yet (before the first sync): NEW GAME.")
     @RateLimit(policy = "insights", key = KeyType.USER)
     @GetMapping("/insights")
     public InsightsResponse insights(@AuthenticationPrincipal Jwt jwt) {
@@ -43,6 +55,18 @@ public class UserController {
      * otherwise 429 with {@code Retry-After}.
      * Synchronous: a sync takes about 10–30 s (GitHub + five LLM calls).
      */
+    @Operation(summary = "Sync now and return the fresh insights",
+            description = "Synchronous: usually under 30 s, at worst about 90 s (GitHub, then five LLM calls). "
+                    + "Also refreshes today's activity, so GET /hero shows a new contribution right away.")
+    @ApiResponse(responseCode = "200", useReturnTypeSchema = true, description = "The fresh insights")
+    @ApiResponse(responseCode = "404", description = "Rare: the sync wrote nothing; treat as NEW GAME.")
+    @ApiResponse(responseCode = "409", description = "GitHub no longer accepts the stored token (needs_reauth): "
+            + "log in again.")
+    @ApiResponse(responseCode = "429", description = "The per-user 10-minute cooldown (also after a failed sync), "
+            + "or too many syncs across all users right now. No X-RateLimit-* headers here.",
+            headers = @Header(name = HttpHeaders.RETRY_AFTER, description = "Whole seconds to wait, at least 1",
+                    schema = @Schema(type = "integer")))
+    @ApiResponse(responseCode = "502", description = "GitHub is unavailable.")
     @PostMapping("/sync")
     public InsightsResponse refresh(@AuthenticationPrincipal Jwt jwt) {
         long githubId = githubId(jwt);

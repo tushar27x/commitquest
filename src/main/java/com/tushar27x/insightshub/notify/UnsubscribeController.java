@@ -5,6 +5,13 @@ import com.tushar27x.insightshub.ratelimit.RateLimit;
 import com.tushar27x.insightshub.ratelimit.RateLimit.KeyType;
 import com.tushar27x.insightshub.repository.UsersRepository;
 import com.tushar27x.insightshub.security.UnsubscribeTokens;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -29,6 +36,9 @@ import java.util.OptionalLong;
  *   <li>A missing, forged or expired token is a 400 page. Rate-limited per IP ({@code unsubscribe}).</li>
  * </ul>
  */
+@Tag(name = "Notifications", description = "The digest email's unsubscribe link. Public, answered with HTML pages: "
+        + "the signed token in the link is the authorization (no JWT, cookie or CSRF token).")
+@SecurityRequirements // public: overrides the API-wide bearer requirement (B9 docs)
 @Slf4j
 @Controller
 @RequestMapping(DigestService.UNSUBSCRIBE_PATH)
@@ -49,18 +59,33 @@ public class UnsubscribeController {
         this.settingsUrl = properties.frontendUrl().replaceFirst("/$", "") + "/settings";
     }
 
+    @Operation(summary = "The unsubscribe confirm page",
+            description = "Changes nothing (mail scanners prefetch links): shows a button that POSTs the token back.")
+    @ApiResponse(responseCode = "200", description = "The confirm page",
+            content = @Content(mediaType = "text/html", schema = @Schema(type = "string")))
+    @ApiResponse(responseCode = "400", description = "A missing, forged or expired token, or a login JWT",
+            content = @Content(mediaType = "text/html", schema = @Schema(type = "string")))
     @RateLimit(policy = "unsubscribe", key = KeyType.IP)
     @GetMapping
-    public ModelAndView confirm(@RequestParam(required = false) String token) {
+    public ModelAndView confirm(@Parameter(description = "The signed token from the email")
+                                @RequestParam(required = false) String token) {
         if (tokens.verify(token).isEmpty()) {
             return invalid();
         }
         return new ModelAndView(CONFIRM, Map.of("token", token, "settingsUrl", settingsUrl), HttpStatus.OK);
     }
 
+    @Operation(summary = "Turn digest emails off",
+            description = "Sets alerts_enabled to false. Idempotent, and the same page for an account deleted since. "
+                    + "Also the RFC 8058 one-click target: any form body is accepted (List-Unsubscribe=One-Click).")
+    @ApiResponse(responseCode = "200", description = "\"Digest emails are off\"",
+            content = @Content(mediaType = "text/html", schema = @Schema(type = "string")))
+    @ApiResponse(responseCode = "400", description = "A missing, forged or expired token, or a login JWT",
+            content = @Content(mediaType = "text/html", schema = @Schema(type = "string")))
     @RateLimit(policy = "unsubscribe", key = KeyType.IP)
     @PostMapping
-    public ModelAndView unsubscribe(@RequestParam(required = false) String token) {
+    public ModelAndView unsubscribe(@Parameter(description = "The signed token from the email")
+                                    @RequestParam(required = false) String token) {
         OptionalLong userId = tokens.verify(token);
         if (userId.isEmpty()) {
             return invalid();

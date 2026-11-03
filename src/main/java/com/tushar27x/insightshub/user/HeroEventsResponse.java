@@ -1,5 +1,6 @@
 package com.tushar27x.insightshub.user;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import com.tushar27x.insightshub.hero.HeroEventType;
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
@@ -12,6 +13,7 @@ import java.util.Map;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record HeroEventsResponse(List<Event> events, List<XpDay> xpDays) {
 
+    @Schema(name = "HeroEvent")
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public record Event(HeroEventType type, LocalDate onDate, Map<String, Object> details) {
     }

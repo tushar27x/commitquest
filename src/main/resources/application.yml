@@ -109,6 +109,15 @@ insightshub:
       base-url: https://generativelanguage.googleapis.com/v1beta/openai
       api-key: ${GEMINI_API_KEY:}
       model: ${GEMINI_MODEL:gemini-3.6-flash}
+springdoc:  # B9: OpenAPI at /v3/api-docs and Swagger UI at /swagger-ui.html, public while on (SecurityConfig)
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:false}  # off unless asked: set API_DOCS_ENABLED=true in .env for local runs
+  swagger-ui:
+    enabled: ${API_DOCS_ENABLED:false}
+  paths-to-match: /api/**  # the API only, not /error or /actuator
+  default-produces-media-type: application/json
+  model-and-view-allowed: true  # the unsubscribe pages (Thymeleaf views) are endpoints too
+  override-with-generic-response: false  # each endpoint lists its own errors (OpenApiConfig adds 401/429/500)
 management:
   health:
     mail:
