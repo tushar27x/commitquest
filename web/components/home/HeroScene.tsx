@@ -16,19 +16,20 @@ const MOOD_WORDS: Record<Hero["mood"], string> = {
 };
 
 // Where things stand in each backdrop, in the art's pixels at its drawn scale
-// (docs/design/source/HomeMobile, HomeDesktop, TierHome). The campfire hero stands left of the fire.
+// (docs/design/source/HomeMobile, HomeDesktop, TierHome; U8 backdrops). The campfire hero stands
+// left of the fire, which sits on the logs drawn in the art.
 const LAYOUT = {
   phone: {
     centre: 147,
     hero: (tier: Tier) => ({ left: tier === "CAMPFIRE" ? 176 : 147, bottom: 20 }),
-    fire: { fire: [304, 188], glow: [230, 120, 190, 150] },
+    fire: { fire: [304, 216], glow: [230, 167, 190, 150] },
     stars: [[40, 18, 0], [188, 34, 1.2], [310, 14, 2.1], [120, 52, 0.6]],
     starSize: 3,
   },
   desktop: {
     centre: 284,
     hero: (tier: Tier) => ({ left: tier === "CAMPFIRE" ? 330 : 284, bottom: 34 }),
-    fire: { fire: [592, 328], glow: [470, 220, 330, 260] },
+    fire: { fire: [591, 376], glow: [470, 308, 330, 260] },
     stars: [[90, 40, 0], [380, 70, 1.1], [620, 30, 2], [240, 110, 0.5]],
     starSize: 4,
   },
