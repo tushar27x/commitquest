@@ -22,7 +22,7 @@ export default function TitlePage() {
   return (
     <main className="flex min-h-dvh flex-col bg-night">
       <div className="relative h-[clamp(480px,72dvh,600px)] overflow-hidden" style={{ background: SIDES }}>
-        <PixelScene url={TITLE_SCENE.url} width={TITLE_SCENE.width} height={TITLE_SCENE.height} scale={1} mirrored={false}>
+        <PixelScene url={TITLE_SCENE.url} width={TITLE_SCENE.width} height={TITLE_SCENE.height} scale={1}>
           <Stars stars={STARS} />
           <div aria-hidden className="absolute inset-x-0 top-[458px] flex justify-center">
             {PARTY.map((archetype) => (
