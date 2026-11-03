@@ -23,7 +23,7 @@ All PNGs, pixel art: render with `image-rendering: pixelated` at integer scales 
 | `heroes/idle/<class>.png` (8) | 5760×128 | Idle (OKAY mood): 60 frames of 96×128 in one row | `steps(60)` over **6.2832 s**, infinite. ×2: `background-size: 11520px 256px` |
 | `heroes/moods/<class>.png` (7, every class except Monk) | 5760×768 | The 6 other moods, one row each, 60 frames per row. Rows top to bottom: **HAPPY, WEAK, HUNGRY, SLEEPING, LEVEL UP, FAINTED** | Same timing. Row *n* = `background-position-y: -(n × 128)px` at ×1 |
 | `heroes/moods/monk-<mood>.png` (7) | 5760×128 | Monk's moods as separate sheets: `happy`, `weak`, `hungry`, `sleeping`, `levelup`, `fainted`, and `hungry-bubble` | Home uses `hungry` (no speech bubble) and draws the bubble in HTML. `hungry-bubble` has it drawn in; only the Moods board shows it |
-| `scenes/<tier>-phone.png` | 390×292 | Home backdrop, phone, ×1 | `campfire` LV 1–4, `village` 5–9, `keep` 10–19, `citadel` 20+ |
+| `scenes/<tier>-phone.png` | 390×292 | Home backdrop, phone, ×1 | `campfire` LV 1–4, `village` 5–9, `keep` 10–14, `citadel` 15+ (`tokens.json` `tiers`) |
 | `scenes/<tier>-desktop.png` | 380×260 | Home backdrop, desktop | Drawn at ×2: `background-size: 760px 520px` |
 | `scenes/<tier>-card.png` | 312×250 | The small tier cards on the "Level tiers" board | Optional in the app |
 | `scenes/title.png` | 390×600 | Title screen scene | |
