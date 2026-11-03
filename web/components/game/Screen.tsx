@@ -14,6 +14,8 @@ export interface ScreenProps {
   hideTitle?: boolean;
   /** Content runs edge to edge on phones (Home's scene); it pads itself. */
   flush?: boolean;
+  /** Desktop only: a 760 px column (Home: the scene at its ×2 scale, the cards under it). */
+  narrow?: boolean;
   /** Desktop only: shown at the right of the title (CHANGE CLASS, a subtitle). */
   actions?: ReactNode;
   children: ReactNode;
@@ -24,7 +26,7 @@ export interface ScreenProps {
  * two shell queries (insights + hero) and is replaced by NEW GAME (404) or THE ROAD IS
  * BLOCKED (500 / 502 / network, or anything else unexpected) when they can't load.
  */
-export function Screen({ header, title, hideTitle = false, flush = false, actions, children }: ScreenProps) {
+export function Screen({ header, title, hideTitle = false, flush = false, narrow = false, actions, children }: ScreenProps) {
   const { needsReauth, syncBlocked, syncNotFound, save, saving } = useGameState();
   const insights = useInsights();
   const hero = useHero();
@@ -60,7 +62,7 @@ export function Screen({ header, title, hideTitle = false, flush = false, action
     <>
       {header}
       <div
-        className={`mx-auto flex w-full max-w-[1180px] flex-col gap-5 pb-6 md:px-6 md:pt-10 ${
+        className={`mx-auto flex w-full flex-col gap-5 pb-6 md:px-6 md:pt-10 ${narrow ? "max-w-[808px]" : "max-w-[1180px]"} ${
           flush ? "md:pb-14" : "px-3 pt-5"
         }`}
       >
