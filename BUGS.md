@@ -41,6 +41,8 @@ New bugs get the next `B` number. PR descriptions list the bugs found while buil
 | [B34](#b34) | 9 | Spring 7 `ProblemDetail` has no `type` by default, so error bodies lacked a key the contract lists | Dependency |
 | [B35](#b35) | 9 | Validation errors named Java fields (`restDays`), not the API's snake_case keys | Code |
 | [B36](#b36) | 2.6 | `daily_contributions` SQL is unqualified and resolves outside `v2`, so every sync fails at the activity write | Code |
+| [B40](#b40) | 14 (B9) | springdoc failed with `NoSuchMethodError: Schema.$dynamicRef()`: Spring AI pulls older swagger annotations | Dependency |
+| [B41](#b41) | 14 (B9) | The OpenAPI schemas showed camelCase keys: swagger-core can't see Jackson 3's `@JsonNaming` | Dependency |
 
 ---
 
@@ -308,3 +310,17 @@ New bugs get the next `B` number. PR descriptions list the bugs found while buil
 - **Root cause:** the shared repository's `.git/info/exclude` (all worktrees use it) has unanchored `README.md` and `prompts/` lines under "Claude kit (local only)". They match `docs/design/README.md`, `web/README.md` and `src/main/resources/prompts/`. Files that were already tracked stay tracked; new ones never show up.
 - **Fix:** `git add -f` for the missing files (#35: `b418b0e`; I5 adds `docs/design/README.md`; `web/README.md` waits on the ui). The developer's call: anchor the two lines (`/README.md`, `/prompts/`) or remove them.
 - **Lesson:** a green local build doesn't prove that the commit is complete; CI on a clean checkout does. When a file "can't be found" only in CI, run `git ls-files --others --ignored --exclude-standard`.
+
+### B40
+**springdoc failed with `NoSuchMethodError: io.swagger.v3.oas.annotations.media.Schema.$dynamicRef()`** · Phase 14 (B9) · Dependency · found while building B9
+- **Symptom:** with springdoc-openapi 3.2.0 added, building the OpenAPI document failed as soon as a class carried a swagger `@Schema` annotation.
+- **Root cause:** two clashes on the swagger annotations. Spring AI 2.0.0 (`spring-ai-model`) depends on `swagger-annotations-jakarta` 2.2.38, nearer in the tree than springdoc's 2.2.55, so Maven picked 2.2.38, and swagger-core 2.2.55 calls annotation methods that 2.2.38 lacks. And `openai-java-core` (Spring AI's OpenAI client) adds `swagger-annotations` 2.2.31, the javax flavour with the same package and class names, so the classpath held two copies of each annotation.
+- **Fix:** `pom.xml` pins `swagger-annotations-jakarta` to `${swagger-core.version}` (2.2.55, the one springdoc 3.2.0 is built on) in `dependencyManagement`, and excludes `swagger-annotations` from `spring-ai-starter-model-openai`. `./mvnw dependency:tree | grep swagger-annotations` now shows one jar, 2.2.55.
+- **Lesson:** Maven resolves by nearest wins, not newest, and a jar of "only annotations" can still break at runtime. After adding a starter, grep the tree for duplicate packages under different artifact ids. Bump `swagger-core.version` together with `springdoc.version`.
+
+### B41
+**The OpenAPI schemas showed camelCase keys (`xpForNext`), not the API's snake_case** · Phase 14 (B9) · Dependency · found while building B9
+- **Symptom:** the first `/v3/api-docs` listed `xpForNext`, `restDays`, `lastEvaluatedOn`, ... although the API sends `xp_for_next`, `rest_days`, `last_evaluated_on`. A client generated from the docs would have been wrong on every multi-word field.
+- **Root cause:** the DTOs use Jackson 3's `tools.jackson.databind.annotation.JsonNaming` (Boot 4). swagger-core, under springdoc 3.2.0, still introspects models with Jackson 2, which only knows `com.fasterxml.jackson.databind.annotation.JsonNaming`. The annotations both versions share (`@JsonProperty`, `@JsonValue`, in `com.fasterxml.jackson.annotation`) were honoured, so `class` and the lower-case week statuses came out right, which hid the problem at a glance.
+- **Fix:** `OpenApiConfig.modelResolver` gives swagger-core a Jackson 2 mapper whose introspector also reads the Jackson 3 `@JsonNaming` and maps it to the Jackson 2 strategy (an unknown strategy fails loudly). `OpenApiDocsTest` compares every response schema's keys with the contract fixtures, so a camelCase key fails the build.
+- **Lesson:** during the Jackson 2 to 3 transition, a tool that reads your annotations may be on the other major version. Check generated docs against real payloads, not by eye.
