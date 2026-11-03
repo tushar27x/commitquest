@@ -19,7 +19,7 @@ const EASE_MS = 25_000;
 const GAME_TIPS = [
   "A rest day costs no heart and doesn't break your streak.",
   "Three active days in a row win a heart back.",
-  "Any commit on any branch feeds your hero.",
+  "Any commit on any branch completes today's quest.",
 ];
 
 function tipsFor(current: Archetype | undefined): string[] {
