@@ -2,6 +2,7 @@ import { HeartRow } from "@/components/HeartRow";
 import { Campfire, PixelScene, Stars } from "@/components/art/SceneArt";
 import type { Hero, HeroEvent, Tier } from "@/lib/api/types";
 import { SCENE, sceneUrl } from "@/lib/art";
+import { SCENE_EDGES } from "@/lib/scene-edges";
 import { TIER_LEVELS, faintLabel } from "@/lib/hero";
 import { HeroFigure, type HeroFigureProps } from "./HeroFigure";
 
@@ -45,7 +46,7 @@ function Backdrop({ tier, size, figure }: { tier: Tier; size: "phone" | "desktop
   const layout = LAYOUT[size];
   const at = layout.hero(tier);
   return (
-    <PixelScene url={sceneUrl(tier, size)} width={width} height={height} scale={scale} className={size === "phone" ? "md:hidden" : "hidden md:block"}>
+    <PixelScene url={sceneUrl(tier, size)} width={width} height={height} scale={scale} edges={SCENE_EDGES[tier][size]} className={size === "phone" ? "md:hidden" : "hidden md:block"}>
       {STARRY[tier] && <Stars stars={layout.stars} size={layout.starSize} />}
       {tier === "CAMPFIRE" && <Campfire scale={scale} fire={[...layout.fire.fire]} glow={[...layout.fire.glow]} />}
       <div className="absolute" style={at}>
