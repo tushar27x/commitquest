@@ -1,5 +1,6 @@
 package com.tushar27x.insightshub.user;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import com.tushar27x.insightshub.ai.CharacterSheet;
 import com.tushar27x.insightshub.entity.Archetype;
 import com.tushar27x.insightshub.entity.Insights;
@@ -26,7 +27,7 @@ public record InsightsResponse(
         String weeklyReview,
         String craftReview,
         Map<String, String> repoSummaries,
-        CharacterSheet characterSheet,
+        @Schema(description = "null until the AI has written one") CharacterSheet characterSheet,
         Instant updatedAt) {
 
     static InsightsResponse from(Insights insights) {

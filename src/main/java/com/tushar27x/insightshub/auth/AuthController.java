@@ -5,6 +5,15 @@ import com.tushar27x.insightshub.auth.GitHubOAuthClient.OAuthCodeRejectedExcepti
 import com.tushar27x.insightshub.config.InsightsHubProperties;
 import com.tushar27x.insightshub.ratelimit.RateLimit;
 import com.tushar27x.insightshub.ratelimit.RateLimit.KeyType;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpHeaders;
@@ -34,6 +43,8 @@ import java.util.Base64;
  * for the round trip; the callback only accepts a {@code state} matching it, which stops an
  * attacker from completing a login with their own code in the victim's browser (login CSRF).
  */
+@Tag(name = "Auth", description = "The GitHub login round trip. Public: no JWT.")
+@SecurityRequirements // public: overrides the API-wide bearer requirement (B9 docs)
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -57,6 +68,14 @@ public class AuthController {
         this.frontendUrl = stripTrailingSlash(properties.frontendUrl());
     }
 
+    @Operation(summary = "Start the GitHub login",
+            description = "Opened by the browser directly (not through the web app's proxy), because the "
+                    + "oauth_state cookie must live on the backend origin.")
+    @ApiResponse(responseCode = "302", description = "To GitHub's authorize page. Sets the oauth_state cookie "
+            + "(HttpOnly, path /api/auth, 10 min).", headers = {
+            @Header(name = HttpHeaders.LOCATION, description = "GitHub's authorize URL",
+                    schema = @Schema(type = "string")),
+            @Header(name = HttpHeaders.SET_COOKIE, description = "oauth_state", schema = @Schema(type = "string"))})
     @RateLimit(policy = "login", key = KeyType.IP)
     @GetMapping("/login")
     public ResponseEntity<Void> login() {
@@ -71,6 +90,19 @@ public class AuthController {
      * GitHub sends {@code code} on success, or {@code error} (e.g. {@code access_denied}) when the user cancels.
      * The size limits only bound what we accept; {@code error} is echoed in the 400, so it must be a plain code.
      */
+    @Operation(summary = "GitHub's redirect back after the login",
+            description = "Exchanges the code, upserts the user, runs a sync if one is due (a failure there doesn't "
+                    + "block the login) and hands the JWT to the web app.")
+    @ApiResponse(responseCode = "302", description = "The default (insightshub.auth.redirect-to-frontend: true): "
+            + "to ${FRONTEND_URL}/dashboard#token=<jwt>, a fragment, so the JWT never reaches a server log. "
+            + "Clears the oauth_state cookie.", headers = @Header(name = HttpHeaders.LOCATION,
+            description = "${FRONTEND_URL}/dashboard#token=<jwt>", schema = @Schema(type = "string")))
+    @ApiResponse(responseCode = "200", description = "Only with insightshub.auth.redirect-to-frontend: false: "
+            + "the JWT as JSON.", content = @Content(mediaType = "application/json",
+            schema = @Schema(implementation = LoginResponse.class)))
+    @ApiResponse(responseCode = "400", description = "The state doesn't match the cookie (or it expired), the user "
+            + "cancelled on GitHub (error), there is no code, or GitHub rejected the code.")
+    @ApiResponse(responseCode = "502", description = "GitHub failed during the code exchange.")
     @RateLimit(policy = "callback", key = KeyType.IP) // each callback costs 3 GitHub calls and may sync
     @GetMapping("/callback")
     public ResponseEntity<LoginResponse> callback(@RequestParam(required = false) @Size(max = MAX_PARAM) String code,
@@ -78,6 +110,8 @@ public class AuthController {
                                                   @RequestParam(required = false) @Size(max = MAX_PARAM)
                                                   @Pattern(regexp = "[a-z_]+", message = "must be a GitHub error code")
                                                   String error,
+                                                  @Parameter(in = ParameterIn.COOKIE, name = STATE_COOKIE,
+                                                          description = "Set by /api/auth/login")
                                                   @CookieValue(name = STATE_COOKIE, required = false) String expectedState) {
         if (!sameState(expectedState, state)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired OAuth state; start again at /api/auth/login");
@@ -104,6 +138,10 @@ public class AuthController {
     }
 
     /** JWTs are stateless: nothing to revoke server-side, the client drops its token. Kept for v1's contract. */
+    @Operation(summary = "Log out", description = "JWTs are stateless: nothing is revoked. The web app just drops its "
+            + "token and doesn't need to call this.")
+    @ApiResponse(responseCode = "302", description = "To FRONTEND_URL.",
+            headers = @Header(name = HttpHeaders.LOCATION, schema = @Schema(type = "string")))
     @GetMapping("/logout")
     public ResponseEntity<Void> logout() {
         return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(frontendUrl)).build();

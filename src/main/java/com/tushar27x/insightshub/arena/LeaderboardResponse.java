@@ -1,5 +1,6 @@
 package com.tushar27x.insightshub.arena;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import com.tushar27x.insightshub.entity.Archetype;
 import com.tushar27x.insightshub.hero.Tier;
 import tools.jackson.databind.PropertyNamingStrategies;
@@ -21,6 +22,7 @@ public record LeaderboardResponse(Archetype archetype, int page, int size, int t
      * @param rank  shared by heroes with the same level and XP (1, 2, 2, 4)
      * @param isYou whether this row is the caller's hero
      */
+    @Schema(name = "LeaderboardEntry")
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public record Entry(int rank, String login, String avatarUrl, int level, int xp, int lives, Tier tier,
                         boolean isYou) {
