@@ -1,6 +1,7 @@
 // Generates the web app's design files from the design kit in docs/design/:
 //   docs/design/tokens.json  -> app/theme.css        (Tailwind 4 @theme)
 //   docs/design/art/**       -> public/art/**         (byte copies of the PNG art)
+//   docs/design/art/scenes   -> lib/scene-edges.ts    (each backdrop's edge colours, scene-edges.mjs)
 // All outputs are committed. Run `npm run design` after the kit changes;
 // `npm run design:check` fails if the committed files have drifted.
 // If docs/ is missing (web/ deployed on its own), it skips and keeps the committed copies.
@@ -8,6 +9,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { sceneEdgesTs } from "./scene-edges.mjs";
 
 const web = join(dirname(fileURLToPath(import.meta.url)), "..");
 const kit = join(web, "..", "docs", "design");
@@ -62,7 +64,10 @@ function listFiles(dir) {
 }
 
 const tokens = JSON.parse(readFileSync(join(kit, "tokens.json"), "utf8"));
-const outputs = [[join(web, "app", "theme.css"), themeCss(tokens)]];
+const outputs = [
+  [join(web, "app", "theme.css"), themeCss(tokens)],
+  [join(web, "lib", "scene-edges.ts"), sceneEdgesTs(join(kit, "art", "scenes"), ["CAMPFIRE", "VILLAGE", "KEEP", "CITADEL"])],
+];
 
 // The art: docs/design/art/<path> -> public/art/<path>, and nothing else in public/art.
 const artSrc = join(kit, "art");

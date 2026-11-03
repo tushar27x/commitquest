@@ -6,6 +6,10 @@ The approved UI. Build `web/` to match it. The rules behind it are in `docs/v2-h
 - **Hero Design (hi-res):** https://claude.ai/artifact/WpSMuuZevpRYoK9M99honc. It replaces the two canvases below for the art and the boards.
 - Old canvases, kept for history: Character Design https://claude.ai/artifact/1qrPrfpjU94UCYh2c2C2Nb · Home & Journal https://claude.ai/artifact/3vjimL2VeHgExJnuB7BNQt
 
+## Backdrops redrawn (2026-11-03, U8)
+
+The developer replaced every scene: the 4 tiers at phone, desktop and card size, and the title. Same file names and sizes, so they drop in. The style moved from wide landscapes to closer, warmer night scenes (e.g. the village is now a lamp-lit street). The campfire, its glow and the hero sit at new positions on the `Tiers` and `TierHome` boards: take the overlay positions from those sources, not from the old ones. Nothing else changed: heroes, moods, hearts, icons, portraits and the other boards are as in U7.
+
 ## What changed in the hi-res design (U7)
 
 - **Heroes are pixel art in PNG sprite sheets**, not 16×16 grids: 96×128 per frame (1 art pixel = 1 CSS pixel at ×1), a 60-frame idle loop that repeats without a seam, drawn at ×1, ×2 (192×256) or ×3 (288×384). Shaded ramps lit from the top left, a cool rim light on the right, dark tinted outlines.
@@ -56,10 +60,10 @@ All PNGs, pixel art: render with `image-rendering: pixelated` at integer scales 
 | `f18954a9…` `8ed10d55…` `0e4e4ce8…` `773d1670…` `5da76443…` `81732435…` `abcc5510…` `aa0ac593…` | `heroes/idle/` paladin, barbarian, wizard, artificer, cleric, bard, monk, rogue (CSS `.k-<class>`) |
 | `9e835526…` `66fd421e…` `0a005124…` `765fe7ca…` `4b8af6fc…` `9b74601d…` `4083877a…` | `heroes/moods/` paladin, barbarian, wizard, artificer, cleric, bard, rogue (`.a-<class>`, rows `.r0`–`.r5`) |
 | `0a47e55b…` `bf494fff…` `0cb33118…` `72913c88…` `4f5904c1…` `f95aab39…` `c4ebdb61…` | `heroes/moods/monk-` happy, weak, hungry, hungry-bubble, sleeping, levelup, fainted (`.k-monk-<mood>`; `-hungry-nb` = `monk-hungry`) |
-| `15917864…` `2a0d8b13…` `2085463b…` `19399a35…` | `scenes/` campfire, village, keep, citadel `-phone` (`.sd-<tier>-p`, `.sc-vphone`) |
-| `efe90137…` `1bd60d6c…` `4d620cc0…` `e9f5c8b6…` | `scenes/` campfire, village, keep, citadel `-desktop` (`.sd-<tier>-d`, `.sc-vdesk`) |
-| `c0ce4c67…` `8dbcf996…` `e7560be3…` `2490dc0a…` | `scenes/` campfire, village, keep, citadel `-card` (`.sc-camp`, `.sc-vill`, `.sc-keep`, `.sc-cita`) |
-| `de49c3db…` | `scenes/title.png` (`.sc-title`) |
+| `00e9012f…` `86bfea0f…` `1e020d61…` `14f1bbf2…` | `scenes/` campfire, village, keep, citadel `-phone` (`.sd-<tier>-p`, `.sc-vphone`) |
+| `f5a3c153…` `0dc9803b…` `7237a28b…` `21498b85…` | `scenes/` campfire, village, keep, citadel `-desktop` (`.sd-<tier>-d`, `.sc-vdesk`) |
+| `1f82edac…` `71946e83…` `c4c1d5ad…` `7641cacf…` | `scenes/` campfire, village, keep, citadel `-card` (`.sc-camp`, `.sc-vill`, `.sc-keep`, `.sc-cita`) |
+| `292362e5…` | `scenes/title.png` (`.sc-title`) |
 | `1206abce…` `71aa271d…` `43b2b41e…` `93bf0f74…` | `ui/` hearts (`.ht`), nav-icons (`.ic`), portraits (`.pt`), campfire (`.fire`) |
 
 ## Images (`png/`) and data

@@ -2,6 +2,7 @@ import { HeartRow } from "@/components/HeartRow";
 import { Campfire, PixelScene, Stars } from "@/components/art/SceneArt";
 import type { Hero, HeroEvent, Tier } from "@/lib/api/types";
 import { SCENE, sceneUrl } from "@/lib/art";
+import { SCENE_EDGES } from "@/lib/scene-edges";
 import { TIER_LEVELS, faintLabel } from "@/lib/hero";
 import { HeroFigure, type HeroFigureProps } from "./HeroFigure";
 
@@ -16,19 +17,20 @@ const MOOD_WORDS: Record<Hero["mood"], string> = {
 };
 
 // Where things stand in each backdrop, in the art's pixels at its drawn scale
-// (docs/design/source/HomeMobile, HomeDesktop, TierHome). The campfire hero stands left of the fire.
+// (docs/design/source/HomeMobile, HomeDesktop, TierHome; U8 backdrops). The campfire hero stands
+// left of the fire, which sits on the logs drawn in the art.
 const LAYOUT = {
   phone: {
     centre: 147,
     hero: (tier: Tier) => ({ left: tier === "CAMPFIRE" ? 176 : 147, bottom: 20 }),
-    fire: { fire: [304, 188], glow: [230, 120, 190, 150] },
+    fire: { fire: [304, 216], glow: [230, 167, 190, 150] },
     stars: [[40, 18, 0], [188, 34, 1.2], [310, 14, 2.1], [120, 52, 0.6]],
     starSize: 3,
   },
   desktop: {
     centre: 284,
     hero: (tier: Tier) => ({ left: tier === "CAMPFIRE" ? 330 : 284, bottom: 34 }),
-    fire: { fire: [592, 328], glow: [470, 220, 330, 260] },
+    fire: { fire: [591, 376], glow: [470, 308, 330, 260] },
     stars: [[90, 40, 0], [380, 70, 1.1], [620, 30, 2], [240, 110, 0.5]],
     starSize: 4,
   },
@@ -44,7 +46,7 @@ function Backdrop({ tier, size, figure }: { tier: Tier; size: "phone" | "desktop
   const layout = LAYOUT[size];
   const at = layout.hero(tier);
   return (
-    <PixelScene url={sceneUrl(tier, size)} width={width} height={height} scale={scale} className={size === "phone" ? "md:hidden" : "hidden md:block"}>
+    <PixelScene url={sceneUrl(tier, size)} width={width} height={height} scale={scale} edges={SCENE_EDGES[tier][size]} className={size === "phone" ? "md:hidden" : "hidden md:block"}>
       {STARRY[tier] && <Stars stars={layout.stars} size={layout.starSize} />}
       {tier === "CAMPFIRE" && <Campfire scale={scale} fire={[...layout.fire.fire]} glow={[...layout.fire.glow]} />}
       <div className="absolute" style={at}>

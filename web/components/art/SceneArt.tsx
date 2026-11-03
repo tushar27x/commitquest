@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { UI_ART } from "@/lib/art";
+import type { SceneEdge } from "@/lib/scene-edges";
 
 /** The campfire's 8-frame flame (`ui/campfire.png`) with its flickering glow. Positions in frame pixels. */
 export function Campfire({ scale, fire, glow }: { scale: 1 | 2; fire: [number, number]; glow: [number, number, number, number] }) {
@@ -28,18 +29,29 @@ export function Stars({ stars, size = 3 }: { stars: readonly (readonly [number, 
   ));
 }
 
+/** One side's edge colours as a CSS gradient: hard bands for the ground, soft stops above it. */
+export function edgeGradient({ ground, above }: SceneEdge, scale: number): string {
+  let from = 0;
+  const bands = ground.map(([colour, to]) => {
+    const band = `${colour} ${from * scale}px ${to * scale}px`;
+    from = to;
+    return band;
+  });
+  const soft = above.map(([colour, row]) => `${colour} ${row * scale}px`);
+  return `linear-gradient(to top, ${[...bands, ...soft].join(", ")})`;
+}
+
 /**
  * A pixel-art picture at an integer scale, centred and anchored to the bottom of its parent. With
- * `mirrored`, flipped copies either side continue it, so a wider parent never shows a hard edge
- * (landscapes only: a castle or a moon would repeat). Children are positioned in the picture's
- * own pixels (scaled).
+ * `edges`, a wider parent continues the picture past each side with its edge colours (lib/scene-edges.ts), so the scene never repeats. Children are positioned in the
+ * picture's own pixels (scaled).
  */
 export function PixelScene({
   url,
   width,
   height,
   scale,
-  mirrored = true,
+  edges,
   className = "",
   children,
 }: {
@@ -47,27 +59,29 @@ export function PixelScene({
   width: number;
   height: number;
   scale: number;
-  mirrored?: boolean;
+  edges?: { left: SceneEdge; right: SceneEdge };
   className?: string;
   children?: ReactNode;
 }) {
   const w = width * scale;
   const h = height * scale;
-  const tile = (x: number, mirrored: boolean): CSSProperties => ({
+  // Wide enough for any screen: the parent clips it.
+  const side = (bands: SceneEdge, at: "right" | "left"): CSSProperties => ({
     position: "absolute",
-    left: x,
     bottom: 0,
-    width: w,
+    [at]: "100%",
+    width: "100vw",
     height: h,
-    backgroundImage: `url(${url})`,
-    backgroundSize: `${w}px ${h}px`,
-    transform: mirrored ? "scaleX(-1)" : undefined,
+    backgroundImage: edgeGradient(bands, scale),
   });
   return (
     <div className={`absolute bottom-0 left-1/2 ${className}`} style={{ width: w, height: h, marginLeft: -w / 2 }}>
-      {mirrored && <div aria-hidden className="art" style={tile(-w, true)} />}
-      {mirrored && <div aria-hidden className="art" style={tile(w, true)} />}
-      <div className="art" style={tile(0, false)}>
+      {edges && <div aria-hidden style={side(edges.left, "right")} />}
+      {edges && <div aria-hidden style={side(edges.right, "left")} />}
+      <div
+        className="art absolute bottom-0 left-0"
+        style={{ width: w, height: h, backgroundImage: `url(${url})`, backgroundSize: `${w}px ${h}px` }}
+      >
         {children}
       </div>
     </div>
