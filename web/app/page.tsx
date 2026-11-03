@@ -9,9 +9,11 @@ import { StartButton } from "./start-button";
 
 const PARTY: Archetype[] = ["PALADIN", "WIZARD", "BARD", "ROGUE"];
 
-// Beside the scene on wide screens: its edge colours, sky down to the grass line (130 px up).
+// Beside the scene on wide screens: its edge colours from the bottom up (the road, its lit edge
+// 20 px up, the misty lake behind the pines), then a plain night sky. The towers at the picture's
+// edges don't carry on, so the sky behind them fades without their purple band.
 const SIDES =
-  "linear-gradient(to top, #0c2013 0, #2b5c37 80px, #2c5d39 125px, #59954a 125px 130px, #1b1735 130px, #221d42 200px, #291f4e 250px, #251c48 300px, #130f2d 400px, #0d0a1f 500px, #06040e 600px)";
+  "linear-gradient(to top, #0e081b 0, #1e1c3e 18px, #5d3a53 20px 22px, #3e316b 22px 70px, #0d1226 70px, #161331 250px, #100d26 420px, #06040f 600px)";
 
 // [x, y, delay in s] in the 390×600 scene.
 const STARS = [[60, 90, 0], [150, 40, 1.4], [332, 150, 0.7], [240, 110, 2.2]] as const;
