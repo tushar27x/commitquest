@@ -61,7 +61,7 @@ describe("weekCells", () => {
     expect(today).toMatchObject({ date: "2026-10-18", status: "rest", mark: "Z" });
   });
 
-  it("shows a fed today as active", () => {
+  it("shows a quest done today as active", () => {
     expect(weekCells(variant("happy")).find((c) => c.isToday)).toMatchObject({ status: "active", mark: "+10" });
   });
 });

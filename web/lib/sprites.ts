@@ -1,4 +1,4 @@
-// Tiny one-colour icons drawn as grids (the "FED TODAY" tick). The heroes, hearts, nav icons and
+// Tiny one-colour icons drawn as grids (the "QUEST DONE" tick). The heroes, hearts, nav icons and
 // portraits are PNG art now: see lib/art.ts.
 
 export type Palette = Readonly<Record<string, string>>;
