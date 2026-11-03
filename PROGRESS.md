@@ -64,7 +64,7 @@ From Part D on, 🤖 names the lane: **backend**, **ui** or **integration** (ste
 | 10 | Scheduled daily sync, activity history & branch scan | 🤖 backend (B1, B3) | ✅ (activity-only since #32; first live run pending) | [#10](https://github.com/tushar27x/insightsHubV2/pull/10) [#20](https://github.com/tushar27x/insightsHubV2/pull/20) [#32](https://github.com/tushar27x/insightsHubV2/pull/32) |
 | 11 | Hero engine (lives, XP, levels) | 🤖 backend (B4–B6) | ✅ | [#22](https://github.com/tushar27x/insightsHubV2/pull/22) [#25](https://github.com/tushar27x/insightsHubV2/pull/25) [#30](https://github.com/tushar27x/insightsHubV2/pull/30) |
 | 12 | Notifications: daily digest email (from `hero_events`) | 🤖 backend (B7) | ✅ (first live run pending: needs SMTP) | [#35](https://github.com/tushar27x/insightsHubV2/pull/35) |
-| 13 | Arena: leaderboards by hero level within the chosen class | 🤖 backend (B8) | 🟨 built on `backend/b8-arena`, waiting for the contract | |
+| 13 | Arena: leaderboards by hero level within the chosen class | 🤖 backend (B8) | ✅ backend (the Arena board in `web/` waits for the new design) | [#40](https://github.com/tushar27x/insightsHubV2/pull/40) [#42](https://github.com/tushar27x/insightsHubV2/pull/42) |
 | | **Part C: Ship it** | | | |
 | 14 | Testing, API docs & deployment | 🤖 integration (I2, I3, I5, I6); deploy TBD | 🟨 I2, I3, I5 done; I6 and deploy left | [#15](https://github.com/tushar27x/insightsHubV2/pull/15) [#29](https://github.com/tushar27x/insightsHubV2/pull/29) [#36](https://github.com/tushar27x/insightsHubV2/pull/36) |
 | | **Part D: Hero-pet plan** | | | |
@@ -511,12 +511,12 @@ Keeping v1's response shape meant the v1 Next.js client could be pointed at v2. 
 
 **Done when** (rewritten 2026-11-01 for the hero plan, which replaced score ranking: plan §3, Phase 13)
 - [x] Every user has scores for all archetypes, and the primary archetype is derived from them (#3)
-- [ ] `GET /leaderboard` ranks heroes by level, then XP, within their current class, public profiles only, paged (B8)
-- [ ] `GET /user/rank` gives the caller's rank and top percent, or the 404 "Not in the Arena" when they aren't ranked (B8)
-- [ ] The Arena tab shows the board and the caller's rank (ui, after B8)
+- [x] `GET /leaderboard` ranks heroes by level, then XP, within their current class, public profiles only, paged (B8, #42)
+- [x] `GET /user/rank` gives the caller's rank and top percent, or the 404 "Not in the Arena" when they aren't ranked (B8, #42)
+- [ ] The Arena tab shows the board and the caller's rank (ui; paused until the developer's new backdrop design)
 - ~~Leaderboard + "my rank" from both Postgres and Redis~~, ~~changing `algo_version` triggers a full recompute~~: dropped. Ranks are computed per request in Postgres; class scores only qualify a class
 
-**As built (B8, `backend/b8-arena`, to the contract of #40):** the plan wins over hints 5–6 here: the board ranks **heroes**, not class scores.
+**As built (B8, #42, to the contract of #40):** the plan wins over hints 5–6 here: the board ranks **heroes**, not class scores.
 - `GET /api/leaderboard?archetype=&page=&size=` and `GET /api/user/rank` (JWT, policy `arena`, 30/min per user, shared). Shapes and the developer's decisions (2026-11-01) are in that day's HANDOFF REQUEST: `public_profile` stays opt-in (V1's `DEFAULT FALSE`), pages of 20 up to 50 (`arena/Arena`), and a caller who isn't on the board (private or `needs_reauth`) gets a 404 titled "Not in the Arena" (`NotInArenaException`), told apart from the "no hero yet" 404 by `title`.
 - `repository/ArenaRepository`: one native query, `RANK() OVER (ORDER BY level DESC, xp DESC)` over the heroes whose user is public, not `needs_reauth` (the hero job skips them, so their hero would be frozen on the board), and whose **current** class `COALESCE(chosen_archetype, insights.archetype)` is the board's. Ties share a rank (1, 2, 2, 4) and are listed by GitHub id, so pages are stable. Computed per request: no stored rank, no Redis mirror (hint 6). The hourly hero job changes levels, the tables are small, and one source of truth can't disagree with itself. Revisit with a cache or sorted set if `EXPLAIN` gets slow at thousands of public heroes.
 - No migration: no index helps much yet (the filter is on `users`, the sort on `hero_state`). The avatar is derived from the GitHub id (`avatars.githubusercontent.com/u/{id}`), so there's no new column.
@@ -831,3 +831,11 @@ One entry per session: what was built, what was learned, open questions. Bug det
 - **Lessons:** Playwright doesn't route a redirect's target: the first run reached the real GitHub sign-in page. Intercept the request that issues the redirect and block the host as a safety net. A one-shot 5xx on a GET never shows: the query client retries it once (4xx never). The stubbed zone test asserts the hero is read after the PUT completes (a slow PUT), not just that two GETs happened.
 - **Merge order:** I5's first CI run failed 7 tests (4 change-class, 3 zone) because #34 wasn't in `main` yet: `PUT /hero/class` was still served by the in-browser mock, and nothing sent the zone. Rebased on #34 + #35: all green.
 - **Open for the developer:** anchor or drop the two `.git/info/exclude` lines (B39).
+
+### 2026-11-02 / 03: hi-res design, U7, B8 (🤖 integration)
+- **Merged:** #40 (B8 contract), #41 (hi-res design import: `docs/design/art/` with 39 named PNGs, the 15 board sources, the id → file map), #42 (B8 / Phase 13: `GET /api/leaderboard`, `GET /api/user/rank`), #43 (U7: the PNG sprite sheets, every class in every mood, PNG backdrops, hearts, nav icons, portraits).
+- **First look by the developer** (full stack from `main`, live Neon/Redis/GitHub/Groq): login and sync fine (9 s, scored WIZARD). Heroes and portraits were blank: `next dev`'s cache in `web/.next` predated #43 and served CSS without the sprite rules; a fresh cache fixed it (`docs/run-locally.md`, "Good to know"). Next 16 also logs an "instant navigation" validation warning per route in dev: harmless, worth `export const instant = false` on the client-rendered game pages when the UI resumes. Overnight the laptop slept and the backend lost its Neon and Redis connections (health DOWN); a restart fixes it.
+- **Decisions by the developer:** not satisfied with the design; a **new backdrop design** comes next session and the UI resumes from it (Arena board included). Meanwhile: backend **B9** API docs (Swagger), and turning the digest email on live (needs SMTP settings), plus this close-out.
+- **Fixed in docs:** the design README's tier ranges (keep 10–14, citadel 15+, as in `tokens.json`); I had written 10–19 / 20+.
+- **Lessons:** a merge that renames shared CSS can leave a running developer's dev cache stale even though CI (always cold) passes. Two docs PRs touching `HANDOFF.md` at the same time conflict on the appended entries: keep both, and check the `Status:` line didn't get shared.
+

@@ -222,7 +222,8 @@ B8 contract (`int/b8-contract`, stacked on `int/b7-contract`): the Arena, built 
 - `web/lib/api/types.ts`: `Leaderboard`, `LeaderboardEntry`, `Rank`, `LEADERBOARD_DEFAULT_SIZE` / `LEADERBOARD_MAX_SIZE`, `NOT_IN_ARENA_TITLE`. `fixtures.test.ts` checks the shapes, the board's order and `RANK()` ranks, and that `rank.json` agrees with the board and `hero.json`.
 - **Backend:** once this merges, rebase `backend/b8-arena`, switch `ArenaApiTest` to these fixtures, and add the `ApiContractIT` checks in your PR as before (the endpoints don't exist on `main` until B8, so they can't land here): both endpoints by shape against the fixtures, `size=51` → 400 with `errors[{field: "size"}]`, a private user's `/user/rank` → 404 with `title` "Not in the Arena", and a hero-less user's → `title` "Not Found". `ArenaIT` and the `IntegrationTest` javadoc line: reviewed, fine. Then open the PR. I'll add `arena/` to the `AGENTS.md` index after it merges.
 - **UI:** the Arena board can start on these fixtures in mock mode. Keep `/api/leaderboard` and `/api/user/rank` in `PENDING_ENDPOINTS` (mock) until B8 merges. Show `rank-not-in-arena`'s case as an Arena state pointing to Settings ("Show me in the Arena"), not as an error; a 404 with any other title is NEW GAME. The leaderboard's 404 (no hero, no `archetype`) is NEW GAME too.
-Status: open
+Reply (backend, #42, 2026-11-02): rebased on the merged contract; `ArenaApiTest` strict against `leaderboard.json`, `rank.json`, `rank-not-in-arena.json`; the Arena checks are in `ApiContractIT` (ids 9_000_409–412). No drift: the code already matched. UI: the Arena board is paused until the developer's new backdrop design; `/api/leaderboard` and `/api/user/rank` leave `PENDING_ENDPOINTS` with that step.
+Status: done (backend); ui part open, paused
 
 ## 2026-11-02 · integration → ui · REQUEST
 **U7: hi-res art.** The developer updated the design: https://claude.ai/artifact/WpSMuuZevpRYoK9M99honc ("Hero Design (hi-res)"). Imported on `int/design-hires`: the art in `docs/design/art/` (39 PNGs, named), the 15 board sources + `canvas.json` in `docs/design/source/` (the old sources are replaced), and the mapping in `docs/design/README.md`.
@@ -234,7 +235,8 @@ Status: open
 - Reduced motion stops every sprite, heart, star and fire animation (first frame).
 - I5: the e2e tests key on roles, names and text, not on sprites. Keep `role="img"` + the labels (e.g. "Your hero" and its summary). If one changes, say so in the PR and I'll update the spec.
 - `docs/design/png/` is from the old canvases; there are no new renders yet. Compare your screenshots with the boards' sources (and the canvas, if the developer exports PNGs).
-Status: open
+Reply (ui, #43, recorded by integration 2026-11-03): done. `HeroSprite` + `lib/art.ts` draw the PNG sheets (every class in every mood), the PNG scenes per tier, hearts, nav icons and portraits; `sync-design.mjs` copies `docs/design/art/` to `web/public/art/` (committed, `design:check` catches drift); `lib/design/sprites.json` and `lib/tab-icons.ts` are gone; the theme is `@theme static`. No e2e role, name or text changed. Intentional differences are listed in #43. Open points: the art is committed twice (~8 MB; kept, same pattern as the tokens), and the README's tier ranges were wrong (fixed here: keep 10–14, citadel 15+). After merging, a stale `web/.next` dev cache served CSS without the sprite rules (blank heroes); `docs/run-locally.md` now says to delete it. The developer isn't satisfied with the design and brings new backdrops next session.
+Status: done
 
 ## 2026-11-01 · backend → integration · REQUEST
 B8 (`backend/b8-arena`, pushed, **no PR yet**): Phase 13 Arena, built to the defaults below. The PR opens once the developer answers the four questions and you land the contract. Please write the leaderboard section of `contract.md`, fixtures `leaderboard.json` + `rank.json` (and a private `rank` variant), the types, and the `PENDING_ENDPOINTS` note for the UI. I'll switch `ArenaApiTest` to strict fixture comparison and change whatever the developer decides.
@@ -285,4 +287,9 @@ B8 (`backend/b8-arena`, pushed, **no PR yet**): Phase 13 Arena, built to the def
 **5. `it/`** (your lane, written in this branch, please review): new `it/ArenaIT` (ids **9_000_7xx**, added to `IntegrationTest`'s javadoc). The board is global and the DB is shared, so its heroes sit at levels 900+ and totals are compared with `count`. Covers: level-then-XP order, a shared rank with the GitHub-id tie-break, a chosen class moving a hero to another board, private / `needs_reauth` / hero-less users left off, paging, `rankOf` agreeing with the board, the service end to end, and private / `needs_reauth` callers getting `NotInArenaException`. For `ApiContractIT`, once the fixtures exist: the two endpoints by shape, plus `size=51` → 400, and `/user/rank` for a private user → 404 with `title` "Not in the Arena".
 
 **6. `PROGRESS.md`:** I appended "As built (B8)" under Phase 13 (done-when boxes left alone: they describe the older score-ranking plan; yours to rewrite).
+Reply (integration, `int/b8-closeout`, 2026-11-03): the contract landed in #40 and B8 merged as #42. `AGENTS.md`: the `arena/` row, `ArenaRepository`, the `arena` policy, the endpoints (no longer "planned"), the tests and `ArenaIT`. `PROGRESS.md`: Phase 13's backend boxes ticked, the status row ✅ (backend), your "As built" kept. `it/ArenaIT` reviewed in #42.
+Status: done
+
+## 2026-11-03 · developer → all · FYI
+The developer isn't satisfied with the hi-res design and will hand over a **new backdrop design** next session; the UI moves forward from that. **UI: no new work until then** (the Arena board included). Backend: B9 (API docs) is in progress; the digest's first live send waits on SMTP settings from the developer.
 Status: open
