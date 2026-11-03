@@ -38,11 +38,11 @@ export function LevelPanel({ hero }: { hero: Hero }) {
   );
 }
 
-// A 7×6 tick for "FED TODAY" (the fonts have no ✓ glyph).
+// A 7×6 tick for "QUEST DONE" (the fonts have no ✓ glyph).
 // It draws in currentColor, so the heading's text-success colours it.
 const TICK = { grid: ["......k", ".....kk", "k...kk.", "kk.kk..", ".kkk...", "..k...."], palette: { k: "currentColor" } };
 
-/** Today: fed, resting, or not fed yet with the countdown to local midnight. */
+/** Today: quest done, resting, or quest open with the countdown to local midnight. */
 export function TodayCard({ hero }: { hero: Hero }) {
   const now = useNow();
   const { today } = hero;
@@ -57,10 +57,10 @@ export function TodayCard({ hero }: { hero: Hero }) {
     return (
       <section aria-labelledby="today-title" className={`${CARD} gap-1.5 md:gap-2.5`}>
         <h2 id="today-title" className="flex items-center gap-2.5 font-display text-[10px] text-success md:text-[12px]">
-          FED TODAY <PixelSprite {...TICK} scale={2} label="done" />
+          QUEST DONE <PixelSprite {...TICK} scale={2} label="done" />
         </h2>
         <p className="leading-[1.05] text-muted md:text-[22px]">
-          {parts.length ? `${parts.join(" and ")} today. ` : ""}Your hearts are safe until midnight.
+          {parts.length ? `${parts.join(" and ")} today. ` : ""}Quest complete, your hearts are safe until midnight.
         </p>
       </section>
     );
@@ -88,7 +88,7 @@ export function TodayCard({ hero }: { hero: Hero }) {
     >
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <h2 id="today-title" className={`font-display text-[10px] leading-normal md:text-[12px] ${hungry ? "text-ember" : "text-bone"}`}>
-          NOT FED YET
+          QUEST OPEN
         </h2>
         <span
           role="timer"
@@ -99,7 +99,7 @@ export function TodayCard({ hero }: { hero: Hero }) {
         </span>
       </div>
       <p className="leading-[1.05] text-muted md:text-[22px] md:leading-[1.08]">
-        Any <span className="hidden md:inline">GitHub </span>contribution before midnight keeps {heartsAtStake(hero.lives)}.
+        Any <span className="hidden md:inline">GitHub </span>contribution before midnight completes today&apos;s quest and keeps {heartsAtStake(hero.lives)}.
         <span className="hidden md:inline"> A commit, a PR, an issue or a review all count.</span>
       </p>
     </section>

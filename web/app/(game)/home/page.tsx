@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Home · Insight Hub" };
 
 export default function Page() {
   return (
-    <Screen title="HOME" hideTitle flush header={<HomeHeader />}>
+    <Screen title="HOME" hideTitle flush narrow header={<HomeHeader />}>
       <HomeView />
     </Screen>
   );

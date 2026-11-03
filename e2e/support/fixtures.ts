@@ -31,7 +31,7 @@ const MOOD_WORDS: Record<Hero["mood"], string> = {
   HAPPY: "happy",
   OKAY: "okay",
   WEAK: "weak",
-  HUNGRY: "hungry, not fed yet today",
+  HUNGRY: "rusty, today's quest still open",
   SLEEPING: "sleeping, it's a rest day",
   LEVEL_UP: "celebrating a level up",
   FAINTED: "fainted, hearts refilled",

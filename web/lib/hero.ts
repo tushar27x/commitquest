@@ -63,7 +63,7 @@ const WEEK_MARK: Record<WeekStatus, string> = { active: "+10", missed: "-1", tod
 const WEEK_LABEL: Record<WeekStatus, string> = {
   active: "active, plus 10 XP",
   missed: "missed, lost a heart",
-  today: "today, not fed yet",
+  today: "today, quest still open",
   future: "upcoming",
   rest: "rest day",
 };
@@ -72,7 +72,7 @@ const WEEK_LABEL: Record<WeekStatus, string> = {
 export function weekCells(hero: Hero): WeekCell[] {
   return hero.week.map(({ date, status }) => {
     const isToday = date === hero.today.date;
-    // A fed today reads as active, though its XP only lands at the morning check.
+    // A quest done today reads as active, though its XP only lands at the morning check.
     const shown: WeekStatus = isToday && status === "today" && hero.today.active ? "active" : status;
     const weekday = weekdayOf(date);
     const name = weekday.charAt(0) + weekday.slice(1).toLowerCase();
@@ -82,7 +82,7 @@ export function weekCells(hero: Hero): WeekCell[] {
       status: shown,
       isToday,
       mark: WEEK_MARK[shown],
-      label: `${name}${isToday ? " (today)" : ""}: ${isToday && shown === "active" ? "fed today" : WEEK_LABEL[shown]}`,
+      label: `${name}${isToday ? " (today)" : ""}: ${isToday && shown === "active" ? "quest done today" : WEEK_LABEL[shown]}`,
     };
   });
 }

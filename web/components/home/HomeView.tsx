@@ -10,10 +10,12 @@ export function HomeView() {
   const events = useHeroEvents(30);
   if (!hero) return null;
 
+  // One column from md up (Screen narrow: 760 px, the scene's ×2 width): the scene, then the
+  // cards in rows of two (XP + today, week + recently), one per row where two don't fit.
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:gap-8">
-      <HeroScene hero={hero} events={events.data?.events} className="md:flex-[1_1_760px]" />
-      <div className="flex min-w-0 flex-col gap-3.5 px-3 md:flex-[1_1_340px] md:gap-6 md:px-0">
+    <div className="flex flex-col gap-4 md:gap-6">
+      <HeroScene hero={hero} events={events.data?.events} />
+      <div className="flex min-w-0 flex-col gap-3.5 px-3 md:grid md:grid-cols-[repeat(auto-fit,minmax(320px,1fr))] md:gap-6 md:px-0">
         <LevelPanel hero={hero} />
         <TodayCard hero={hero} />
         <WeekCard hero={hero} />
