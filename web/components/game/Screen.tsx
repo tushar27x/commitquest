@@ -14,19 +14,25 @@ export interface ScreenProps {
   hideTitle?: boolean;
   /** Content runs edge to edge on phones (Home's scene); it pads itself. */
   flush?: boolean;
-  /** Desktop only: a 760 px column (Home: the scene at its ×2 scale, the cards under it). */
-  narrow?: boolean;
+  /**
+   * Desktop column, always centred under the top nav: `wide` 1132 px (the default), `narrow`
+   * 760 px (Home: the scene at its ×2 scale; Journal), `form` 640 px (Settings).
+   */
+  width?: keyof typeof WIDTHS;
   /** Desktop only: shown at the right of the title (CHANGE CLASS, a subtitle). */
   actions?: ReactNode;
   children: ReactNode;
 }
+
+// Content width + the 24 px desktop gutter on each side.
+const WIDTHS = { wide: "max-w-[1180px]", narrow: "max-w-[808px]", form: "max-w-[688px]" } as const;
 
 /**
  * A tab screen: phone header, sync banners, then the content. The content waits for the
  * two shell queries (insights + hero) and is replaced by NEW GAME (404) or THE ROAD IS
  * BLOCKED (500 / 502 / network, or anything else unexpected) when they can't load.
  */
-export function Screen({ header, title, hideTitle = false, flush = false, narrow = false, actions, children }: ScreenProps) {
+export function Screen({ header, title, hideTitle = false, flush = false, width = "wide", actions, children }: ScreenProps) {
   const { needsReauth, syncBlocked, syncNotFound, save, saving } = useGameState();
   const insights = useInsights();
   const hero = useHero();
@@ -62,7 +68,7 @@ export function Screen({ header, title, hideTitle = false, flush = false, narrow
     <>
       {header}
       <div
-        className={`mx-auto flex w-full flex-col gap-5 pb-6 md:px-6 md:pt-10 ${narrow ? "max-w-[808px]" : "max-w-[1180px]"} ${
+        className={`mx-auto flex w-full flex-col gap-5 pb-6 md:px-6 md:pt-10 ${WIDTHS[width]} ${
           flush ? "md:pb-14" : "px-3 pt-5"
         }`}
       >
