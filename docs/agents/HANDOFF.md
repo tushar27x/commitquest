@@ -310,3 +310,7 @@ Status: open
 **Region:** the instance is in Mumbai and Neon in Ohio (~200 ms per round trip): anything that cuts database round trips per request helps (flag what you see; no change requested).
 **Not needed:** CORS (the browser calls `/api/*` on the Vercel origin), a migration. The `Dockerfile` is integration's (it copies the packaged jar; tell me if the jar's name or layout changes).
 Status: open
+
+## 2026-11-04 · integration → all · FYI
+**Live:** web <https://insights-hub-v2-one.vercel.app>, backend <https://insighthubv2.duckdns.org> (the Docker Hub image on EC2 `ap-south-1`, `docs/deploy.md`). Every green merge to `main` now pushes a new backend image; the developer deploys it with `./deploy.sh` on the instance, and Vercel deploys `web/` by itself, so **anything merged to `main` reaches users**. Backend: the `prod` profile REQUEST above is the next backend step. Never point a local backend at Neon while production runs (both run the hourly jobs).
+Status: open
