@@ -120,7 +120,7 @@ access token with **Read & Write** for CI (Account settings → Personal access 
 |---|---|---|
 | `DOCKERHUB_USERNAME` | secret | `<dockerhub-user>` |
 | `DOCKERHUB_TOKEN` | secret | The Read & Write token |
-| `DOCKERHUB_IMAGE` | variable | `<dockerhub-user>/insightshub-backend` |
+| `DOCKERHUB_IMAGE` | variable (or secret) | `<dockerhub-user>/insightshub-backend`, no `docker.io/` and no tag. As a secret it works too, but shows as `***` in the logs |
 
 **Every merge to `main`:** CI runs `backend`, `web` and `e2e`; when all three are green, the `image`
 job packages the jar, builds the image (`linux/amd64`) and pushes `:latest` and `:sha-<7>`. On PRs it
