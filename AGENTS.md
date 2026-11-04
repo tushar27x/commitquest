@@ -6,17 +6,17 @@ Product spec: `docs/v2-hero-plan.md` (wins over this file and `PROGRESS.md` wher
 
 ## Project index
 
-_Last indexed: 2026-10-14, after Phase 8 (commit `a51a427`). Updated 2026-10-16 for the hero-pet plan (I0), I2, B3 (Phase 10) and B4 (`23ed3e2`); 2026-10-19 for B5 (`df24904`); 2026-10-29 for I5; 2026-11-01 for B7 (#35); 2026-11-03 for B8 (#42) and U7 (#43)._
+_Last indexed: 2026-10-14, after Phase 8 (commit `a51a427`). Updated 2026-10-16 for the hero-pet plan (I0), I2, B3 (Phase 10) and B4 (`23ed3e2`); 2026-10-19 for B5 (`df24904`); 2026-10-29 for I5; 2026-11-01 for B7 (#35); 2026-11-03 for B8 (#42) and U7 (#43); 2026-11-04 for B9 (#45), U8–U10 (#47–#49): the Arena is off for the first release._
 
 ### What it is
 
 Hero-pet habit tracker for GitHub activity: the user's scored D&D class character has 3 hearts, XP and levels,
 and loses a heart for each day without GitHub activity (rules: `docs/v2-hero-plan.md` §2).
 Backend: `com.tushar27x:insightshub:0.0.1-SNAPSHOT`, Java 21, Spring Boot 4.1.1, Spring AI 2.0.0 (BOM), Maven wrapper,
-virtual threads on. Web: Next.js 16 + React 19 + TypeScript + Tailwind 4 + TanStack Query in `web/` (every screen built; the Arena still shows "under construction": its board waits for the new design). `/api/*` is proxied to the backend by a Next rewrite (`web/next.config.ts`, 120 s timeout).
+virtual threads on. Web: Next.js 16 + React 19 + TypeScript + Tailwind 4 + TanStack Query in `web/` (Home, Journal, Hero, Change class, Settings; the Arena is **off for the first release** (U10): no tab, no route, no Settings switch, though the backend keeps its endpoints). `/api/*` is proxied to the backend by a Next rewrite (`web/next.config.ts`, 120 s timeout).
 Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13, Part D). HTTP surface today:
 `/api/auth/{login,callback,logout}` (public; the callback 302s to `${FRONTEND_URL}/dashboard#token=<jwt>`), `GET /api/user/insights`, `POST /api/user/sync`,
-`GET /api/user/hero`, `GET /api/user/hero/events`, `PUT /api/user/hero/class`, `GET/PUT /api/user/preferences`, `GET /api/leaderboard`, `GET /api/user/rank` (JWT), `GET/POST /api/notifications/unsubscribe` (public, signed token, HTML pages), `/actuator/health`.
+`GET /api/user/hero`, `GET /api/user/hero/events`, `PUT /api/user/hero/class`, `GET/PUT /api/user/preferences`, `GET /api/leaderboard`, `GET /api/user/rank` (JWT; the Arena pair is unused by the web app for now), `GET/POST /api/notifications/unsubscribe` (public, signed token, HTML pages), `/actuator/health`.
 Shapes in `docs/api/contract.md`.
 
 ### Status snapshot
@@ -24,8 +24,8 @@ Shapes in `docs/api/contract.md`.
 - **Done:** Phases 0–8 (setup/config, health, JPA model steps 1–5, GitHub GraphQL client,
   insights engine + D&D archetype scoring, AI layer, GitHub OAuth + JWT, sync + Redis cache, rate limiting). PRs #2–#8 merged to `main`.
 - **Open v1 issue:** B26 — v1 production still calls Groq models that were retired.
-- **Done in Part D:** I0 (#9), B1 (#10), U1 (#11), B2 / Phase 9 (#12), I1 (#13), U2 (#14), I2 Testcontainers + CI (#15), B36 fix (#16, #17), U3 Home (#18), closed-eye sprites (#19), B3 / Phase 10 daily sync (#20), B4 hero schema + rules (#22), U4 Journal + Hero sheet (#23), B4 contract (#24), B5 hero job + hero/preferences API (#25), B5 contract + B6 contract (#26), U5 Change class + Settings (#27), U6 Arena shell (#28), I3 contract tests (#29), B6 class change (#30), I4 wiring (#31), tab icons + class info from the developer's feedback (`0ef3d35`), activity-only daily sync (#32), browser zone on login (#34), B7 / Phase 12 digest (#35). I5 Playwright e2e (#36), B38 + B39 (#37), B7 contract (#38), B8 contract (#40), hi-res design import (#41), B8 / Phase 13 Arena (#42), U7 hi-res art (#43).
-- **Next up:** backend: **B9** API docs (Swagger/OpenAPI) · the digest's first live send (needs SMTP settings from the developer) · ui: **paused** until the developer's new backdrop design (next session), then the Arena board · integration **I6** (responsive/a11y, release checklist). Run locally: `docs/run-locally.md`. Full order: `docs/agents/WORKFLOW.md`.
+- **Done in Part D:** I0 (#9), B1 (#10), U1 (#11), B2 / Phase 9 (#12), I1 (#13), U2 (#14), I2 Testcontainers + CI (#15), B36 fix (#16, #17), U3 Home (#18), closed-eye sprites (#19), B3 / Phase 10 daily sync (#20), B4 hero schema + rules (#22), U4 Journal + Hero sheet (#23), B4 contract (#24), B5 hero job + hero/preferences API (#25), B5 contract + B6 contract (#26), U5 Change class + Settings (#27), U6 Arena shell (#28), I3 contract tests (#29), B6 class change (#30), I4 wiring (#31), tab icons + class info from the developer's feedback (`0ef3d35`), activity-only daily sync (#32), browser zone on login (#34), B7 / Phase 12 digest (#35). I5 Playwright e2e (#36), B38 + B39 (#37), B7 contract (#38), B8 contract (#40), hi-res design import (#41), B8 / Phase 13 Arena (#42), U7 hi-res art (#43), B8 close-out (#44), B9 OpenAPI + Swagger UI (#45), redrawn backdrops (#46) + U8 (#47), U9 Home layout + quest wording (#48), U10 Hero/Settings centred + Arena removed (#49).
+- **Next up:** shipping the current app (the Arena board is shelved): integration **I6** (responsive/a11y, release checklist) · deployment (host not chosen) · the digest's first live send (needs SMTP settings from the developer). Run locally: `docs/run-locally.md`. Full order: `docs/agents/WORKFLOW.md`.
 - **Open items:** see the latest "End of session" entry at the bottom of `PROGRESS.md`.
 - Working agreement & phase details: `PROGRESS.md` (status table at the top, learning log at the bottom).
 
@@ -62,7 +62,7 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 |---|---|
 | `auth/` | `AuthController` (`/api/auth/*`, `oauth_state` cookie, constant-time state check), `AuthService` (authorize URL; code → user upsert with encrypted token → JWT), `GitHubOAuthClient` (token exchange, `GET /user`, `GET /user/emails`), `AuthProperties` (`insightshub.auth.*`: client id/secret, scopes `read:user user:email`, token TTL) |
 | `ai/` | `AiReviewer` (5 generators — year in review, weekly, craft, repo summaries, character sheet — each with a static fallback), `AiInsightsService` (parallel execution, per-task timeout, crash isolation), `LlmChain`/`LlmProvider`/`ModelTier` (provider fallback chain), `AiConfig` (Groq primary + optional Gemini fallback), `AiProperties` (`insightshub.ai.*`), `CharacterSheet` |
-| `config/` | `InsightsHubProperties` (`@ConfigurationProperties` record, `insightshub.*`), `ClockConfig` (injectable `Clock` bean), `SchedulingConfig` (`@EnableScheduling`; the scheduler runs on virtual threads), `CacheConfig` (`@EnableCaching`; Redis `user_insights`: 24 h, typed JSON, prefix `v2:`, transaction-aware) |
+| `config/` | `InsightsHubProperties` (`@ConfigurationProperties` record, `insightshub.*`), `ClockConfig` (injectable `Clock` bean), `SchedulingConfig` (`@EnableScheduling`; the scheduler runs on virtual threads), `CacheConfig` (`@EnableCaching`; Redis `user_insights`: 24 h, typed JSON, prefix `v2:`, transaction-aware), `OpenApiConfig` (B9: springdoc; bearer JWT scheme, public auth/unsubscribe, 401/429/500 + problem+json from the security setup and `@RateLimit`, a Jackson 3 `@JsonNaming` bridge for snake_case schemas, B41; `/v3/api-docs` + `/swagger-ui.html` only while `API_DOCS_ENABLED=true`, off by default) |
 | `dev/` | `DevDataRunner` (dev-profile idempotent JPA round-trip check) |
 | `entity/` | `Users` (maps the V5 columns since B5), `Insights` (`@MapsId`; stats, scores, AI texts, character sheet), enum `Archetype` (8 D&D classes) |
 | `github/` | `GitHubGraphQlClient` (RestClient + `graphql/user-insights.graphql`, per-call token, rate-limit logging; `countBranchCommits` runs `graphql/branch-activity.graphql` for one day's window), `GitHubClientConfig`, `GitHubApiException`, `GitHubAuthException` (401 → Phase 10 `needs_reauth`) |
@@ -76,7 +76,7 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 | `arena/` | B8 (Phase 13): `ArenaController` (`GET /api/leaderboard?archetype&page&size`, `GET /api/user/rank`; policy `arena`, 30/min per user, shared), `ArenaService` (tier, avatar URL, `is_you`, `top_percent`), `Arena` (page 0, size 20 by default, at most 50; `topPercent`, `avatarUrl` from the GitHub id), DTOs `LeaderboardResponse`, `RankResponse`, `NotInArenaException` (404 titled "Not in the Arena": private profile or `needs_reauth`; the UI tells it from "no hero yet" by `title`). Heroes ranked by `level DESC, xp DESC` within their **current** class, public profiles only, computed per request (no Redis mirror) |
 | `ratelimit/` | `@RateLimit(policy, key = IP\|USER)`, `RateLimitInterceptor` (after Spring Security; 429 + `Retry-After` + `ProblemDetail`), `RedisRateLimiter` (Lua `INCR`+`PEXPIRE`, keys `v2:rl:*`, fails open), `RateLimitConfig` (registers it; startup check that every policy exists), `RateLimitProperties` (`insightshub.rate-limit.policies`, incl. `sync-global` and B8's `arena`) |
 | `repository/` | `ArenaRepository` (B8, JdbcTemplate, schema-qualified: `page`, `count`, `rankOf`, `currentClass`; one `RANK() OVER (ORDER BY level DESC, xp DESC)` query, ties share a rank and list by GitHub id), `UsersRepository` (`findByAlertsEnabledTrue`, `findDueForSync`, `findIdsForScheduledSync`: a token and no `needs_reauth`, `claimSync`, `changeClass`: JPQL compare-and-set on `archetype_changed_at`, `IS NULL` for a first change, `disableAlerts`), `DigestRepository` (JdbcTemplate, schema-qualified: `findCandidates`, `findUnsent`, `insertDigest`, `stamp` with `digest_id IS NULL`), `InsightsRepository` (`@EntityGraph`), `HeroRepository` (JdbcTemplate, schema-qualified: `hero_state`, `hero_events` with JSONB details, `hero_days`, `findCandidates`), `DailyContributionsRepository` (`findCounts`; JdbcTemplate `INSERT … ON CONFLICT` upserts: `calendar_count` from the calendar, `branch_commit_count` with `GREATEST` so it never goes down; the table is qualified with `spring.flyway.default-schema`, B36) |
-| `error/` | `ApiExceptionHandler` (`@RestControllerAdvice`: every error as `application/problem+json`, `type: about:blank`, `instance` = path, validation 400s with snake_case `errors[]`, 500 without exception text), `ProblemDetails` (shared body builder), `ProblemErrorController` (replaces Boot's `/error`), `TooManyRequestsException` (429 + `Retry-After`) |
+| `error/` | `ApiExceptionHandler` (`@RestControllerAdvice`: every error as `application/problem+json`, `type: about:blank`, `instance` = path, validation 400s with snake_case `errors[]`, 500 without exception text), `ProblemDetails` (shared body builder), `ProblemErrorController` (replaces Boot's `/error`), `TooManyRequestsException` (429 + `Retry-After`), `ApiProblem` (B9: the problem+json schema for the OpenAPI docs) |
 
 ### Resources
 
@@ -119,9 +119,9 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 
 ### Conventions
 
-- One PR per step (B1–B8, U1–U6, I0–I6): three agents implement everything, including Phases 2.6 and 10–13; the developer reviews and merges (see Agent lanes).
+- One PR per step (B1–B9, U1–U10, I0–I6): three agents implement everything, including Phases 2.6 and 10–13; the developer reviews and merges (see Agent lanes).
 - No AI-agent attribution in commits or PR descriptions (no co-author lines, no "generated with" footers).
-- Bugs go to `BUGS.md` with the next `B` number (currently B1–B39); PR descriptions list the phase's bugs.
+- Bugs go to `BUGS.md` with the next `B` number (currently B1–B42); PR descriptions list the phase's bugs.
 - No key- or token-shaped literals in code or tests, even fake ones: build test keys at runtime (B31).
 - DTOs only from controllers (never entities); no secrets in logs; AI output always has a static fallback;
   the LLM never decides the archetype (code scores it, the LLM adds flavour).

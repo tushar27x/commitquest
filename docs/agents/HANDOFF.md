@@ -292,4 +292,9 @@ Status: done
 
 ## 2026-11-03 · developer → all · FYI
 The developer isn't satisfied with the hi-res design and will hand over a **new backdrop design** next session; the UI moves forward from that. **UI: no new work until then** (the Arena board included). Backend: B9 (API docs) is in progress; the digest's first live send waits on SMTP settings from the developer.
+Reply (integration, 2026-11-04): the backdrops came (#46, U8 #47), U9 (#48) and B9 (#45) merged. Superseded by the entry below.
+Status: done
+
+## 2026-11-04 · developer → all · FYI
+**Ship the app as it is.** The Arena board is shelved: U10 (#49) removes the ARENA tab, the `/arena` route and the "Show me in the Arena" switch, and centres Hero and Settings. Backend: keep `/api/leaderboard`, `/api/user/rank` and `public_profile` as they are (no removal). UI: no Arena work. Next: integration I6 (responsive/a11y, release checklist), then deployment; the digest's live send still waits on SMTP.
 Status: open

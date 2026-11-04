@@ -64,17 +64,17 @@ From Part D on, 🤖 names the lane: **backend**, **ui** or **integration** (ste
 | 10 | Scheduled daily sync, activity history & branch scan | 🤖 backend (B1, B3) | ✅ (activity-only since #32; first live run pending) | [#10](https://github.com/tushar27x/insightsHubV2/pull/10) [#20](https://github.com/tushar27x/insightsHubV2/pull/20) [#32](https://github.com/tushar27x/insightsHubV2/pull/32) |
 | 11 | Hero engine (lives, XP, levels) | 🤖 backend (B4–B6) | ✅ | [#22](https://github.com/tushar27x/insightsHubV2/pull/22) [#25](https://github.com/tushar27x/insightsHubV2/pull/25) [#30](https://github.com/tushar27x/insightsHubV2/pull/30) |
 | 12 | Notifications: daily digest email (from `hero_events`) | 🤖 backend (B7) | ✅ (first live run pending: needs SMTP) | [#35](https://github.com/tushar27x/insightsHubV2/pull/35) |
-| 13 | Arena: leaderboards by hero level within the chosen class | 🤖 backend (B8) | ✅ backend (the Arena board in `web/` waits for the new design) | [#40](https://github.com/tushar27x/insightsHubV2/pull/40) [#42](https://github.com/tushar27x/insightsHubV2/pull/42) |
+| 13 | Arena: leaderboards by hero level within the chosen class | 🤖 backend (B8) | ✅ backend · **shelved in `web/` for the first release** (U10: tab, route and Settings switch removed) | [#40](https://github.com/tushar27x/insightsHubV2/pull/40) [#42](https://github.com/tushar27x/insightsHubV2/pull/42) |
 | | **Part C: Ship it** | | | |
-| 14 | Testing, API docs & deployment | 🤖 integration (I2, I3, I5, I6); deploy TBD | 🟨 I2, I3, I5 done; I6 and deploy left | [#15](https://github.com/tushar27x/insightsHubV2/pull/15) [#29](https://github.com/tushar27x/insightsHubV2/pull/29) [#36](https://github.com/tushar27x/insightsHubV2/pull/36) |
+| 14 | Testing, API docs & deployment | 🤖 integration (I2, I3, I5, I6); deploy TBD | 🟨 I2, I3, I5, B9 (Swagger) done; I6 and deploy left | [#15](https://github.com/tushar27x/insightsHubV2/pull/15) [#29](https://github.com/tushar27x/insightsHubV2/pull/29) [#36](https://github.com/tushar27x/insightsHubV2/pull/36) |
 | | **Part D: Hero-pet plan** | | | |
 | D0 | Docs: kit committed, `PROGRESS.md` + `AGENTS.md` updated | 🤖 integration (I0) | ✅ | [#9](https://github.com/tushar27x/insightsHubV2/pull/9) |
-| D1 | Web UI in `web/` (scaffold, title, Home, Journal, Hero, Settings, Arena shell) | 🤖 ui (U1–U6) | 🟨 U1–U6 + first feedback (Arena shell; the board after B8) | [#11](https://github.com/tushar27x/insightsHubV2/pull/11) [#14](https://github.com/tushar27x/insightsHubV2/pull/14) [#18](https://github.com/tushar27x/insightsHubV2/pull/18) [#23](https://github.com/tushar27x/insightsHubV2/pull/23) [#27](https://github.com/tushar27x/insightsHubV2/pull/27) [#28](https://github.com/tushar27x/insightsHubV2/pull/28) `0ef3d35` |
-| D2 | Contract, shared types, wiring, e2e | 🤖 integration (I1, I4, I5) | 🟨 I1, I4, I5, sprites, hero-events, B5/B6/B7 contract; B8 contract left | [#13](https://github.com/tushar27x/insightsHubV2/pull/13) [#19](https://github.com/tushar27x/insightsHubV2/pull/19) [#24](https://github.com/tushar27x/insightsHubV2/pull/24) [#26](https://github.com/tushar27x/insightsHubV2/pull/26) [#31](https://github.com/tushar27x/insightsHubV2/pull/31) [#36](https://github.com/tushar27x/insightsHubV2/pull/36) |
+| D1 | Web UI in `web/` (scaffold, title, Home, Journal, Hero, Settings, Arena shell) | 🤖 ui (U1–U10) | ✅ U1–U10 (Arena shelved in U10) | [#11](https://github.com/tushar27x/insightsHubV2/pull/11) [#14](https://github.com/tushar27x/insightsHubV2/pull/14) [#18](https://github.com/tushar27x/insightsHubV2/pull/18) [#23](https://github.com/tushar27x/insightsHubV2/pull/23) [#27](https://github.com/tushar27x/insightsHubV2/pull/27) [#28](https://github.com/tushar27x/insightsHubV2/pull/28) `0ef3d35` |
+| D2 | Contract, shared types, wiring, e2e | 🤖 integration (I1, I4, I5) | ✅ I1, I4, I5, sprites, hero-events, B5–B8 contract | [#13](https://github.com/tushar27x/insightsHubV2/pull/13) [#19](https://github.com/tushar27x/insightsHubV2/pull/19) [#24](https://github.com/tushar27x/insightsHubV2/pull/24) [#26](https://github.com/tushar27x/insightsHubV2/pull/26) [#31](https://github.com/tushar27x/insightsHubV2/pull/31) [#36](https://github.com/tushar27x/insightsHubV2/pull/36) |
 | | **Stretch** | | | |
 | S | RAG chat, Discord alerts, friends leaderboard, observability | 🧑 | ⬜ | |
 
-**Next up** (each waits for the developer's go): review #37 (B38 + B39) and the B7 docs · 🤖 backend: the B8 PR once the B8 contract (`int/b8-contract`) is merged · 🤖 ui: the Arena board on the B8 fixtures · 🤖 integration I6. Run it locally: [`docs/run-locally.md`](docs/run-locally.md).
+**Next up** (each waits for the developer's go): ship the app as it is (decided 2026-11-04; the Arena board is shelved) · 🤖 integration **I6** (responsive/a11y, release checklist) · deployment (host not chosen) · the digest's first live send (needs SMTP). Run it locally: [`docs/run-locally.md`](docs/run-locally.md).
 
 ---
 
@@ -541,7 +541,7 @@ Keeping v1's response shape meant the v1 Next.js client could be pointed at v2. 
 **Done when**
 - [x] `./mvnw verify` is green with integration tests (I2: Testcontainers Postgres + Redis, CI on every PR; `DailyContributionsRepositoryIT` disabled until B36)
 - [x] Backend contract tests (I3): `it/ApiContractIT` checks the real `/insights`, `/hero`, `/hero/events` and `/preferences` responses and their errors against `docs/api/fixtures/` and `contract.md`
-- [ ] Swagger UI documents every endpoint
+- [x] Swagger UI documents every endpoint (B9, #45: `API_DOCS_ENABLED=true`, `OpenApiDocsTest` checks paths and schemas against the contract and fixtures)
 - [ ] The app runs in production, and the daily sync + digest fire there
 
 ---
@@ -839,3 +839,10 @@ One entry per session: what was built, what was learned, open questions. Bug det
 - **Fixed in docs:** the design README's tier ranges (keep 10–14, citadel 15+, as in `tokens.json`); I had written 10–19 / 20+.
 - **Lessons:** a merge that renames shared CSS can leave a running developer's dev cache stale even though CI (always cold) passes. Two docs PRs touching `HANDOFF.md` at the same time conflict on the appended entries: keep both, and check the `Status:` line didn't get shared.
 
+### 2026-11-04: ship as is, Arena shelved, U10 (🤖 integration)
+- **Merged since the last entry:** #44 (B8/U7 close-out), #45 (B9: OpenAPI + Swagger UI, off by default; B40, B41), #46 + #47 (redrawn backdrops, U8), #48 (U9: Home in one column on big screens, quest wording instead of feeding).
+- **Decisions by the developer:** ship the project in its current state. The **Arena board is shelved**: the tab, the `/arena` route and the "Show me in the Arena" switch go from `web/`. The backend's `/api/leaderboard` and `/api/user/rank` stay, unused, and the PUT still sends `public_profile` unchanged. Polish Hero and Settings, with everything centred.
+- **U10** (#49, ui): one shared `Screen` width (`wide` 1132 / `narrow` 760 / `form` 640 px), centred under the header. Hero: character card and CLASS SCORES side by side at equal height, name/score/tagline centred under the portrait, the lore in its own card below. Settings: a centred 640 px column, LOG OUT full width, even 24 px gaps. Journal's tabs and reviews centred. B42: the top score row's empty bar cells matched its highlight colour.
+- **Integration:** the mock e2e spec expects four tabs, `/arena` → 404 and no Arena switch; it rides in #49 with the UI change (split across two PRs, each PR's E2E job failed against the other half). All three suites pass with it (mock 25, stubbed 22, full stack 6). This docs PR (#50): Docs: the Arena marked shelved here, in `AGENTS.md` and the plan; the Swagger box ticked; the Swagger URL in `docs/run-locally.md`; the plan's "fed" wording replaced with U9's quest wording.
+- **Lesson:** a UI change that removes something the e2e specs assert must ship with its spec change in the same PR, or neither PR goes green.
+- **Still open for the developer:** I6 and the deployment host; SMTP for the digest; checking the hero's catch-up from 2026-10-18 in Neon (expected LV 5 → LV 2, 1 heart); the older items in the 2026-10-19 entry. `docs/design/png/` still shows the old art and layout.
