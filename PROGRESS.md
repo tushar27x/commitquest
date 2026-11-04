@@ -74,7 +74,7 @@ From Part D on, 🤖 names the lane: **backend**, **ui** or **integration** (ste
 | | **Stretch** | | | |
 | S | RAG chat, Discord alerts, friends leaderboard, observability | 🧑 | ⬜ | |
 
-**Next up** (each waits for the developer's go): ship the app as it is (decided 2026-11-04; the Arena board is shelved) · 🤖 integration **I6** (responsive/a11y, release checklist) · deployment: Vercel + EC2 t3.micro ([`docs/deploy.md`](docs/deploy.md); 🤖 backend: the `prod` profile) · the digest's first live send (needs SMTP). Run it locally: [`docs/run-locally.md`](docs/run-locally.md).
+**Next up** (each waits for the developer's go): ship the app as it is (decided 2026-11-04; the Arena board is shelved) · 🤖 integration **I6** (responsive/a11y, release checklist) · deployment: Vercel + the backend image on EC2 t3.micro, `ap-south-1` ([`docs/deploy.md`](docs/deploy.md); 🤖 backend: the `prod` profile) · the digest's first live send (needs SMTP). Run it locally: [`docs/run-locally.md`](docs/run-locally.md).
 
 ---
 
@@ -849,7 +849,9 @@ One entry per session: what was built, what was learned, open questions. Bug det
 
 ### 2026-11-04: deployment plan (🤖 integration)
 - **Decided by the developer:** Vercel for `web/`, an **AWS EC2 t3.micro** (1 GB RAM + 2 GB swap, 20 GB) for the backend only, Neon and Upstash free tiers as now. Oracle's free tier didn't work out.
-- **Added:** `docs/deploy.md` (instance setup, `.env`, OAuth app, Vercel, free-tier limits, release checklist), `docs/deploy/` (`insightshub.service`, `Caddyfile`, `deploy.sh` with health check and rollback), `.github/workflows/deploy.yml` (manual, `main` only, secrets in the `production` environment).
-- **Measured:** the backend under the unit's JVM flags peaked at 328 MB RSS through the full-stack e2e suite.
+- **Developer's review of #51:** CI pushes a **Docker image** to Docker Hub; the instance only pulls and restarts it. Region **`ap-south-1`** (Mumbai).
+- **Added:** `docs/deploy.md` (instance, secrets, Docker Hub + GitHub settings, OAuth app, Vercel, memory, free-tier limits, release checklist), the root `Dockerfile` + `.dockerignore`, `docs/deploy/` (`compose.yaml` with Caddy, `Caddyfile`, `deploy.sh`: pull, restart, health check, roll back to `:previous`), the `image` job in `ci.yml` (build on every run, push on `main`). The first draft's systemd unit and SSH deploy workflow were dropped.
+- **Measured:** the backend under the image's JVM flags peaked at 328 MB RSS through the full-stack e2e suite; the image boots with the `prod` profile in 4.9 s at 411 MiB (`docker stats`), as a non-root user.
+- **Flagged:** the instance in Mumbai and Neon in Ohio are ~200 ms apart, and each request makes several database round trips. The developer's call: measure first, or move v2 to a Neon project in Asia (`docs/deploy.md`, "Region").
 - **Found:** the IP-keyed rate limits would see every visitor as `127.0.0.1` behind Caddy; REQUEST to backend for the `prod` profile (trusted forwarded headers from loopback only, a small Hikari pool so Neon can suspend, job concurrency 2). Vercel's external rewrites wait 120 s, enough for the first sync.
-- **Open for the developer:** the domain (or DuckDNS), whether port 22 opens for the deploy workflow or deploys go by hand, SMTP.
+- **Open for the developer:** the domain (or DuckDNS), the Docker Hub account and token, the Neon region question, SMTP.
