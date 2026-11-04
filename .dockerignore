@@ -1,0 +1,4 @@
+# The image only needs the packaged jar (Dockerfile); keep the build context tiny.
+*
+!target/insightshub-*.jar
+target/*.original
