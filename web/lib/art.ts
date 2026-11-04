@@ -70,8 +70,8 @@ export const UI_ART = {
   campfire: `${ART}/ui/campfire.png`,
 } as const;
 
-/** Column of a tab's icon in `ui/nav-icons.png` (row 0 idle, row 1 active). */
-export const NAV_ICON: Record<Tab["href"], number> = { "/home": 0, "/journal": 1, "/hero": 2, "/arena": 3, "/settings": 4 };
+/** Column of a tab's icon in `ui/nav-icons.png` (row 0 idle, row 1 active). Column 3, the Arena's, is unused. */
+export const NAV_ICON: Record<Tab["href"], number> = { "/home": 0, "/journal": 1, "/hero": 2, "/settings": 4 };
 
 /** Column of a class in `ui/portraits.png`. */
 export function portraitIndex(archetype: Archetype): number {

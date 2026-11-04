@@ -55,7 +55,7 @@ export function JournalScreen() {
         role="tablist"
         aria-label="Journal sections"
         onKeyDown={onKeyDown}
-        className="sticky top-14 z-10 -mx-3 -mt-5 grid grid-cols-3 gap-1.5 bg-stone px-4 pt-1 pb-3 shadow-bar-down md:static md:mx-0 md:mt-0 md:max-w-[480px] md:bg-transparent md:p-0 md:shadow-none"
+        className="sticky top-14 z-10 -mx-3 -mt-5 grid grid-cols-3 gap-1.5 bg-stone px-4 pt-1 pb-3 shadow-bar-down md:static md:mx-auto md:mt-0 md:w-full md:max-w-[480px] md:bg-transparent md:p-0 md:shadow-none"
       >
         {TABS.map((t) => {
           const selected = t.id === tab;
@@ -253,7 +253,7 @@ function ReviewsPanel({ insights }: { insights: Insights }) {
     { id: "craft", title: "YOUR CRAFT", text: insights.craft_review },
   ];
   return (
-    <div className="flex max-w-[760px] flex-col gap-5 md:gap-7">
+    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5 md:gap-7">
       {reviews.map((r) => (
         <Parchment key={r.id} title={r.title} titleId={`review-${r.id}`}>
           <p className="leading-[1.08] whitespace-pre-line md:text-[24px] md:leading-[1.1]">{r.text}</p>
