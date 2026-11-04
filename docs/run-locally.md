@@ -51,6 +51,7 @@ browser ──PRESS START──▶ backend :8080/api/auth/login ──▶ GitHub
 - Time zone: on the first login the web app sends your browser's zone while the stored one is still the default `UTC` (#34). A zone you pick in Settings is never overwritten.
 - The 10-minute sync cooldown also applies to login: logging in twice in a row shows "RESTING m:ss".
 - Blank heroes, portraits or backdrops after pulling new art (the sprite CSS missing from the page): `next dev`'s cache in `web/.next` is stale. Stop `npm run dev`, delete `web/.next`, start it again (seen on 2026-11-02 after U7, #43).
+- API docs (B9): set `API_DOCS_ENABLED=true` in `.env`, restart the backend, and open http://localhost:8080/swagger-ui.html (raw spec at `/v3/api-docs`). Off by default, so production serves nothing there.
 - Check the proxy without the backend: `node e2e/wiring/proxy-check.mjs` (fake backend + `next dev`, about a minute).
 
 ## C. End-to-end tests (Playwright, `e2e/`)
