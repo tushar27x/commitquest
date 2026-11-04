@@ -155,7 +155,7 @@ function Preview({ archetype, following }: { archetype: Archetype; following: bo
     <section
       aria-live="polite"
       aria-label="Picked class"
-      className="flex h-[150px] items-center gap-3.5 overflow-hidden bg-(image:--stage) px-4 md:h-auto md:bg-none md:flex-col md:items-start md:gap-5 md:bg-stone md:p-7 md:shadow-px-drop"
+      className="flex h-[150px] items-center gap-3.5 overflow-hidden bg-(image:--stage) px-4 md:h-auto md:bg-none md:flex-col md:items-center md:gap-5 md:bg-stone md:p-7 md:shadow-px-drop"
       style={{ ["--stage" as string]: stage }}
     >
       <div className="shrink-0 md:hidden">
@@ -164,7 +164,7 @@ function Preview({ archetype, following }: { archetype: Archetype; following: bo
       <div className="hidden h-[288px] w-full shrink-0 justify-center overflow-hidden shadow-btn-flat md:flex" style={{ background: stage }}>
         <HeroSprite archetype={archetype} scale={2} label={`${className(archetype)} preview, animated`} className="mt-auto mb-[22px]" />
       </div>
-      <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex min-w-0 flex-col gap-2 md:items-center md:text-center">
         {following && <span className="font-display text-[7px] leading-normal text-success md:text-[9px]">FOLLOWING TOP SCORE</span>}
         <span className="font-display text-[14px] md:text-[22px] md:[text-shadow:4px_4px_0_var(--color-outline)]" style={{ color: accent }}>
           {archetype}

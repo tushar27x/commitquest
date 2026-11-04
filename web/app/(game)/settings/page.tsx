@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Settings · Insight Hub" };
 
 export default function Page() {
   return (
-    <Screen title="SETTINGS" header={<MobileHeader><MobileTitle>SETTINGS</MobileTitle></MobileHeader>}>
+    <Screen title="SETTINGS" width="form" header={<MobileHeader><MobileTitle>SETTINGS</MobileTitle></MobileHeader>}>
       <Settings />
     </Screen>
   );

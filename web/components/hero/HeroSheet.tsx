@@ -55,8 +55,10 @@ function HeroSheet() {
   const spriteLabel = `Your ${className(current)}, idle animation`;
 
   return (
-    <div className="flex flex-col gap-3.5 md:flex-row md:flex-wrap md:items-start md:gap-8">
-      <section aria-label="Your character" className="flex min-w-0 flex-col gap-3.5 md:flex-[1_1_520px] md:gap-[22px] md:bg-stone md:p-6 md:shadow-px-drop">
+    // Phone and md: one column (character, lore, scores). lg up: the character and the scores side by
+    // side at the same height, the lore across both under them.
+    <div className="flex flex-col gap-3.5 md:gap-8 lg:grid lg:grid-cols-2">
+      <section aria-label="Your character" className="flex min-w-0 flex-col gap-3.5 md:justify-center md:bg-stone md:p-6 md:shadow-px-drop">
         {/* Phone: a stage with the name in its corner, the habit line below. */}
         <div className="flex flex-col gap-3.5 md:hidden">
           <div className="relative h-[288px] overflow-hidden shadow-px" style={{ background: stage(current) }}>
@@ -68,28 +70,30 @@ function HeroSheet() {
           <p className="text-center text-[22px] leading-[1.05] text-muted">{CLASS_INFO[current].habit}</p>
           <ClassNote hero={hero} insights={insights} />
         </div>
-        {/* Desktop: the sprite at ×3 beside the name. */}
-        <div className="hidden flex-wrap items-end gap-[26px] md:flex">
+        {/* Desktop: the sprite at ×3, the name centred under it. */}
+        <div className="hidden flex-col items-center gap-[22px] md:flex">
           <div className="relative h-[384px] w-[288px] shrink-0 overflow-hidden shadow-btn-flat" style={{ background: stage(current) }}>
             <HeroSprite archetype={current} scale={3} label={spriteLabel} className="absolute bottom-0 left-0" />
           </div>
-          <div className="flex flex-[1_1_200px] flex-col gap-2.5 pb-2">
+          <div className="flex max-w-[440px] flex-col items-center gap-2.5 text-center">
             <span className="font-display text-[9px] text-muted-2">YOUR CLASS · SCORE {insights.archetype_scores[current] ?? 0}</span>
             <span className="font-display text-[26px] [text-shadow:4px_4px_0_var(--color-outline)]" style={{ color: classAccent(current) }}>
               {current}
             </span>
-            <span className="text-[24px] leading-[1.05] text-muted">{CLASS_INFO[current].habit}</span>
+            <span className="text-[24px] leading-[1.05] text-balance text-muted">{CLASS_INFO[current].habit}</span>
             <ClassNote hero={hero} insights={insights} />
           </div>
         </div>
+      </section>
+      <div className="min-w-0 md:bg-stone md:p-6 md:shadow-px-drop lg:col-span-2 lg:row-start-2">
         {insights.character_sheet ? (
           <Parchment title={insights.character_sheet.title.toUpperCase()} titleId="lore-title" className="md:gap-2.5">
             <p className="text-[21px] leading-[1.08] md:text-[24px] md:leading-[1.1]">{insights.character_sheet.lore}</p>
           </Parchment>
         ) : (
-          <p className="text-muted-2">Your lore gets written on your next save.</p>
+          <p className="text-muted-2 md:text-center">Your lore gets written on your next save.</p>
         )}
-      </section>
+      </div>
       <ScoresCard current={current} scores={insights.archetype_scores} />
     </div>
   );
@@ -101,7 +105,7 @@ function ClassNote({ hero, insights }: { hero: Hero; insights: Insights }) {
   if (!suggestion) return null;
   const { scored, belowThreshold: weak } = suggestion;
   return (
-    <p className={`text-center md:text-left ${weak ? "text-ember" : "text-muted-2"}`}>
+    <p className={`text-center ${weak ? "text-ember" : "text-muted-2"}`}>
       {weak ? "Your habits now point to " : "Chosen class. Your top score is "}
       <span style={{ color: classAccent(scored) }}>{className(scored)}</span>.
     </p>
@@ -132,21 +136,26 @@ function ScoresCard({ current, scores }: { current: Archetype; scores: Insights[
   };
 
   return (
-    <section aria-labelledby="scores-title" className="flex min-w-0 flex-col gap-3 md:flex-[1_1_420px] md:gap-4 md:bg-stone md:p-6 md:shadow-px-drop">
-      <div className="flex items-baseline justify-between gap-3">
+    <section
+      aria-labelledby="scores-title"
+      className="flex min-w-0 flex-col gap-3 md:gap-5 md:bg-stone md:p-6 md:shadow-px-drop lg:col-start-2 lg:row-start-1"
+    >
+      <div className="flex items-baseline justify-between gap-3 md:flex-col md:items-center md:gap-2 md:text-center">
         <h2 id="scores-title" className="shrink-0 font-display text-[10px] md:text-[12px]">
           CLASS SCORES
         </h2>
         <span className="text-muted-2 md:hidden">0–100 · ALGO v1</span>
-        <span className="hidden text-right text-muted-2 md:inline">0–100 · highest wins · ties go to roster order</span>
+        <span className="hidden text-balance text-muted-2 md:inline">0–100 · highest wins · ties go to roster order</span>
       </div>
-      <ol className="flex flex-col gap-2 md:gap-2.5">
+      <ol className="flex flex-col gap-2 md:gap-2.5 lg:flex-1 lg:justify-between">
         {rows.map((row) => {
           const accent = classAccent(row.archetype);
           const name = className(row.archetype);
           const label = `${name} ${row.score} out of 100`;
           const expanded = open === row.archetype;
           const panelId = `about-${row.archetype.toLowerCase()}`;
+          // The top row sits on stone-lit: its empty cells go a shade darker so the bar keeps its length.
+          const empty = row.top ? "bg-stone" : "bg-stone-lit";
           return (
             <li key={row.archetype} className="flex flex-col gap-2" onKeyDown={onKeyDown(row.archetype)}>
               <div
@@ -160,8 +169,8 @@ function ScoresCard({ current, scores }: { current: Archetype; scores: Insights[
                   {row.top && <span className="sr-only"> (top score)</span>}
                   {row.archetype === current && <span className="sr-only"> (your class)</span>}
                 </span>
-                <SegmentBar filled={row.score / 10} cells={10} label={label} fillColor={accent} className="h-3 gap-0.5 md:hidden" />
-                <SegmentBar filled={row.score / 5} cells={20} label={label} fillColor={accent} className="hidden h-4 gap-[3px] md:grid" />
+                <SegmentBar filled={row.score / 10} cells={10} label={label} fillColor={accent} emptyClass={empty} className="h-3 gap-0.5 md:hidden" />
+                <SegmentBar filled={row.score / 5} cells={20} label={label} fillColor={accent} emptyClass={empty} className="hidden h-4 gap-[3px] md:grid" />
                 <span aria-hidden className="text-right md:text-[24px]">
                   {row.score}
                 </span>
