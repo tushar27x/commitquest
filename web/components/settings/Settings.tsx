@@ -123,7 +123,7 @@ function SettingsForm({ saved }: { saved: Preferences }) {
   const errors = status.kind === "invalid" ? status.errors.byField : {};
 
   return (
-    <div className="flex w-full flex-col gap-4 md:max-w-[640px] md:gap-6">
+    <div className="flex w-full flex-col gap-4 md:gap-6">
       <RestDays days={value.rest_days} error={errors.rest_days} onChange={(rest_days) => change({ rest_days })} />
       <TimeZone zone={value.timezone} error={errors.timezone} onChange={(timezone) => change({ timezone })} />
 
@@ -135,28 +135,22 @@ function SettingsForm({ saved }: { saved: Preferences }) {
           checked={value.alerts_enabled}
           error={errors.alerts_enabled}
           onChange={(alerts_enabled) => change({ alerts_enabled })}
-          divider
         />
-        <ToggleRow
-          id="arena"
-          title="SHOW ME IN THE ARENA"
-          help="Public leaderboard, by class"
-          checked={value.public_profile}
-          error={errors.public_profile}
-          onChange={(public_profile) => change({ public_profile })}
-        />
+        {/* "Show me in the Arena" is hidden while the Arena is off; public_profile still goes out unchanged in every PUT. */}
       </section>
 
-      <SaveStatusLine status={status} onRetry={retry} />
-
-      <p className="px-1 text-[18px] leading-[1.05] text-muted-2">
-        Insight Hub reads public data. Private work counts only if your GitHub profile shows private contributions.
-      </p>
+      {/* The save status (a live region) takes no room while it's empty, so the gaps stay even. */}
+      <div className="flex flex-col">
+        <SaveStatusLine status={status} onRetry={retry} />
+        <p className="text-center text-[18px] leading-[1.05] text-balance text-muted-2">
+          Insight Hub reads public data. Private work counts only if your GitHub profile shows private contributions.
+        </p>
+      </div>
 
       <button
         type="button"
         onClick={logOut}
-        className="mt-4 h-12 bg-transparent font-display text-[10px] text-ember shadow-[0_0_0_3px_var(--color-ember)] hover:bg-ember-fill/40 active:bg-ember-fill/40 md:w-60"
+        className="h-12 w-full bg-transparent font-display text-[10px] text-ember shadow-[0_0_0_3px_var(--color-ember)] hover:bg-ember-fill/40 active:bg-ember-fill/40"
       >
         LOG OUT
       </button>
@@ -272,7 +266,6 @@ function ToggleRow({
   checked,
   error,
   onChange,
-  divider = false,
 }: {
   id: string;
   title: string;
@@ -280,10 +273,9 @@ function ToggleRow({
   checked: boolean;
   error?: string;
   onChange: (checked: boolean) => void;
-  divider?: boolean;
 }) {
   return (
-    <div className={`flex flex-col gap-1 py-2.5 ${divider ? "shadow-[0_2px_0_var(--color-stone-lit)]" : ""}`}>
+    <div className="flex flex-col gap-1 py-2.5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <span id={`${id}-title`} className="font-display text-[8px] leading-normal md:text-[9px]">
@@ -349,7 +341,7 @@ function SaveStatusLine({ status, onRetry }: { status: SaveStatus; onRetry: () =
     }
   }
   return (
-    <p role="status" className="min-h-6 px-1 font-display text-[8px] leading-normal">
+    <p role="status" className="flex min-h-6 items-center justify-center pb-2 text-center font-display text-[8px] leading-normal empty:min-h-0 empty:pb-0">
       {content}
     </p>
   );

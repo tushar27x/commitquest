@@ -15,7 +15,6 @@ test("PRESS START on the title goes home, where the hero from hero.json waits", 
 for (const tab of [
   { link: "JOURNAL", path: "/journal", landmark: { role: "heading" as const, name: "YEAR IN REVIEW" } },
   { link: "HERO", path: "/hero", landmark: { role: "region" as const, name: "Your character" } },
-  { link: "ARENA", path: "/arena", landmark: { role: "region" as const, name: "The Arena, under construction" } },
   { link: "SETTINGS", path: "/settings", landmark: { role: "region" as const, name: "Notifications and privacy" } },
 ]) {
   test(`the ${tab.link} tab opens its screen`, async ({ page }) => {
@@ -27,16 +26,26 @@ for (const tab of [
   });
 }
 
-test("the phone tab bar has all five tabs and moves between screens", async ({ page }) => {
+test("the phone tab bar has all four tabs and moves between screens", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/home");
   const tabs = nav(page);
-  for (const name of ["HOME", "JOURNAL", "HERO", "ARENA", "SETTINGS"]) {
+  for (const name of ["HOME", "JOURNAL", "HERO", "SETTINGS"]) {
     await expect(tabs.getByRole("link", { name })).toBeVisible();
   }
+  await expect(tabs.getByRole("link", { name: "ARENA" })).toHaveCount(0);
   await tabs.getByRole("link", { name: "HERO" }).click();
   await expect(page).toHaveURL(/\/hero$/);
   await expect(page.getByRole("region", { name: "Your character" })).toBeVisible();
+});
+
+// The Arena is off for the first release: no tab, no route, no Settings switch (the backend keeps its endpoints).
+test("the Arena is gone: no route and no Settings switch", async ({ page }) => {
+  const res = await page.goto("/arena");
+  expect(res?.status()).toBe(404);
+  await page.goto("/settings");
+  await expect(page.getByRole("switch", { name: "EMAIL ALERTS" })).toBeVisible();
+  await expect(page.getByRole("switch", { name: /ARENA/ })).toHaveCount(0);
 });
 
 test("Change class lists every class, highest score first", async ({ page }) => {

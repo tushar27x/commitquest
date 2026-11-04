@@ -324,3 +324,10 @@ New bugs get the next `B` number. PR descriptions list the bugs found while buil
 - **Root cause:** the DTOs use Jackson 3's `tools.jackson.databind.annotation.JsonNaming` (Boot 4). swagger-core, under springdoc 3.2.0, still introspects models with Jackson 2, which only knows `com.fasterxml.jackson.databind.annotation.JsonNaming`. The annotations both versions share (`@JsonProperty`, `@JsonValue`, in `com.fasterxml.jackson.annotation`) were honoured, so `class` and the lower-case week statuses came out right, which hid the problem at a glance.
 - **Fix:** `OpenApiConfig.modelResolver` gives swagger-core a Jackson 2 mapper whose introspector also reads the Jackson 3 `@JsonNaming` and maps it to the Jackson 2 strategy (an unknown strategy fails loudly). `OpenApiDocsTest` compares every response schema's keys with the contract fixtures, so a camelCase key fails the build.
 - **Lesson:** during the Jackson 2 to 3 transition, a tool that reads your annotations may be on the other major version. Check generated docs against real payloads, not by eye.
+
+### B42
+**The top row of CLASS SCORES drew a shorter bar than the others** · U10 · UI · found in the developer's Hero screenshot
+- **Symptom:** on `/hero` the highlighted (top score) row's segment bar looked shorter and didn't line up with the bars under it, so the gold box looked misaligned.
+- **Root cause:** the highlighted row sits on `bg-stone-lit`, which is also the colour of the bar's empty cells, so they vanished into the row and only the filled cells showed.
+- **Fix:** the top row's empty cells use `bg-stone`, a shade darker than the row, so its bar keeps the full 10 (phone) or 20 (desktop) cells.
+- **Lesson:** a highlight background must differ from every fill drawn on it; check the "empty" states of meters on highlighted rows.
