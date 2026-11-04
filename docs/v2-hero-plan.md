@@ -54,7 +54,7 @@ v2's purpose is a **habit tracker**, and the yearly "GitHub Wrapped" insights ar
 
 | Topic | Decision |
 |---|---|
-| What counts as active ("fed") | Any GitHub contribution on the contribution calendar **or** any commit authored by the user on **any branch** (branch scan, see §3) |
+| What counts as active (today's quest done; "fed" before U9) | Any GitHub contribution on the contribution calendar **or** any commit authored by the user on **any branch** (branch scan, see §3) |
 | Forgiveness | **User-picked rest days**, at most 2 weekdays |
 | Regaining hearts | **+1 heart per 3-day streak** (max 3) |
 | Class switching | Any class with score ≥ 40, plus the top-scored class; **7-day cooldown**; level and hearts are kept |
@@ -142,7 +142,7 @@ v2's purpose is a **habit tracker**, and the yearly "GitHub Wrapped" insights ar
 
 **Phase 12, digest email:** one email a day per user, only when there are unsent `hero_events`. Cover `LIFE_LOST` at 1 heart left, `LEVEL_DOWN`, `FAINTED` and `LEVEL_UP`. Use the existing supportive persona (no guilt trips), reuse the AI layer with a static template fallback, add a signed unsubscribe link, and use a `NotificationChannel` interface. (`PROGRESS.md` Phase 12 has the details.)
 
-**Phase 13, Arena:** rank by **hero level, then XP**, within the **chosen class**, for users with `public_profile`. Class scores remain the qualification and the "suggested class" signal.
+**Phase 13, Arena** (backend built in B8, #42; **shelved in the web app for the first release**, 2026-11-04, U10: no tab or route, and Settings hides the `public_profile` switch while the API keeps the field): rank by **hero level, then XP**, within the **chosen class**, for users with `public_profile`. Class scores remain the qualification and the "suggested class" signal.
 
 **Phase 9 (errors as `ProblemDetail`, validation, logging) is still open.** Do it before or alongside the new endpoints.
 
@@ -156,15 +156,15 @@ v2's purpose is a **habit tracker**, and the yearly "GitHub Wrapped" insights ar
 - The login link goes **directly** to `${NEXT_PUBLIC_BACKEND_URL}/api/auth/login`, because the OAuth state cookie must live on the backend origin.
 - **Check the deploy host's proxy timeout** against the worst-case sync time (about 90 s). If it's shorter, call the backend directly for `/sync` and add CORS for that route only.
 
-**Information architecture:** tabs **HOME · JOURNAL · HERO · ARENA · SETTINGS**, as a bottom bar on phone (≥ 44 px targets, `env(safe-area-inset-bottom)`) and a top nav on desktop. Mobile first, with no horizontal page scroll down to 320 px.
+**Information architecture:** tabs **HOME · JOURNAL · HERO · SETTINGS** (ARENA shelved for the first release, U10), as a bottom bar on phone (≥ 44 px targets, `env(safe-area-inset-bottom)`) and a top nav on desktop. Mobile first, with no horizontal page scroll down to 320 px.
 
 | Screen | Content |
 |---|---|
-| **Home** (the pet) | A tier backdrop that changes with level: Lv 1–4 Campfire, 5–9 Village, 10–14 Keep, 15+ Citadel. The large hero sprite with a 2-frame idle animation and mood overlay. **3 hearts**, level + XP bar, streak. A **Today card**: "Fed today ✓", or "Not fed yet: any contribution before midnight keeps your hearts" with a local countdown and an ember border when hungry. A **7-day strip** (+10 active, −1 missed, Z rest, ? today, empty future). "N more active days wins a heart back". Recent events. A SAVE (refresh) button |
+| **Home** (the pet) | A tier backdrop that changes with level: Lv 1–4 Campfire, 5–9 Village, 10–14 Keep, 15+ Citadel. The large hero sprite with a 2-frame idle animation and mood overlay. **3 hearts**, level + XP bar, streak. A **Today card**: "QUEST DONE ✓", or "QUEST OPEN: any contribution before midnight completes today's quest and keeps your hearts" with a local countdown and an ember border when hungry (quest wording since U9, #48: commits are practice, not food). A **7-day strip** (+10 active, −1 missed, Z rest, ? today, empty future). "N more active days wins a heart back". Recent events. A SAVE (refresh) button |
 | **Journal** | Tabs STATS / REPOS / REVIEWS: 4 stat cards, a 28-day calendar (labels computed from `updated_at`, because `heatmap_labels` only covers 7 days), top repos with bars + AI `repo_summaries`, and the three AI reviews on parchment |
 | **Hero** | The character sheet: sprite on a pedestal, class name, habit line, AI title + lore on parchment (fallback: label + habit), and 8 segmented score bars sorted by score with mini sprites, the top class gold-ringed. **Change class** screen: qualified classes selectable, others greyed with "NEEDS 40", a confirm "BECOME <CLASS>", and the note "keeps LV and hearts, next change in 7 days" |
-| **Arena** | "Under construction · Phase 13" until leaderboards land. Use different art from a padlock: padlocks are for things the user unlocks by playing |
-| **Settings** | Rest-day picker (7 day buttons, at most 2; when 2 are picked the others are disabled; "changes apply from tomorrow"), timezone (auto-detected, editable), email alerts toggle, "Show me in the Arena" toggle, a one-line note that private work counts only if the GitHub profile shows private contributions, and log out |
+| **Arena** | **Shelved for the first release** (U10, 2026-11-04): no tab or route. Before that: "Under construction · Phase 13" until leaderboards land. Use different art from a padlock: padlocks are for things the user unlocks by playing |
+| **Settings** | Rest-day picker (7 day buttons, at most 2; when 2 are picked the others are disabled; "changes apply from tomorrow"), timezone (auto-detected, editable), email alerts toggle, ("Show me in the Arena" toggle hidden while the Arena is shelved, U10), a one-line note that private work counts only if the GitHub profile shows private contributions, and log out |
 | **Title** (`/`) | Night scene with a keep silhouette and 4 class sprites standing on grass, the "INSIGHT HUB" pixel logo, "Keep your hero alive with your commits", PRESS START (→ backend login), and "reads public activity only" |
 | **`/dashboard`** | Reads `#token` from the fragment, stores it (localStorage, try/catch), clears the URL with `router.replace`, and goes to `/home` |
 
@@ -301,7 +301,7 @@ TREE 8×8 {g:#2F6B3A, G:#5EA85A, t:#6B4226}: ...gg... ..gggg.. .gggGgg. gggggGgg
 **Fixture story** (use it everywhere in mock mode, so the screens agree):
 - Monk, LV 7, 140/350 XP, 2 of 3 hearts.
 - Mon and Tue active, Wed missed (lost a heart), Thu active (streak 1).
-- Now it's Friday 18:20 local, not fed yet, so the hero is HUNGRY. 5:40 left.
+- Now it's Friday 18:20 local, quest still open, so the hero is HUNGRY. 5:40 left.
 - Sunday is a rest day.
 - Class scores (the developer's real Phase 4 calibration): Monk 52, Rogue 47, Paladin 44, Barbarian 44, Wizard 33, Artificer 33, Bard 10, Cleric 0.
 
@@ -338,4 +338,4 @@ TREE 8×8 {g:#2F6B3A, G:#5EA85A, t:#6B4226}: ...gg... ..gggg.. .gggGgg. gggggGgg
 
 - **Backend:** targeted unit tests are green, and `HeroRules` covers every rule, edge case and idempotency case. Running the hero job twice creates no duplicate events. A 3-day outage is caught up in order.
 - **Web:** `npm run lint` and `npm run build` are clean. Mock mode renders every screen and mood. Check at 320 / 375 / 768 / 1280 px. No request storm on window focus, and no retries after a 429.
-- **End to end:** login lands on `/dashboard#token` → `/home` with no token in the URL. A contribution + SAVE flips the Today card to "Fed". The next morning's evaluation shows +10 XP. Class switch: unqualified → 409, during the cooldown → 429, success keeps the level.
+- **End to end:** login lands on `/dashboard#token` → `/home` with no token in the URL. A contribution + SAVE flips the Today card to "QUEST DONE". The next morning's evaluation shows +10 XP. Class switch: unqualified → 409, during the cooldown → 429, success keeps the level.
