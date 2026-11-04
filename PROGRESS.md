@@ -74,7 +74,7 @@ From Part D on, 🤖 names the lane: **backend**, **ui** or **integration** (ste
 | | **Stretch** | | | |
 | S | RAG chat, Discord alerts, friends leaderboard, observability | 🧑 | ⬜ | |
 
-**Next up** (each waits for the developer's go): ship the app as it is (decided 2026-11-04; the Arena board is shelved) · 🤖 integration **I6** (responsive/a11y, release checklist) · deployment (host not chosen) · the digest's first live send (needs SMTP). Run it locally: [`docs/run-locally.md`](docs/run-locally.md).
+**Next up** (each waits for the developer's go): ship the app as it is (decided 2026-11-04; the Arena board is shelved) · 🤖 integration **I6** (responsive/a11y, release checklist) · deployment: Vercel + EC2 t3.micro ([`docs/deploy.md`](docs/deploy.md); 🤖 backend: the `prod` profile) · the digest's first live send (needs SMTP). Run it locally: [`docs/run-locally.md`](docs/run-locally.md).
 
 ---
 
@@ -846,3 +846,10 @@ One entry per session: what was built, what was learned, open questions. Bug det
 - **Integration:** the mock e2e spec expects four tabs, `/arena` → 404 and no Arena switch; it rides in #49 with the UI change (split across two PRs, each PR's E2E job failed against the other half). All three suites pass with it (mock 25, stubbed 22, full stack 6). This docs PR (#50): Docs: the Arena marked shelved here, in `AGENTS.md` and the plan; the Swagger box ticked; the Swagger URL in `docs/run-locally.md`; the plan's "fed" wording replaced with U9's quest wording.
 - **Lesson:** a UI change that removes something the e2e specs assert must ship with its spec change in the same PR, or neither PR goes green.
 - **Still open for the developer:** I6 and the deployment host; SMTP for the digest; checking the hero's catch-up from 2026-10-18 in Neon (expected LV 5 → LV 2, 1 heart); the older items in the 2026-10-19 entry. `docs/design/png/` still shows the old art and layout.
+
+### 2026-11-04: deployment plan (🤖 integration)
+- **Decided by the developer:** Vercel for `web/`, an **AWS EC2 t3.micro** (1 GB RAM + 2 GB swap, 20 GB) for the backend only, Neon and Upstash free tiers as now. Oracle's free tier didn't work out.
+- **Added:** `docs/deploy.md` (instance setup, `.env`, OAuth app, Vercel, free-tier limits, release checklist), `docs/deploy/` (`insightshub.service`, `Caddyfile`, `deploy.sh` with health check and rollback), `.github/workflows/deploy.yml` (manual, `main` only, secrets in the `production` environment).
+- **Measured:** the backend under the unit's JVM flags peaked at 328 MB RSS through the full-stack e2e suite.
+- **Found:** the IP-keyed rate limits would see every visitor as `127.0.0.1` behind Caddy; REQUEST to backend for the `prod` profile (trusted forwarded headers from loopback only, a small Hikari pool so Neon can suspend, job concurrency 2). Vercel's external rewrites wait 120 s, enough for the first sync.
+- **Open for the developer:** the domain (or DuckDNS), whether port 22 opens for the deploy workflow or deploys go by hand, SMTP.

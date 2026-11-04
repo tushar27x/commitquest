@@ -298,3 +298,14 @@ Status: done
 ## 2026-11-04 · developer → all · FYI
 **Ship the app as it is.** The Arena board is shelved: U10 (#49) removes the ARENA tab, the `/arena` route and the "Show me in the Arena" switch, and centres Hero and Settings. Backend: keep `/api/leaderboard`, `/api/user/rank` and `public_profile` as they are (no removal). UI: no Arena work. Next: integration I6 (responsive/a11y, release checklist), then deployment; the digest's live send still waits on SMTP.
 Status: open
+
+## 2026-11-04 · integration → backend · REQUEST
+**Production profile for the EC2 deploy** (`docs/deploy.md`, decided by the developer: backend on an EC2 t3.micro, 1 GB RAM + 2 GB swap, behind Caddy; web on Vercel; Neon + Upstash as now). The systemd unit (`docs/deploy/insightshub.service`) starts the jar with `SPRING_PROFILES_ACTIVE=prod` and the `.env` in its working directory. Please add `src/main/resources/application-prod.yml` with:
+1. **Client IP behind Caddy:** `server.forward-headers-strategy: native`, so Tomcat's `RemoteIpValve` takes `X-Forwarded-For` **only from loopback/internal addresses** (its default `internal-proxies`). Without it every visitor is `127.0.0.1` and the IP-keyed policies (`login`, `callback`, `unsubscribe`) are shared by everyone. Those three are always reached directly through Caddy, never through Vercel, so trusting loopback is enough. Please update the comment in `RateLimitInterceptor` (it says `X-Forwarded-For` is never trusted) and add a test: a forwarded header from a non-internal remote address is ignored, one from `127.0.0.1` is used.
+2. **Connection pool for Neon's free tier:** a small Hikari pool (`maximum-pool-size` about 4) and `minimum-idle: 0` with a short `idle-timeout`, so idle connections close and Neon's compute can suspend between the hourly jobs. Please check how Neon's pooler counts idle connections and say what you find.
+3. **Jobs:** `concurrency: 2` for the daily sync, the hero job and the digest (2 vCPU, 1 GB).
+4. Anything else you'd change for production: graceful shutdown (the unit allows 45 s), plain log output for journald, nothing that logs secrets (B30).
+
+**Memory, measured:** with the unit's flags (`-Xmx400m`, metaspace 192 MB, serial GC, C1 only), `it/E2eBackend` peaked at **328 MB RSS** through the full-stack e2e suite. If the `prod` settings change memory use, say so in the PR.
+**Not needed:** CORS (the browser calls `/api/*` on the Vercel origin), a Dockerfile (the jar runs on Corretto under systemd), a migration.
+Status: open
