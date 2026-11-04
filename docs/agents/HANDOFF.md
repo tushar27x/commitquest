@@ -298,3 +298,15 @@ Status: done
 ## 2026-11-04 · developer → all · FYI
 **Ship the app as it is.** The Arena board is shelved: U10 (#49) removes the ARENA tab, the `/arena` route and the "Show me in the Arena" switch, and centres Hero and Settings. Backend: keep `/api/leaderboard`, `/api/user/rank` and `public_profile` as they are (no removal). UI: no Arena work. Next: integration I6 (responsive/a11y, release checklist), then deployment; the digest's live send still waits on SMTP.
 Status: open
+
+## 2026-11-04 · integration → backend · REQUEST
+**Production profile for the EC2 deploy** (`docs/deploy.md`, decided by the developer: the backend as a Docker image from Docker Hub on an EC2 t3.micro in `ap-south-1`, 1 GB RAM + 2 GB swap, behind Caddy in the same compose project; web on Vercel; Neon (`us-east-2`) + Upstash as now). The image (root `Dockerfile`) sets `SPRING_PROFILES_ACTIVE=prod` and the JVM flags; the secrets arrive as environment variables from `backend.env`. Please add `src/main/resources/application-prod.yml` with:
+1. **Client IP behind Caddy:** `server.forward-headers-strategy: native`, so Tomcat's `RemoteIpValve` takes `X-Forwarded-For` **only from internal addresses** (its default `internal-proxies`: loopback and the private ranges, which include the compose network's `172.16.0.0/12` where Caddy sits). Without it every visitor is Caddy's address and the IP-keyed policies (`login`, `callback`, `unsubscribe`) are shared by everyone. Those three are always reached directly through Caddy, never through Vercel, so trusting internal addresses is enough (port 8080 is bound to `127.0.0.1` on the host, never public). Please update the comment in `RateLimitInterceptor` (it says `X-Forwarded-For` is never trusted) and add a test: a forwarded header from a public remote address is ignored, one from a private address is used.
+2. **Connection pool for Neon's free tier:** a small Hikari pool (`maximum-pool-size` about 4) and `minimum-idle: 0` with a short `idle-timeout`, so idle connections close and Neon's compute can suspend between the hourly jobs. Please check how Neon's pooler counts idle connections and say what you find.
+3. **Jobs:** `concurrency: 2` for the daily sync, the hero job and the digest (2 vCPU, 1 GB).
+4. Anything else you'd change for production: graceful shutdown (compose allows 45 s), plain log output for journald, nothing that logs secrets (B30).
+
+**Memory, measured:** with the image's flags (`-Xmx400m`, metaspace 192 MB, serial GC, C1 only), `it/E2eBackend` peaked at **328 MB RSS** through the full-stack e2e suite; the image itself boots in 4.9 s at 411 MiB (`docker stats`). If the `prod` settings change memory use, say so in the PR.
+**Region:** the instance is in Mumbai and Neon in Ohio (~200 ms per round trip): anything that cuts database round trips per request helps (flag what you see; no change requested).
+**Not needed:** CORS (the browser calls `/api/*` on the Vercel origin), a migration. The `Dockerfile` is integration's (it copies the packaged jar; tell me if the jar's name or layout changes).
+Status: open

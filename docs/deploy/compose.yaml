@@ -1,0 +1,41 @@
+# /opt/insightshub/compose.yaml on the EC2 instance (docs/deploy.md): the backend image from Docker
+# Hub and Caddy in front of it for HTTPS. deploy.sh pulls the new image and restarts the backend.
+# Always run it as `docker compose --env-file deploy.env …` (deploy.sh does): there is deliberately no
+# `.env` here, so Compose never reads the secrets for its own ${…} substitution.
+name: insightshub
+
+services:
+  backend:
+    image: ${IMAGE:?set IMAGE in /opt/insightshub/deploy.env}:${TAG:-latest}
+    env_file: backend.env              # the app's secrets (docs/deploy.md §2); never in the image
+    restart: unless-stopped
+    mem_limit: 700m                    # the JVM is capped at ~600 MB (Dockerfile); measured 411 MiB used
+    ports:
+      - "127.0.0.1:8080:8080"          # for deploy.sh's health check only; the internet goes through Caddy
+    stop_grace_period: 45s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    mem_limit: 128m
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in /opt/insightshub/deploy.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data               # the certificates: keep across restarts (Let's Encrypt rate limits)
+      - caddy_config:/config
+    depends_on: [backend]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  caddy_data:
+  caddy_config:
