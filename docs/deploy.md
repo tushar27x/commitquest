@@ -27,7 +27,7 @@ OAuth callback and the unsubscribe links go straight to the backend (the OAuth s
 live on the backend's origin).
 
 Files: [`Dockerfile`](../Dockerfile) + [`.dockerignore`](../.dockerignore) at the root (the image), the
-`image` job in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), and in [`docs/deploy/`](deploy/)
+`image-check` (PRs) and `image-publish` (`main`) jobs in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), and in [`docs/deploy/`](deploy/)
 what goes on the instance: `compose.yaml`, `Caddyfile`, `deploy.sh`, `deploy.env.example`.
 
 ## Region: the instance and Neon are far apart ⚠️
@@ -124,9 +124,10 @@ access token with **Read & Write** for CI (Account settings → Personal access 
 | `DOCKERHUB_TOKEN` | secret | The Read & Write token |
 | `DOCKERHUB_IMAGE` | variable (or secret) | `tushar2703/insight-hub` (set 2026-11-04), no `docker.io/` and no tag. As a secret it works too, but shows as `***` in the logs |
 
-**Every merge to `main`:** CI runs `backend`, `web` and `e2e`; when all three are green, the `image`
-job packages the jar, builds the image (`linux/amd64`) and pushes `:latest` and `:sha-<7>`. On PRs it
-only builds, so a broken Dockerfile shows up before the merge. The web app deploys on Vercel by itself.
+**Every merge to `main`:** CI runs `backend`, `web` and `e2e`; when all three are green,
+`image-publish` packages the jar, builds the image (`linux/amd64`) and pushes `:latest` and `:sha-<7>`.
+**Pull requests never push:** `image-check` only builds the image (so a broken Dockerfile shows up
+before the merge), without logging in to Docker Hub or touching its secrets. The web app deploys on Vercel by itself.
 
 **Then on the instance:**
 
@@ -210,7 +211,7 @@ Not measured: real LLM responses, and the hourly jobs with many users (capped by
 - [ ] Instance in `ap-south-1`, credits on **standard**, Elastic IP, security group (22 from you only; 80, 443)
 - [ ] Docker + compose plugin, swap, `/opt/insightshub` with `compose.yaml`, `Caddyfile`, `deploy.sh`, `deploy.env`, `backend.env` (0600)
 - [ ] `backend.env` with **new** `JWT_SECRET` and `ENCRYPTION_KEY`; the production OAuth app's id and secret
-- [ ] Docker Hub repo + token; `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `DOCKERHUB_IMAGE` in GitHub; the `image` job pushed on `main`
+- [ ] Docker Hub repo + token; `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `DOCKERHUB_IMAGE` in GitHub; `image-publish` pushed on `main`
 - [ ] DNS `api.<domain>` → the Elastic IP; `deploy.sh` succeeded; `https://api.<domain>/actuator/health` is `UP` with a valid certificate
 - [ ] Vercel project, root `web`, the three variables, deployed from `main`
 - [ ] Log in from the Vercel URL: PRESS START → GitHub → `/home`, the hero is there
