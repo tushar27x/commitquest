@@ -53,7 +53,7 @@ class AiLiveTest {
     }
 
     @Test
-    void generatesEverythingAgainstGroqInParallel() throws IOException {
+    void generatesEverythingAgainstGroqInOneCall() throws IOException {
         AiInsightsService service = new AiInsightsService(new AiReviewer(new LlmChain(List.of(groq("groq", key)))),
                 executor, new AiProperties(FAST_MODEL, "low", Duration.ofSeconds(90), null));
         InsightsResult insights = fixtureInsights();
@@ -64,8 +64,7 @@ class AiLiveTest {
                 insights.archetype(), ai.yearInReview(), ai.weeklyReview(), ai.craftReview(), ai.repoSummaries(),
                 ai.characterSheet(), (System.nanoTime() - start) / 1_000_000);
 
-        assertThat(List.of(ai.yearInReview(), ai.weeklyReview(), ai.craftReview()))
-                .as("no static fallbacks").doesNotContain(AiReviewer.PROVIDERS_DOWN);
+        assertThat(ai.fallbacks()).as("no static fallbacks").isEmpty();
         assertThat(ai.repoSummaries().values()).isNotEmpty().doesNotContain(AiReviewer.DEFAULT_REPO_SUMMARY);
         assertThat(ai.characterSheet()).isNotEqualTo(AiReviewer.fallbackSheet("octocat", insights.archetype()));
     }
@@ -73,11 +72,11 @@ class AiLiveTest {
     @Test
     void deadPrimaryKeyFallsBackToTheSecondProvider() throws IOException {
         // the Java version of v1's test_ai.py: kill the primary key, the fallback must answer
-        LlmChain chain = new LlmChain(List.of(groq("dead-primary", "gsk_invalid"), groq("fallback", key)));
+        LlmChain chain = new LlmChain(List.of(groq("dead-primary", "invalid-key"), groq("fallback", key)));
 
-        String review = new AiReviewer(chain).yearInReview(fixtureInsights().stats(), fixtureInsights().archetype());
-        System.out.println("year in review via fallback: " + review);
+        AiInsights texts = new AiReviewer(chain).review("octocat", fixtureInsights());
+        System.out.println("year in review via fallback: " + texts.yearInReview());
 
-        assertThat(review).isNotEqualTo(AiReviewer.PROVIDERS_DOWN);
+        assertThat(texts.fallbacks()).doesNotContain(AiField.YEAR_IN_REVIEW);
     }
 }

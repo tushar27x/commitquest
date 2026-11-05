@@ -57,6 +57,18 @@ public final class FakeChatModel implements ChatModel {
         return new ChatResponse(List.of(new Generation(new AssistantMessage(answer.apply(prompt)))), metadata);
     }
 
+    /** How many prompts it has received. */
+    public int calls() {
+        return prompts.size();
+    }
+
+    /** A model that must never be called: it records the call, then fails it. */
+    public static FakeChatModel mustNotBeCalled() {
+        return new FakeChatModel(prompt -> {
+            throw new AssertionError("the LLM must not be called here");
+        });
+    }
+
     Prompt last() {
         return prompts.getLast();
     }

@@ -3,125 +3,179 @@ package com.tushar27x.insightshub.ai;
 import com.tushar27x.insightshub.entity.Archetype;
 import com.tushar27x.insightshub.insights.ArchetypeScores;
 import com.tushar27x.insightshub.insights.HabitProfile;
+import com.tushar27x.insightshub.insights.InsightsResult;
 import com.tushar27x.insightshub.insights.UserStats;
 import com.tushar27x.insightshub.insights.UserStats.RepoDetail;
 import lombok.RequiredArgsConstructor;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
+import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * The AI generators, written in a supportive mentor persona: a year in review (replaces v1's roast),
- * v1's weekly review, craft review and repo summaries ({@code services/ai_service.py}), plus the
- * D&amp;D character sheet. Each one always returns something:
- * the LLM's answer, or a static fallback text.
+ * The AI texts, written in a supportive mentor persona: a year in review (replaces v1's roast), v1's weekly
+ * review, craft review and repo summaries ({@code services/ai_service.py}), plus the D&amp;D character sheet.
  * <p>
- * Lists are formatted here, not in the templates: StringTemplate renders a list by concatenating its
- * elements with no separator ({@code [1, 2, 3]} becomes {@code 123}).
+ * B11: all five come from <b>one</b> call on the primary tier (until then, five calls per sync). The model answers
+ * one JSON object, described by Spring AI's {@link BeanOutputConverter} schema of {@link Answer}; each field is read
+ * and checked on its own, so a missing, empty or malformed field falls back alone, and a call that fails on every
+ * provider falls back for all five. One user per prompt, always: one user's data never reaches another's text.
+ * <p>
+ * Lists are formatted here, not in the template: StringTemplate renders a list by concatenating its elements
+ * with no separator ({@code [1, 2, 3]} becomes {@code 123}).
  */
 @Component
 @RequiredArgsConstructor
 public class AiReviewer {
 
-    /** Text when every provider failed. */
-    static final String PROVIDERS_DOWN = "Your mentor's notes aren't ready yet. Your stats are up to date; written feedback will follow on the next sync.";
+    static final String YEAR_IN_REVIEW_PENDING = "Your year in review is on its way.";
+    static final String WEEKLY_PENDING = "Activity analysis in progress.";
+    static final String CRAFT_PENDING = "Code quality audit scheduled.";
     static final String DEFAULT_REPO_SUMMARY = "Exploration of technical concepts and implementations.";
 
     static final int SUMMARIZED_REPOS = 3;
     static final int README_CHARS = 1000;
     static final int CRAFT_COMMITS = 10;
     static final int TITLE_MAX_CHARS = 150;
+    /** A text longer than this is not the short note that was asked for: it falls back. */
+    static final int TEXT_MAX_CHARS = 2000;
+    /** The five fields together, as the five calls had them (300 + 200 + 250 + 3 × 120 + 300) plus some slack. */
+    static final int MAX_TOKENS = 1500;
 
-    private static final Resource YEAR_IN_REVIEW = new ClassPathResource("prompts/year-in-review.st");
-    private static final Resource WEEKLY_REVIEW = new ClassPathResource("prompts/weekly-review.st");
-    private static final Resource CRAFT_REVIEW = new ClassPathResource("prompts/craft-review.st");
-    private static final Resource REPO_SUMMARIES = new ClassPathResource("prompts/repo-summaries.st");
-    private static final Resource REPO_SUMMARIES_SYSTEM = new ClassPathResource("prompts/repo-summaries-system.st");
-    private static final Resource CHARACTER_SHEET = new ClassPathResource("prompts/character-sheet.st");
+    private static final Resource PROMPT = new ClassPathResource("prompts/insights-texts.st");
+    private static final String FORMAT = new BeanOutputConverter<>(Answer.class).getFormat();
+    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final LlmChain llm;
 
-    public String yearInReview(UserStats stats, Archetype archetype) {
-        return llm.text("year in review", ModelTier.STANDARD, 300, spec -> spec.user(u -> u.text(YEAR_IN_REVIEW)
-                        .param("archetype", archetype.getLabel() + " (" + archetype.getHabit() + ")")
-                        .param("commits", stats.totalCommits())
-                        .param("activeDays", stats.activeDaysPerYear())
-                        .param("stars", stats.totalStars())
-                        .param("prs", stats.totalPrs())
-                        .param("languages", String.join(", ", stats.topLanguages()))))
-                .orElse(PROVIDERS_DOWN);
-    }
-
-    public String weeklyReview(UserStats stats) {
+    /** The one combined call. Never throws for a bad answer: every field missing from it gets its fallback. */
+    public AiInsights review(String login, InsightsResult insights) {
+        UserStats stats = insights.stats();
+        Archetype archetype = insights.archetype();
+        String className = className(archetype);
+        List<RepoDetail> repos = stats.repoDetails().stream().limit(SUMMARIZED_REPOS).toList();
         List<Integer> heatmap = stats.lastWeekHeatmap();
-        return llm.text("weekly review", ModelTier.STANDARD, 200, spec -> spec.user(u -> u.text(WEEKLY_REVIEW)
-                        .param("total", heatmap.stream().mapToInt(Integer::intValue).sum())
-                        .param("activeDays", heatmap.stream().filter(count -> count > 0).count())
-                        .param("distribution", distribution(heatmap, stats.heatmapLabels()))))
-                .orElse(PROVIDERS_DOWN);
+
+        Parsed parsed = llm.json("insights texts", ModelTier.STANDARD, MAX_TOKENS, spec -> spec.user(u -> u.text(PROMPT)
+                                .param("login", login)
+                                .param("className", className)
+                                .param("habit", archetype.getHabit())
+                                .param("commits", stats.totalCommits())
+                                .param("activeDays", stats.activeDaysPerYear())
+                                .param("stars", stats.totalStars())
+                                .param("prs", stats.totalPrs())
+                                .param("languages", listOrNone(stats.topLanguages()))
+                                .param("weekTotal", heatmap.stream().mapToInt(Integer::intValue).sum())
+                                .param("weekActiveDays", heatmap.stream().filter(count -> count > 0).count())
+                                .param("distribution", distribution(heatmap, stats.heatmapLabels()))
+                                .param("recentCommits", recentCommits(stats))
+                                .param("additions", stats.codeChurn().additions())
+                                .param("deletions", stats.codeChurn().deletions())
+                                .param("scores", topScores(insights.archetypeScores()))
+                                .param("evidence", evidence(insights.habits()))
+                                .param("repos", repos.isEmpty() ? "(none)"
+                                        : repos.stream().map(AiReviewer::describeRepo).collect(Collectors.joining("\n\n")))
+                                .param("outputFormat", FORMAT)),
+                        AiReviewer::parse, Parsed::anyUsable)
+                .orElse(Parsed.NOTHING);
+        return assemble(login, archetype, repos, parsed);
     }
 
-    public String craftReview(UserStats stats) {
-        String commits = stats.recentCommits().stream()
-                .limit(CRAFT_COMMITS)
-                .map(message -> "\"" + message.lines().findFirst().orElse("").strip() + "\"")
-                .collect(Collectors.joining(", "));
-        return llm.text("craft review", ModelTier.STANDARD, 250, spec -> spec.user(u -> u.text(CRAFT_REVIEW)
-                        .param("commits", commits.isEmpty() ? "(none)" : commits)
-                        .param("additions", stats.codeChurn().additions())
-                        .param("deletions", stats.codeChurn().deletions())))
-                .orElse(PROVIDERS_DOWN);
+    /** Every field's fallback: the call failed or timed out. */
+    public static AiInsights fallbacks(String login, InsightsResult insights) {
+        List<RepoDetail> repos = insights.stats().repoDetails().stream().limit(SUMMARIZED_REPOS).toList();
+        return assemble(login, insights.archetype(), repos, Parsed.NOTHING);
+    }
+
+    static AiInsights assemble(String login, Archetype archetype, List<RepoDetail> repos, Parsed parsed) {
+        Set<AiField> fallbacks = EnumSet.noneOf(AiField.class);
+        String year = textOr(parsed.yearInReview(), YEAR_IN_REVIEW_PENDING, AiField.YEAR_IN_REVIEW, fallbacks);
+        String weekly = textOr(parsed.weeklyReview(), WEEKLY_PENDING, AiField.WEEKLY_REVIEW, fallbacks);
+        String craft = textOr(parsed.craftReview(), CRAFT_PENDING, AiField.CRAFT_REVIEW, fallbacks);
+
+        Map<String, String> answered = matching(parsed.repoSummaries(), repos);
+        Map<String, String> summaries = new LinkedHashMap<>();
+        repos.forEach(repo -> summaries.put(repo.name(), answered.getOrDefault(repo.name(), DEFAULT_REPO_SUMMARY)));
+        if (answered.size() < repos.size()) {
+            fallbacks.add(AiField.REPO_SUMMARIES);
+        }
+
+        CharacterSheet sheet = parsed.characterSheet();
+        if (sheet != null && isValidSheet(sheet, className(archetype))) {
+            sheet = new CharacterSheet(sheet.title().strip(), sheet.lore().strip());
+        } else {
+            sheet = fallbackSheet(login, archetype);
+            fallbacks.add(AiField.CHARACTER_SHEET);
+        }
+        return new AiInsights(year, weekly, craft, summaries, sheet, fallbacks);
+    }
+
+    private static String textOr(String text, String fallback, AiField field, Set<AiField> fallbacks) {
+        if (text == null || text.isBlank() || text.length() > TEXT_MAX_CHARS) {
+            fallbacks.add(field);
+            return fallback;
+        }
+        return text.strip();
     }
 
     /**
-     * One structured call for the first {@value #SUMMARIZED_REPOS} repos (v1 made one call per repo).
-     * Names the LLM made up are dropped; repos it skipped get the default summary.
+     * Reads the answer field by field: a field of the wrong JSON type is treated as missing, the others still
+     * count. Tolerates a markdown fence or chatter around the object. Null when there's no JSON object at all.
      */
-    public Map<String, String> repoSummaries(List<RepoDetail> repoDetails) {
-        List<RepoDetail> repos = repoDetails.stream().limit(SUMMARIZED_REPOS).toList();
-        if (repos.isEmpty()) {
-            return Map.of();
+    static Parsed parse(String raw) {
+        int start = raw.indexOf('{');
+        int end = raw.lastIndexOf('}');
+        if (start < 0 || end <= start) {
+            return null;
         }
-        String block = repos.stream().map(AiReviewer::describeRepo).collect(Collectors.joining("\n\n"));
+        JsonNode root;
+        try {
+            root = JSON.readTree(raw.substring(start, end + 1));
+        } catch (JacksonException e) {
+            return null;
+        }
+        if (root == null || !root.isObject()) {
+            return null;
+        }
+        return new Parsed(string(root.get("yearInReview")), string(root.get("weeklyReview")),
+                string(root.get("craftReview")), summaries(root.get("repoSummaries")), sheet(root.get("characterSheet")));
+    }
 
-        Map<String, String> answered = llm.entity("repo summaries", ModelTier.FAST, 120 * repos.size(),
-                        spec -> spec.system(REPO_SUMMARIES_SYSTEM)
-                                .user(u -> u.text(REPO_SUMMARIES).param("repos", block)),
-                        RepoSummaries.class,
-                        result -> result.summaries() != null && !matching(result, repos).isEmpty())
-                .map(result -> matching(result, repos))
-                .orElse(Map.of());
+    private static String string(JsonNode node) {
+        return node != null && node.isString() ? node.stringValue() : null;
+    }
 
-        Map<String, String> summaries = new LinkedHashMap<>();
-        repos.forEach(repo -> summaries.put(repo.name(), answered.getOrDefault(repo.name(), DEFAULT_REPO_SUMMARY)));
+    private static List<RepoSummary> summaries(JsonNode node) {
+        if (node == null || !node.isArray()) {
+            return List.of();
+        }
+        List<RepoSummary> summaries = new ArrayList<>();
+        for (JsonNode entry : node.values()) {
+            if (entry != null && entry.isObject()) {
+                summaries.add(new RepoSummary(string(entry.get("name")), string(entry.get("summary"))));
+            }
+        }
         return summaries;
     }
 
-    public CharacterSheet characterSheet(String login, ArchetypeScores scores, HabitProfile habits,
-                                         List<String> languages) {
-        Archetype archetype = scores.primary();
-        String className = className(archetype);
-        Optional<CharacterSheet> sheet = llm.entity("character sheet", ModelTier.STANDARD, 300,
-                spec -> spec.user(u -> u.text(CHARACTER_SHEET)
-                        .param("login", login)
-                        .param("className", className)
-                        .param("habit", archetype.getHabit())
-                        .param("scores", topScores(scores))
-                        .param("evidence", evidence(habits))
-                        .param("languages", languages.isEmpty() ? "(none)" : String.join(", ", languages))),
-                CharacterSheet.class,
-                answer -> isValidSheet(answer, className));
-        return sheet
-                .map(answer -> new CharacterSheet(answer.title().strip(), answer.lore().strip()))
-                .orElseGet(() -> fallbackSheet(login, archetype));
+    private static CharacterSheet sheet(JsonNode node) {
+        if (node == null || !node.isObject()) {
+            return null;
+        }
+        return new CharacterSheet(string(node.get("title")), string(node.get("lore")));
     }
 
     static CharacterSheet fallbackSheet(String login, Archetype archetype) {
@@ -133,7 +187,7 @@ public class AiReviewer {
     /** The class is decided by code: a title that doesn't name it is rejected. */
     static boolean isValidSheet(CharacterSheet sheet, String className) {
         return sheet.title() != null && !sheet.title().isBlank() && sheet.title().length() <= TITLE_MAX_CHARS
-                && sheet.lore() != null && !sheet.lore().isBlank()
+                && sheet.lore() != null && !sheet.lore().isBlank() && sheet.lore().length() <= TEXT_MAX_CHARS
                 && sheet.title().toLowerCase(Locale.ROOT).contains(className.toLowerCase(Locale.ROOT));
     }
 
@@ -151,6 +205,15 @@ public class AiReviewer {
         return IntStream.range(0, heatmap.size())
                 .mapToObj(i -> labels.get(i) + " " + heatmap.get(i))
                 .collect(Collectors.joining(", "));
+    }
+
+    /** The first {@value #CRAFT_COMMITS} commit subjects, quoted. */
+    static String recentCommits(UserStats stats) {
+        String commits = stats.recentCommits().stream()
+                .limit(CRAFT_COMMITS)
+                .map(message -> "\"" + message.lines().findFirst().orElse("").strip() + "\"")
+                .collect(Collectors.joining(", "));
+        return commits.isEmpty() ? "(none)" : commits;
     }
 
     /** The three strongest classes, e.g. "Monk 52, Rogue 47, Paladin 44". */
@@ -176,6 +239,10 @@ public class AiReviewer {
                 "%d followers + stars".formatted(h.audience()));
     }
 
+    private static String listOrNone(List<String> values) {
+        return values.isEmpty() ? "(none)" : String.join(", ", values);
+    }
+
     private static String describeRepo(RepoDetail repo) {
         String readme = repo.readme() == null || repo.readme().isBlank() ? "(none)"
                 : repo.readme().substring(0, Math.min(README_CHARS, repo.readme().length()));
@@ -188,11 +255,12 @@ public class AiReviewer {
                 >>>""".formatted(repo.name(), String.join(", ", repo.files()), README_CHARS, readme);
     }
 
-    /** Answers for repos that were asked about, keyed by the requested name. */
-    private static Map<String, String> matching(RepoSummaries result, List<RepoDetail> repos) {
+    /** Answers for repos that were asked about, keyed by the requested name; invented names are dropped. */
+    private static Map<String, String> matching(List<RepoSummary> answers, List<RepoDetail> repos) {
         Map<String, String> byName = new LinkedHashMap<>();
-        for (RepoSummary summary : result.summaries()) {
-            if (summary == null || summary.name() == null || summary.summary() == null || summary.summary().isBlank()) {
+        for (RepoSummary summary : answers) {
+            if (summary.name() == null || summary.summary() == null || summary.summary().isBlank()
+                    || summary.summary().length() > TEXT_MAX_CHARS) {
                 continue;
             }
             repos.stream()
@@ -208,10 +276,29 @@ public class AiReviewer {
         return Math.round(share * 100);
     }
 
-    /** Structured output shape for {@link #repoSummaries}. */
-    record RepoSummaries(List<RepoSummary> summaries) {
+    /** The JSON shape asked of the model: only its schema is used; the answer is read by {@link #parse}. */
+    record Answer(String yearInReview, String weeklyReview, String craftReview, List<RepoSummary> repoSummaries,
+                  CharacterSheet characterSheet) {
     }
 
     record RepoSummary(String name, String summary) {
+    }
+
+    /** What {@link #parse} could read; a null field was missing or of the wrong type. */
+    record Parsed(String yearInReview, String weeklyReview, String craftReview, List<RepoSummary> repoSummaries,
+                  CharacterSheet characterSheet) {
+
+        static final Parsed NOTHING = new Parsed(null, null, null, List.of(), null);
+
+        /** Worth keeping instead of asking the next provider: at least one field came through. */
+        boolean anyUsable() {
+            return usable(yearInReview) || usable(weeklyReview) || usable(craftReview)
+                    || repoSummaries.stream().anyMatch(s -> usable(s.summary()))
+                    || (characterSheet != null && usable(characterSheet.title()));
+        }
+
+        private static boolean usable(String text) {
+            return text != null && !text.isBlank();
+        }
     }
 }
