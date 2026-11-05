@@ -45,6 +45,7 @@ New bugs get the next `B` number. PR descriptions list the bugs found while buil
 | [B41](#b41) | 14 (B9) | The OpenAPI schemas showed camelCase keys: swagger-core can't see Jackson 3's `@JsonNaming` | Dependency |
 | [B42](#b42) | U10 | The top row of CLASS SCORES drew a shorter bar than the others | UI |
 | [B43](#b43) | 14 (live) | The live daily refresh marked the developer `needs_reauth`: GitHub 401 on a token that worked two hours earlier | Open |
+| [B44](#b44) | 14 (B11) | Every context failed to start: a second constructor on the `AiProperties` record hid its binding constructor | Config |
 
 ---
 
@@ -340,3 +341,10 @@ New bugs get the next `B` number. PR descriptions list the bugs found while buil
 - **Ruled out:** only a real GitHub 401 sets `needs_reauth` (`GitHubGraphQlClient`, `GitHubOAuthClient`); a decryption failure or a network error doesn't. Our app never revokes tokens (LOG OUT only drops the JWT). GitHub's security log shows no `oauth_authorization.destroy` for the production app (`insighthubv2`) after its creation at the production login, and none by "GitHub System" (secret scanning), so the authorization wasn't revoked and the token didn't leak.
 - **Still open:** whether anything logged in between 01:05 and 03:00 UTC (each login stores a new token in the user's row), and what the Authorized OAuth Apps page says about the app. Next: the developer logs in again; watch the next 01:05 and 03:00 runs. If it recurs with no login, it's ours.
 - **Asked of backend:** on a GitHub 401, log GitHub's `X-GitHub-Request-Id` and error message (traceable by GitHub support), and keep when the stored token was obtained (a timestamp, never the token), so the next occurrence can be pinned to a token.
+
+### B44
+**Every context failed to start: a second constructor on the `AiProperties` record hid its binding constructor** · Phase 14 (B11) · Config · caught by `./mvnw verify` before the PR
+- **Symptom:** every integration test failed with `Failed to instantiate [AiProperties]: No default constructor found`; all unit tests passed.
+- **Root cause:** B11 added `regenerate` to the record and kept a 4-argument constructor so existing callers compile. Boot binds a `@ConfigurationProperties` record through its constructor only when there is exactly one; with two it falls back to JavaBean binding, which needs a no-argument constructor. The unit tests build the record by hand, so none of them went through the binder.
+- **Fix:** `@ConstructorBinding` on the canonical (compact) constructor. `AiPropertiesTest` binds `insightshub.ai` from `application.yml` with Boot's `Binder`, so the next one fails in `./mvnw test`.
+- **Lesson:** an extra constructor on a properties record needs `@ConstructorBinding` on the canonical one; test the binding itself, not only the record.

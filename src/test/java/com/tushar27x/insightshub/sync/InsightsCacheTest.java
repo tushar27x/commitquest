@@ -47,6 +47,11 @@ class InsightsCacheTest {
         CacheManager cacheManager() {
             return new ConcurrentMapCacheManager(InsightsQueryService.CACHE);
         }
+
+        @Bean
+        tools.jackson.databind.json.JsonMapper jsonMapper() {
+            return tools.jackson.databind.json.JsonMapper.builder().build();
+        }
     }
 
     @Autowired

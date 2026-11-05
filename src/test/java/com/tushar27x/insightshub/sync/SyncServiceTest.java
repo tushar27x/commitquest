@@ -1,7 +1,11 @@
 package com.tushar27x.insightshub.sync;
 
+import com.tushar27x.insightshub.ai.AiField;
+import com.tushar27x.insightshub.ai.AiInputs;
 import com.tushar27x.insightshub.ai.AiInsights;
 import com.tushar27x.insightshub.ai.AiInsightsService;
+import com.tushar27x.insightshub.ai.AiProperties;
+import com.tushar27x.insightshub.ai.Regeneration;
 import com.tushar27x.insightshub.ai.AiTestData;
 import com.tushar27x.insightshub.ai.CharacterSheet;
 import com.tushar27x.insightshub.entity.Users;
@@ -24,6 +28,7 @@ import com.tushar27x.insightshub.ratelimit.RateLimitProperties;
 import com.tushar27x.insightshub.ratelimit.RateLimitProperties.Policy;
 import com.tushar27x.insightshub.ratelimit.RateLimiter;
 import com.tushar27x.insightshub.ratelimit.RateLimiter.Decision;
+import com.tushar27x.insightshub.sync.SyncService.DailyOutcome;
 import com.tushar27x.insightshub.sync.SyncService.SyncOutcome;
 import com.tushar27x.insightshub.sync.SyncService.SyncResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +45,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -85,7 +91,8 @@ class SyncServiceTest {
     void setUp() {
         service = new SyncService(usersRepository, cipher, gitHub, engine, ai, writer, activityWriter, branchScanner,
                 JsonMapper.builder().build(), Clock.fixed(NOW, ZoneOffset.UTC), new SyncProperties(COOLDOWN, 4, 2), rateLimiter,
-                new RateLimitProperties(true, Map.of(RateLimitProperties.SYNC_GLOBAL, GLOBAL)), heroService);
+                new RateLimitProperties(true, Map.of(RateLimitProperties.SYNC_GLOBAL, GLOBAL)), heroService,
+                new AiProperties(null, null, Duration.ofSeconds(90), null));
         when(rateLimiter.tryAcquire("sync:global", GLOBAL)).thenReturn(new Decision(true, 30, 29, Duration.ofSeconds(50)));
         user = new Users(ID, "octocat");
         user.setEncryptedGithubToken(cipher.encrypt("gho_stored", ID));
@@ -101,6 +108,7 @@ class SyncServiceTest {
         when(engine.calculate(any())).thenReturn(result);
         when(ai.generate("octocat", result)).thenReturn(texts);
         when(branchScanner.scan(any(), any(), any(), any())).thenReturn(Map.of());
+        when(writer.storedTexts(ID)).thenReturn(Regeneration.Stored.NONE); // a new user: no texts yet
     }
 
     @Test
@@ -301,5 +309,96 @@ class SyncServiceTest {
 
         assertThatThrownBy(() -> service.refreshActivity(ID, OCT_13.date())).isInstanceOf(GitHubApiException.class);
         verifyNoInteractions(activityWriter);
+    }
+
+    // --- B11: when the LLM runs ---
+
+    /** Texts written yesterday from exactly today's inputs: nothing moved. */
+    private void textsWrittenYesterdayFromTheSameData() {
+        when(writer.storedTexts(ID)).thenReturn(
+                new Regeneration.Stored(true, NOW.minus(Duration.ofDays(1)), AiInputs.of(result), false));
+    }
+
+    @Test
+    void aLaterSyncKeepsTheStoredTextsAndCallsNoLlm() {
+        textsWrittenYesterdayFromTheSameData();
+
+        assertThat(service.sync(ID)).isEqualTo(SyncOutcome.SYNCED);
+
+        verify(writer).saveKeepingTexts(eq(ID), any(), eq(result), eq(NOW));
+        verify(writer, never()).save(anyLong(), any(), any(), any(), any());
+        verifyNoInteractions(ai);
+        verify(heroService).seedIfMissing(ID);
+    }
+
+    @Test
+    void aLaterSyncKeepsEvenOldOrFallbackTextsThatsTheDailyJobsWork() {
+        when(writer.storedTexts(ID)).thenReturn(new Regeneration.Stored(true, null, null, true));
+
+        service.sync(ID);
+
+        verifyNoInteractions(ai);
+    }
+
+    @Test
+    void theDailyRefreshFetchesTheFullInsightsAndKeepsTextsWhenNothingMoved() {
+        textsWrittenYesterdayFromTheSameData();
+
+        assertThat(service.refreshInsights(ID)).isEqualTo(DailyOutcome.UNCHANGED);
+
+        verify(gitHub).fetchUserInsights("gho_stored", "octocat"); // the full, year-long fetch: about 1 point
+        verify(activityWriter).writeCalendar(ID, List.of(OCT_12, OCT_13, OCT_14));
+        verify(writer).saveKeepingTexts(eq(ID), any(), eq(result), eq(NOW));
+        verifyNoInteractions(ai, rateLimiter);
+        verify(usersRepository, never()).claimSync(anyLong(), any(), any());
+        verify(heroService).seedIfMissing(ID);
+    }
+
+    @Test
+    void theDailyRefreshRewritesTheTextsWhenTheDataMoved() {
+        AiInputs before = AiInputs.of(result);
+        AiInputs fewerCommits = new AiInputs(before.archetype(), before.scores(), 30, before.totalPrs(),
+                before.totalStars(), before.topRepos(), before.topLanguages());
+        when(writer.storedTexts(ID)).thenReturn(
+                new Regeneration.Stored(true, NOW.minus(Duration.ofDays(1)), fewerCommits, false));
+
+        assertThat(service.refreshInsights(ID)).isEqualTo(DailyOutcome.REGENERATED);
+
+        verify(ai).generate("octocat", result);
+        verify(writer).save(eq(ID), any(), eq(result), eq(texts), eq(NOW));
+    }
+
+    @Test
+    void theDailyRefreshCountsAFallbackSeparately() {
+        when(ai.generate("octocat", result)).thenReturn(new AiInsights("y", "w", "c", Map.of(),
+                new CharacterSheet("t", "l"), Set.of(AiField.WEEKLY_REVIEW)));
+
+        assertThat(service.refreshInsights(ID)).isEqualTo(DailyOutcome.FALLBACK); // no texts yet: written
+    }
+
+    @Test
+    void theDailyRefreshWithARejectedTokenFlagsTheUser() {
+        when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenThrow(new GitHubAuthException("401"));
+
+        assertThat(service.refreshInsights(ID)).isEqualTo(DailyOutcome.NEEDS_REAUTH);
+        verify(writer).markNeedsReauth(ID);
+        verifyNoInteractions(ai, activityWriter);
+    }
+
+    @Test
+    void theDailyRefreshSkipsAFlaggedUser() {
+        user.setNeedsReauth(true);
+
+        assertThat(service.refreshInsights(ID)).isEqualTo(DailyOutcome.NEEDS_REAUTH);
+        verifyNoInteractions(gitHub, ai);
+    }
+
+    @Test
+    void theDailyRefreshLetsOtherGitHubFailuresThroughAndWritesNothing() {
+        when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenThrow(new GitHubApiException("HTTP 502"));
+
+        assertThatThrownBy(() -> service.refreshInsights(ID)).isInstanceOf(GitHubApiException.class);
+        verifyNoInteractions(activityWriter, ai);
+        verify(writer, never()).saveKeepingTexts(anyLong(), any(), any(), any());
     }
 }

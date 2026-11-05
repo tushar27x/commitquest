@@ -10,10 +10,10 @@ import java.time.Duration;
  * {@code @Scheduled} in {@link ScheduledSync} directly.
  *
  * @param minInterval    per-user cooldown between syncs the user starts (login or refresh). GitHub's limit is
- *                       per user token, so it isn't the constraint; each sync also makes five LLM calls on the
- *                       app's shared key. The daily activity refresh neither checks nor claims it.
- * @param concurrency    how many users the daily activity refresh runs at once. It makes no LLM calls, so this
- *                       bounds the database pool, not GitHub (each user has their own budget).
+ *                       per user token, so it isn't the constraint; since B11 only a new user's first sync calls
+ *                       the LLM. The daily refresh neither checks nor claims it.
+ * @param concurrency    how many users the daily insights refresh runs at once (GitHub on each user's own token +
+ *                       DB writes); its LLM calls have their own, lower cap ({@code insightshub.ai.regenerate.concurrency})
  * @param branchScanDays how many days, up to today, the branch scan checks for commits the calendar misses
  */
 @ConfigurationProperties(prefix = "insightshub.sync")

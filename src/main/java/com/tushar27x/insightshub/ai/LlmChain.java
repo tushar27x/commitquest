@@ -9,6 +9,7 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -29,6 +30,7 @@ public class LlmChain {
     static final int REASONING_HEADROOM = 300;
 
     private final List<LlmProvider> providers;
+    private final AtomicLong calls = new AtomicLong();
 
     public LlmChain(List<LlmProvider> providers) {
         if (providers.isEmpty()) {
@@ -47,6 +49,7 @@ public class LlmChain {
     <T> Optional<T> call(String task, ModelTier tier, int maxTokens,
                          Function<ChatClientRequestSpec, ResponseEntity<ChatResponse, T>> request, Predicate<T> usable) {
         for (LlmProvider provider : providers) {
+            calls.incrementAndGet();
             try {
                 ResponseEntity<ChatResponse, T> response =
                         request.apply(provider.client().prompt().options(options(provider, tier, maxTokens)));
@@ -90,7 +93,27 @@ public class LlmChain {
     }
 
     /**
-     * Every daily sync calls the LLM for every user (Phase 10), so usage is logged per call. Logged even
+     * A JSON answer parsed by the caller, so a malformed field can fall back on its own instead of failing the
+     * whole answer (B11). {@code parse} returns null for text it can't use at all.
+     */
+    public <T> Optional<T> json(String task, ModelTier tier, int maxTokens,
+                                Function<ChatClientRequestSpec, ChatClientRequestSpec> prompt,
+                                Function<String, T> parse, Predicate<T> usable) {
+        return call(task, tier, maxTokens, spec -> {
+            ChatResponse response = prompt.apply(spec).call().chatResponse();
+            String text = response == null || response.getResult() == null ? null
+                    : response.getResult().getOutput().getText();
+            return new ResponseEntity<>(response, text == null ? null : parse.apply(text));
+        }, usable);
+    }
+
+    /** Requests sent to any provider since the start, failed ones included (B11: a redeploy sends none). */
+    public long calls() {
+        return calls.get();
+    }
+
+    /**
+     * Usage is logged per call, so the cost of the combined call and the digest intros shows in the logs. Logged even
      * when the answer is then rejected: those tokens are spent too.
      */
     private static void logUsage(String task, LlmProvider provider, ModelTier tier, ChatResponse response) {

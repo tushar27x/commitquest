@@ -2,14 +2,11 @@ package com.tushar27x.insightshub.sync;
 
 import com.tushar27x.insightshub.github.GitHubApiException;
 import com.tushar27x.insightshub.repository.UsersRepository;
-import com.tushar27x.insightshub.sync.SyncService.SyncOutcome;
+import com.tushar27x.insightshub.sync.SyncService.DailyOutcome;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.Clock;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -17,15 +14,16 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Phase 10: refreshes every user's activity once a day, so the hero's history keeps up even for users who
- * don't open the app. Cron in {@code insightshub.sync.cron} (UTC; {@code "-"} turns it off).
+ * Phase 10, reworked in B11: refreshes every user once a day, so the hero's history and the insights keep up even
+ * for users who don't open the app. Cron in {@code insightshub.sync.cron} (UTC; {@code "-"} turns it off).
  * <p>
- * Activity only ({@link SyncService#refreshActivity}): the contribution calendar for the last
- * {@link ActivityWriter#OVERLAP_DAYS} days and the branch scan. No insights and no AI: the texts are
- * regenerated only by a sync the user starts (login or refresh). It doesn't claim the per-user cooldown either,
- * so it never blocks a refresh; its writes are idempotent upserts.
+ * A full insights refresh per user ({@link SyncService#refreshInsights}): one GitHub insights fetch on the user's own
+ * token, the activity, stats and scores written, and the AI texts rewritten only when the data moved since they were
+ * written (at most once per user per day). It doesn't claim the per-user cooldown, so it never blocks a refresh; its
+ * writes are idempotent upserts.
  * <ul>
- *   <li>One virtual thread per user, at most {@code insightshub.sync.concurrency} refreshing at once.</li>
+ *   <li>One virtual thread per user, at most {@code insightshub.sync.concurrency} refreshing at once, and at most
+ *       {@code insightshub.ai.regenerate.concurrency} of them calling the LLM.</li>
  *   <li>Each user is isolated: a failure is logged and counted, and the others go on.</li>
  *   <li>GitHub 401 → {@code needs_reauth}, done by {@link SyncService}; those users drop out of later runs.</li>
  * </ul>
@@ -39,14 +37,11 @@ public class ScheduledSync {
 
     private final UsersRepository usersRepository;
     private final SyncService syncService;
-    private final Clock clock;
     private final int concurrency;
 
-    public ScheduledSync(UsersRepository usersRepository, SyncService syncService, SyncProperties properties,
-                         Clock clock) {
+    public ScheduledSync(UsersRepository usersRepository, SyncService syncService, SyncProperties properties) {
         this.usersRepository = usersRepository;
         this.syncService = syncService;
-        this.clock = clock;
         this.concurrency = properties.concurrency();
     }
 
@@ -59,9 +54,7 @@ public class ScheduledSync {
     Summary run() {
         long start = System.nanoTime();
         List<Long> ids = usersRepository.findIdsForScheduledSync();
-        // refreshActivity adds a day of slack, so this covers the overlap in every zone
-        LocalDate from = LocalDate.now(clock.withZone(ZoneOffset.UTC)).minusDays(ActivityWriter.OVERLAP_DAYS);
-        log.info("Scheduled activity refresh started: {} users from {}, {} at a time", ids.size(), from, concurrency);
+        log.info("Scheduled insights refresh started: {} users, {} at a time", ids.size(), concurrency);
 
         Semaphore permits = new Semaphore(concurrency);
         Counts counts = new Counts();
@@ -70,13 +63,13 @@ public class ScheduledSync {
                 executor.submit(() -> {
                     permits.acquireUninterruptibly();
                     try {
-                        counts.add(syncService.refreshActivity(id, from));
+                        counts.add(syncService.refreshInsights(id));
                     } catch (GitHubApiException e) {
                         counts.failed.incrementAndGet();
-                        log.warn("Scheduled activity refresh for user {} failed: {}", id, e.getMessage());
+                        log.warn("Scheduled insights refresh for user {} failed: {}", id, e.getMessage());
                     } catch (RuntimeException e) {
                         counts.failed.incrementAndGet();
-                        log.error("Scheduled activity refresh for user {} failed", id, e);
+                        log.error("Scheduled insights refresh for user {} failed", id, e);
                     } finally {
                         permits.release();
                     }
@@ -84,30 +77,38 @@ public class ScheduledSync {
             }
         } // close() waits for every task
 
-        Summary summary = counts.summary();
-        log.info("Scheduled activity refresh done in {} s: {}", (System.nanoTime() - start) / 1_000_000_000, summary);
+        Summary summary = counts.summary(ids.size());
+        log.info("Scheduled insights refresh done in {} s: {}", (System.nanoTime() - start) / 1_000_000_000, summary);
         return summary;
     }
 
-    record Summary(int synced, int needsReauth, int failed) {
+    /**
+     * @param regenerated texts rewritten, every field from the LLM
+     * @param unchanged   texts kept: nothing moved enough, or already written today
+     * @param fallbacks   texts rewritten with at least one static fallback (retried next run)
+     */
+    record Summary(int users, int regenerated, int unchanged, int fallbacks, int needsReauth, int failed) {
     }
 
     private static final class Counts {
-        final AtomicInteger synced = new AtomicInteger();
+        final AtomicInteger regenerated = new AtomicInteger();
+        final AtomicInteger unchanged = new AtomicInteger();
+        final AtomicInteger fallbacks = new AtomicInteger();
         final AtomicInteger needsReauth = new AtomicInteger();
         final AtomicInteger failed = new AtomicInteger();
 
-        void add(SyncOutcome outcome) {
+        void add(DailyOutcome outcome) {
             switch (outcome) {
-                case SYNCED -> synced.incrementAndGet();
+                case REGENERATED -> regenerated.incrementAndGet();
+                case UNCHANGED -> unchanged.incrementAndGet();
+                case FALLBACK -> fallbacks.incrementAndGet();
                 case NEEDS_REAUTH -> needsReauth.incrementAndGet();
-                // refreshActivity never returns these: it takes no cooldown and no global cap
-                case COOLDOWN, BUSY -> throw new IllegalStateException("Unexpected outcome " + outcome);
             }
         }
 
-        Summary summary() {
-            return new Summary(synced.get(), needsReauth.get(), failed.get());
+        Summary summary(int users) {
+            return new Summary(users, regenerated.get(), unchanged.get(), fallbacks.get(), needsReauth.get(),
+                    failed.get());
         }
     }
 }

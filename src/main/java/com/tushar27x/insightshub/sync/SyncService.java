@@ -1,7 +1,10 @@
 package com.tushar27x.insightshub.sync;
 
+import com.tushar27x.insightshub.ai.AiInputs;
 import com.tushar27x.insightshub.ai.AiInsights;
 import com.tushar27x.insightshub.ai.AiInsightsService;
+import com.tushar27x.insightshub.ai.AiProperties;
+import com.tushar27x.insightshub.ai.Regeneration;
 import com.tushar27x.insightshub.entity.Users;
 import com.tushar27x.insightshub.github.GitHubAuthException;
 import com.tushar27x.insightshub.github.GitHubGraphQlClient;
@@ -29,12 +32,24 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.Semaphore;
 
 /**
  * One user's sync: GitHub → daily activity (calendar + branch scan) → stats and archetype → AI texts →
  * database (v1: the body of {@code callback()}).
- * Needs only a user id, so the login callback and refresh can call it. The daily {@link ScheduledSync} and the
- * hourly hero job call {@link #refreshActivity} instead: activity only, no AI.
+ * Needs only a user id, so the login callback and refresh can call it. The hourly hero job calls
+ * {@link #refreshActivity} instead: activity only, no AI.
+ * <p>
+ * When the LLM runs (B11, one combined call per user):
+ * <ul>
+ *   <li>{@link #sync}: only for a user with no texts yet (a new user's first login), inline, so the first Journal
+ *       has real texts. Later logins and SAVE keep the stored texts and call nothing.</li>
+ *   <li>{@link #refreshInsights}, the daily {@link ScheduledSync}: a full insights fetch, then the texts are
+ *       rewritten only when {@link Regeneration} says the data moved since they were written, at most once per
+ *       user per UTC day, and at most {@code insightshub.ai.regenerate.concurrency} calls at once.</li>
+ * </ul>
+ * Nothing calls the LLM at startup.
  * <p>
  * The slow steps (GitHub, LLMs: seconds each) run outside any transaction; only the final write in
  * {@link ActivityWriter} and {@link InsightsWriter} hold a database connection.
@@ -63,12 +78,14 @@ public class SyncService {
     private final RateLimiter rateLimiter;
     private final RateLimitProperties rateLimits;
     private final HeroService heroService;
+    private final AiProperties.Regenerate regenerate;
+    private final Semaphore llmPermits;
 
     public SyncService(UsersRepository usersRepository, TokenCipher tokenCipher, GitHubGraphQlClient gitHub,
                        InsightsEngine engine, AiInsightsService ai, InsightsWriter writer,
                        ActivityWriter activityWriter, BranchScanner branchScanner, JsonMapper jsonMapper,
                        Clock clock, SyncProperties properties, RateLimiter rateLimiter,
-                       RateLimitProperties rateLimits, HeroService heroService) {
+                       RateLimitProperties rateLimits, HeroService heroService, AiProperties aiProperties) {
         this.usersRepository = usersRepository;
         this.tokenCipher = tokenCipher;
         this.gitHub = gitHub;
@@ -83,6 +100,8 @@ public class SyncService {
         this.rateLimiter = rateLimiter;
         this.rateLimits = rateLimits;
         this.heroService = heroService;
+        this.regenerate = aiProperties.regenerate();
+        this.llmPermits = new Semaphore(regenerate.concurrency());
     }
 
     /**
@@ -156,18 +175,85 @@ public class SyncService {
         Activity activity = writeActivity(user, token, data);
 
         InsightsResult result = engine.calculate(data.user());
-        AiInsights texts = ai.generate(user.getLogin(), result);
         Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP); // snake_case, v1's shape
 
-        writer.save(userId, stats, result, texts, clock.instant());
+        // B11: the LLM only for a user with no texts yet; everyone else keeps theirs until the daily job
+        boolean firstTexts = !writer.storedTexts(userId).hasTexts();
+        if (firstTexts) {
+            AiInsights texts = ai.generate(user.getLogin(), result);
+            writer.save(userId, stats, result, texts, clock.instant());
+        } else {
+            writer.saveKeepingTexts(userId, stats, result, clock.instant());
+        }
         seedHeroQuietly(user);
-        log.info("Sync for '{}' done in {} ms: {}, {} activity days written, branch scan {}", user.getLogin(),
-                (System.nanoTime() - start) / 1_000_000, result.archetype(), activity.days(), activity.branchCounts());
+        log.info("Sync for '{}' done in {} ms: {}, {} activity days written, branch scan {}, AI texts {}",
+                user.getLogin(), (System.nanoTime() - start) / 1_000_000, result.archetype(), activity.days(),
+                activity.branchCounts(), firstTexts ? "written (first sync)" : "kept");
         return SyncOutcome.SYNCED;
     }
 
     /**
-     * The daily {@link ScheduledSync}, and the hero job before it settles days: the contribution calendar from
+     * The daily {@link ScheduledSync} for one user (B11): a full insights fetch with the user's own token (about 1
+     * GitHub point), the activity, stats and scores written as in {@link #sync}, and the AI texts rewritten only if
+     * {@link Regeneration} finds the data moved since they were written. No cooldown and no global cap: the user
+     * didn't start it, and the LLM calls are bounded by {@code insightshub.ai.regenerate.concurrency}.
+     *
+     * @return what happened to the texts, or {@code NEEDS_REAUTH} (and the user is flagged) when GitHub rejects the
+     * token. Any other GitHub failure is thrown, and nothing is written.
+     */
+    public DailyOutcome refreshInsights(long userId) {
+        Users user = load(userId);
+        if (user.isNeedsReauth() || user.getEncryptedGithubToken() == null) {
+            return DailyOutcome.NEEDS_REAUTH;
+        }
+        long start = System.nanoTime();
+        String token = tokenCipher.decrypt(user.getEncryptedGithubToken(), userId);
+
+        UserInsightsData data;
+        try {
+            data = gitHub.fetchUserInsights(token, user.getLogin());
+        } catch (GitHubAuthException e) {
+            log.warn("Daily insights refresh for '{}': GitHub rejected the stored token; marked needs_reauth",
+                    user.getLogin());
+            writer.markNeedsReauth(userId);
+            return DailyOutcome.NEEDS_REAUTH;
+        }
+        Activity activity = writeActivity(user, token, data);
+
+        InsightsResult result = engine.calculate(data.user());
+        Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP);
+        Optional<Regeneration.Reason> reason = Regeneration.decide(writer.storedTexts(userId), AiInputs.of(result),
+                clock.instant(), regenerate);
+
+        DailyOutcome outcome;
+        if (reason.isPresent()) {
+            AiInsights texts = generateWithPermit(user.getLogin(), result);
+            writer.save(userId, stats, result, texts, clock.instant());
+            outcome = texts.fallback() ? DailyOutcome.FALLBACK : DailyOutcome.REGENERATED;
+        } else {
+            writer.saveKeepingTexts(userId, stats, result, clock.instant());
+            outcome = DailyOutcome.UNCHANGED;
+        }
+        seedHeroQuietly(user);
+        log.info("Daily insights refresh for '{}' done in {} ms: {}, {} activity days written, branch scan {}, "
+                        + "AI texts {}", user.getLogin(), (System.nanoTime() - start) / 1_000_000, result.archetype(),
+                activity.days(), activity.branchCounts(),
+                reason.map(r -> "rewritten (" + r + ")" + (outcome == DailyOutcome.FALLBACK ? " with fallbacks" : ""))
+                        .orElse("kept"));
+        return outcome;
+    }
+
+    private AiInsights generateWithPermit(String login, InsightsResult result) {
+        llmPermits.acquireUninterruptibly();
+        try {
+            return ai.generate(login, result);
+        } finally {
+            llmPermits.release();
+        }
+    }
+
+    /**
+     * The hourly hero job, before it settles days: the contribution calendar from
      * {@code from} and the branch scan, written to {@code daily_contributions}. No insights, no AI and no cooldown:
      * it's one or two cheap GitHub calls on the user's own token.
      *
@@ -244,6 +330,18 @@ public class SyncService {
 
     /** @param retryAfter for {@code COOLDOWN} and {@code BUSY}: when a new attempt can succeed */
     public record SyncResult(SyncOutcome outcome, Duration retryAfter) {
+    }
+
+    /** {@link #refreshInsights}: what happened to the user's AI texts. */
+    public enum DailyOutcome {
+        /** Rewritten, every field from the LLM. */
+        REGENERATED,
+        /** Rewritten, but at least one field is a static fallback (retried on the next run). */
+        FALLBACK,
+        /** Nothing moved enough, or they were already written today: kept. */
+        UNCHANGED,
+        /** No usable GitHub token: the user must log in again. */
+        NEEDS_REAUTH
     }
 
     public enum SyncOutcome {

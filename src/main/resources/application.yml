@@ -86,8 +86,8 @@ insightshub:
       unsubscribe: { requests: 10, per: 1m }  # per IP, GET and POST /api/notifications/unsubscribe together
       sync-global: { requests: 30, per: 1m }  # all users together: protects the shared Groq key; tune to the plan
   sync:
-    min-interval: 10m  # per-user cooldown for login/refresh syncs, the only ones that call the LLM (v1: 7 days, login only)
-    cron: "0 0 3 * * *"  # daily activity-only refresh of every user, no LLM calls, in UTC (Spring cron: sec min hour day month weekday; "-" = off)
+    min-interval: 10m  # per-user cooldown for login/refresh syncs (v1: 7 days, login only); only a new user's first one calls the LLM (B11)
+    cron: "0 0 3 * * *"  # daily insights refresh of every user, in UTC; the LLM only when the data moved (insightshub.ai.regenerate) (Spring cron: sec min hour day month weekday; "-" = off)
     concurrency: 4  # users refreshed at once by the daily job (GitHub on each user's own token + DB writes)
     branch-scan-days: 2  # today and yesterday: days the calendar shows as empty get a branch scan
   hero:
@@ -102,9 +102,14 @@ insightshub:
     concurrency: 4  # users at once: one fast-tier LLM call + one email each
     from: ${DIGEST_FROM:}  # e.g. "Insight Hub <digest@example.com>"
   ai:
-    fast-model: openai/gpt-oss-20b  # cheap model for repo summaries (v1: llama-3.1-8b-instant, retired)
+    fast-model: openai/gpt-oss-20b  # cheap model for the digest intro (v1: llama-3.1-8b-instant, retired)
     reasoning-effort: low  # gpt-oss reasons before answering; "low" keeps that short
-    task-timeout: 90s
+    task-timeout: 90s  # the one combined texts call (B11), fallback provider included; inside the 120 s proxy timeout
+    regenerate:  # B11: the daily job rewrites a user's texts only when one of these moved since they were written
+      score-delta: 5  # any class score, in points
+      stat-change: 0.10  # total commits, PRs or stars, as a share of the old value
+      max-age: 7d  # rewritten anyway after this many (UTC) days: the weekly review describes "this week"
+      concurrency: 2  # LLM calls at once in the daily job
     fallback:  # OpenAI-compatible Gemini endpoint; switched off while GEMINI_API_KEY is empty
       base-url: https://generativelanguage.googleapis.com/v1beta/openai
       api-key: ${GEMINI_API_KEY:}
