@@ -70,6 +70,20 @@ public class Insights {
     @Setter
     private String characterLore;
 
+    /** When the AI texts above were written (V7, B11); null for texts from before V7. Not {@link #updatedAt}: every sync moves that. */
+    @Setter
+    private Instant aiGeneratedAt;
+
+    /** What the texts were written from ({@code ai/AiInputs}, snake_case); null with {@link #aiGeneratedAt}. */
+    @Setter
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> aiInputs;
+
+    /** At least one of the texts is a static fallback: the daily job rewrites them. */
+    @Setter
+    @Column(nullable = false)
+    private boolean aiFallback;
+
     @UpdateTimestamp
     @Column(nullable = false)
     private Instant updatedAt;
