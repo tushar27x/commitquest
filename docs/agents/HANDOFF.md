@@ -310,3 +310,37 @@ Status: open
 **Region:** the instance is in Mumbai and Neon in Ohio (~200 ms per round trip): anything that cuts database round trips per request helps (flag what you see; no change requested).
 **Not needed:** CORS (the browser calls `/api/*` on the Vercel origin), a migration. The `Dockerfile` is integration's (it copies the packaged jar; tell me if the jar's name or layout changes).
 Status: open
+
+## 2026-11-04 · integration → all · FYI
+**Live:** web <https://insights-hub-v2-one.vercel.app>, backend <https://insighthubv2.duckdns.org> (the Docker Hub image on EC2 `ap-south-1`, `docs/deploy.md`). Every green merge to `main` now pushes a new backend image; the developer deploys it with `./deploy.sh` on the instance, and Vercel deploys `web/` by itself, so **anything merged to `main` reaches users**. Backend: the `prod` profile REQUEST above is the next backend step. Never point a local backend at Neon while production runs (both run the hourly jobs).
+Status: open
+
+## 2026-11-05 · integration → backend · REQUEST
+Two more for the backend, after the `prod` profile above (one PR or two, your call). Updated the same day with the developer's second decision.
+
+**1. Fewer LLM calls: one combined call, at the first login, then only from the daily job when the data moved** (the developer's decisions, 2026-11-05; this replaces both earlier versions of this item). Today every login or SAVE past the 10-minute cooldown runs a full sync with **5 LLM calls** on the app's Groq key.
+
+*a. One combined call per user.* Replace the five generator calls (year in review, weekly, craft, character sheet, repo summaries) with **one** call on the primary tier that returns all five as structured JSON (Spring AI structured output). Each field keeps its own static fallback when it's missing, empty or malformed; a failed or timed-out call falls back for every field. One prompt per user: never several users in one prompt (one user's data must not reach another's text). Keep the persona and the "no roast" rule; the per-task timeout becomes one, longer, timeout.
+
+*b. When the LLM runs.*
+- **First login of a new user** (no texts yet): the login sync makes the combined call **inline**, so the first Journal already has real texts. The user waits; check that it stays well inside the 120 s proxy timeout (today's worst case is about 90 s with five calls).
+- **Every later login, SAVE and redeploy: no LLM call.** The sync still does GitHub, stats, scoring and the hero seed. A redeploy calls nothing today (no startup hook touches the LLM): keep it so.
+- **The daily scheduled job** (the 03:00 UTC `ScheduledSync`, or a job right after it): for each user, a **full** GitHub insights fetch with their own token (about 1 point each), the engine and the scores written as in a full sync, then regenerate the texts **only if the data moved**:
+  - the scored class changed, or
+  - any class score moved by **5+ points**, or
+  - total commits, PRs or stars changed by **10%+**, or
+  - the top repos or top languages changed, or
+  - the texts are **7+ days old** (the weekly review describes "this week"), or
+  - the last texts came from a fallback.
+  Compare against the inputs the texts were generated from, not yesterday's (store them, or a snapshot of them, with the texts). **At most once per user per day.** All thresholds are properties (e.g. `insightshub.ai.regenerate.score-delta: 5`, `stat-change: 0.10`, `max-age: 7d`). Cap concurrency (e.g. 2). Summary log like the other jobs: `{users, regenerated, unchanged, fallbacks, needsReauth, failed}`.
+- This changes the daily job from activity-only (#32) to a full insights refresh with no LLM unless the data moved; the GitHub cost is 1 point per user per day.
+- The texts need their own timestamp (e.g. `ai_generated_at`) and the stored generation inputs: a migration (`V7`). `insights.updated_at` changes on every sync.
+
+*c. Unchanged.* The digest intro (`DigestIntro`: one fast-tier call per user per local day, scheduled, only with `DIGEST_ENABLED`) already fits the rule. `/api/user/insights` keeps its shape; if you add the texts' timestamp, tell me and I'll update `contract.md`, the fixtures and the types.
+
+*d. Tests.* A first sync makes exactly one LLM call; later logins and SAVE make none (a `FakeChatModel` that fails if called); a context start makes none; the job regenerates for each trigger above and skips a user below every threshold; a 7-day-old text is regenerated though nothing changed; a malformed field falls back alone; a user is regenerated at most once a day.
+
+*Later, not now:* Groq's Batch API for the daily job (cheaper, outside the live rate limits; needs checking against the Groq plan).
+
+**2. B43 diagnostics** (`BUGS.md`): on a GitHub 401, log GitHub's `X-GitHub-Request-Id` and the error message (never the token), and store when the user's GitHub token was obtained (e.g. `users.github_token_obtained_at`, set at login) and log its age with the 401. The first live daily refresh marked the developer `needs_reauth` with no revocation in GitHub's security log; the next occurrence should be traceable.
+Status: open

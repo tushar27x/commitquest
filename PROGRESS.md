@@ -66,7 +66,7 @@ From Part D on, 🤖 names the lane: **backend**, **ui** or **integration** (ste
 | 12 | Notifications: daily digest email (from `hero_events`) | 🤖 backend (B7) | ✅ (first live run pending: needs SMTP) | [#35](https://github.com/tushar27x/insightsHubV2/pull/35) |
 | 13 | Arena: leaderboards by hero level within the chosen class | 🤖 backend (B8) | ✅ backend · **shelved in `web/` for the first release** (U10: tab, route and Settings switch removed) | [#40](https://github.com/tushar27x/insightsHubV2/pull/40) [#42](https://github.com/tushar27x/insightsHubV2/pull/42) |
 | | **Part C: Ship it** | | | |
-| 14 | Testing, API docs & deployment | 🤖 integration (I2, I3, I5, I6); deploy TBD | 🟨 I2, I3, I5, B9 (Swagger) done; I6 and deploy left | [#15](https://github.com/tushar27x/insightsHubV2/pull/15) [#29](https://github.com/tushar27x/insightsHubV2/pull/29) [#36](https://github.com/tushar27x/insightsHubV2/pull/36) |
+| 14 | Testing, API docs & deployment | 🤖 integration (I2, I3, I5, I6, deploy) | 🟨 I2, I3, I5, B9 (Swagger) done; **live since 2026-11-04** (Vercel + EC2); I6 and the backend's `prod` profile left | [#51](https://github.com/tushar27x/insightsHubV2/pull/51) [#15](https://github.com/tushar27x/insightsHubV2/pull/15) [#29](https://github.com/tushar27x/insightsHubV2/pull/29) [#36](https://github.com/tushar27x/insightsHubV2/pull/36) |
 | | **Part D: Hero-pet plan** | | | |
 | D0 | Docs: kit committed, `PROGRESS.md` + `AGENTS.md` updated | 🤖 integration (I0) | ✅ | [#9](https://github.com/tushar27x/insightsHubV2/pull/9) |
 | D1 | Web UI in `web/` (scaffold, title, Home, Journal, Hero, Settings, Arena shell) | 🤖 ui (U1–U10) | ✅ U1–U10 (Arena shelved in U10) | [#11](https://github.com/tushar27x/insightsHubV2/pull/11) [#14](https://github.com/tushar27x/insightsHubV2/pull/14) [#18](https://github.com/tushar27x/insightsHubV2/pull/18) [#23](https://github.com/tushar27x/insightsHubV2/pull/23) [#27](https://github.com/tushar27x/insightsHubV2/pull/27) [#28](https://github.com/tushar27x/insightsHubV2/pull/28) `0ef3d35` |
@@ -74,7 +74,7 @@ From Part D on, 🤖 names the lane: **backend**, **ui** or **integration** (ste
 | | **Stretch** | | | |
 | S | RAG chat, Discord alerts, friends leaderboard, observability | 🧑 | ⬜ | |
 
-**Next up** (each waits for the developer's go): ship the app as it is (decided 2026-11-04; the Arena board is shelved) · 🤖 integration **I6** (responsive/a11y, release checklist) · deployment: Vercel + the backend image on EC2 t3.micro, `ap-south-1` ([`docs/deploy.md`](docs/deploy.md); 🤖 backend: the `prod` profile) · the digest's first live send (needs SMTP). Run it locally: [`docs/run-locally.md`](docs/run-locally.md).
+**Next up** (each waits for the developer's go): **live since 2026-11-04**: web <https://insights-hub-v2-one.vercel.app>, backend <https://insighthubv2.duckdns.org> ([`docs/deploy.md`](docs/deploy.md)) · 🤖 backend: the `prod` profile (HANDOFF REQUEST: per-IP rate limits behind Caddy, Neon pool, job concurrency) · the release checklist's open items (first live run of the daily refresh and the hourly hero job, budget alert, usage after a week) · 🤖 integration **I6** (responsive/a11y) · the digest's first live send (needs SMTP). Run it locally: [`docs/run-locally.md`](docs/run-locally.md).
 
 ---
 
@@ -542,7 +542,7 @@ Keeping v1's response shape meant the v1 Next.js client could be pointed at v2. 
 - [x] `./mvnw verify` is green with integration tests (I2: Testcontainers Postgres + Redis, CI on every PR; `DailyContributionsRepositoryIT` disabled until B36)
 - [x] Backend contract tests (I3): `it/ApiContractIT` checks the real `/insights`, `/hero`, `/hero/events` and `/preferences` responses and their errors against `docs/api/fixtures/` and `contract.md`
 - [x] Swagger UI documents every endpoint (B9, #45: `API_DOCS_ENABLED=true`, `OpenApiDocsTest` checks paths and schemas against the contract and fixtures)
-- [ ] The app runs in production, and the daily sync + digest fire there
+- [ ] The app runs in production, and the daily sync + digest fire there (running since 2026-11-04: Vercel + the backend image on EC2, #51; the first live daily refresh and hourly hero job still to check; the digest waits on SMTP)
 
 ---
 
@@ -855,3 +855,35 @@ One entry per session: what was built, what was learned, open questions. Bug det
 - **Flagged:** the instance in Mumbai and Neon in Ohio are ~200 ms apart, and each request makes several database round trips. The developer's call: measure first, or move v2 to a Neon project in Asia (`docs/deploy.md`, "Region").
 - **Found:** the IP-keyed rate limits would see every visitor as `127.0.0.1` behind Caddy; REQUEST to backend for the `prod` profile (trusted forwarded headers from loopback only, a small Hikari pool so Neon can suspend, job concurrency 2). Vercel's external rewrites wait 120 s, enough for the first sync.
 - **Open for the developer:** the domain (or DuckDNS), the Docker Hub account and token, the Neon region question, SMTP.
+
+### 2026-11-04: End of session (🤖 integration)
+- **Merged today:** #49 (U10: Hero and Settings centred, Arena removed from `web/`, B42), #50 (docs for U10, B9, quest wording), #51 (deployment: `Dockerfile`, the CI `image` job, `docs/deploy/`, `docs/deploy.md`).
+- **Decisions by the developer:**
+  - Ship the app in its current state; the **Arena board is shelved** (the backend keeps `/api/leaderboard`, `/api/user/rank` and `public_profile`).
+  - Hosting: **Vercel** for `web/`; the backend as a **Docker image** on Docker Hub (`tushar2703/insight-hub`), pulled by an **AWS EC2 t3.micro in `ap-south-1`** (Ubuntu, 1 GB + 2 GB swap); Neon and Upstash free tiers as before. Oracle's free tier didn't work out for the developer. CI pushes `:latest` + `:sha-<7>` after every green run on `main`; deploys are `./deploy.sh` on the instance, by hand.
+  - The backend's domain is a free DuckDNS name (no bought domain).
+- **Live since the evening of 2026-11-04:**
+
+  | | |
+  |---|---|
+  | Web | <https://insights-hub-v2-one.vercel.app> (Vercel, root `web`, `NEXT_PUBLIC_MOCK=0`, both backend URLs set) |
+  | Backend | <https://insighthubv2.duckdns.org> (Elastic IP, `/opt/insightshub`: compose with the backend + Caddy, Let's Encrypt certificate until 2027-02-02, renewed by Caddy) |
+  | OAuth | A production GitHub OAuth app, separate from the dev one (callback `https://insighthubv2.duckdns.org/api/auth/callback`) |
+
+  Checked from outside: health `UP` (200), `http://` → 308 to `https://`, `/actuator/env` 404, `/arena` 404, `/api/*` through Vercel returns the backend's problem+json 401, login redirects to GitHub with the production client id. The developer's first production login worked: Home with WIZARD LV 2, 2/3 hearts, streak 3.
+- **Hero catch-up verified:** last settled 2026-10-18; the hourly job settled the missed days honestly to **LV 2** (from LV 5, as expected), and three active days since (Sun–Tue) won a heart back.
+- **Measured:** the backend under the image's JVM flags peaked at 328 MB RSS through the full-stack e2e suite; on the instance the container sits at 387 MiB of its 700 MiB limit, idle CPU 0.4%. Startup takes ~30 s on the instance (4.9 s locally): Mumbai ↔ Neon in Ohio, ~200 ms per round trip, and a slower CPU.
+- **Setup notes from the first deploy** (for `docs/deploy.md` next time): the instance runs Ubuntu (user `ubuntu`); a host-installed Caddy had to be stopped for the compose one; the first `.env` copied over held the laptop's dev values and two credentials the server doesn't need (`DOCKERHUB_TOKEN`, `GITHUB_TOKEN`): removed, renamed to `backend.env`, `JWT_SECRET` regenerated, `ENCRYPTION_KEY` kept (dev and prod share schema `v2`, so they must share the key). The deploy files can be fetched on the instance with `curl` from `raw.githubusercontent.com` (the repo is public) instead of `scp`.
+- **Lessons:** a UI change that removes something the e2e specs assert must ship with its spec change in the same PR (#49/#50 were each red against the other half). A stale `web/.next` cache fails `next build`'s type check after a route is deleted. A value meant as a GitHub Actions *variable* added as a *secret* is invisible to `vars.*` (the image job now reads either).
+- **Open for next session:**
+  - 🤖 backend: the `prod` profile (`application-prod.yml`, HANDOFF REQUEST of 2026-11-04). Until it lands, the per-IP rate limits (`login`, `callback`, `unsubscribe`) see every visitor as Caddy and are shared.
+  - 🤖 backend (HANDOFF REQUEST of 2026-11-05): **fewer LLM calls**: one combined call per user (5 → 1) at the first login; later logins, SAVE and redeploys make none; the daily job refreshes everyone's insights from GitHub and regenerates texts only when the data moved (class changed, a score ±5, commits/PRs/stars ±10%, top repos/languages changed, texts 7+ days old, or a fallback); B43 diagnostics.
+  - Release checklist (`docs/deploy.md` §8): SAVE twice (cooldown), a Settings save; on the instance, the first 03:00 UTC refresh and the hourly hero runs in `docker compose --env-file deploy.env logs backend`; an AWS budget alert; Neon compute hours and Upstash commands after a few days; page latency (move v2 to a Neon project in Asia if it's slow).
+  - Don't run the local backend against Neon while production runs (both would run the hourly jobs; digests could go out twice). Check whether `DIGEST_ENABLED` is on in production.
+  - Docs: fold the setup notes above into `docs/deploy.md`.
+  - 🤖 integration I6 (responsive/a11y on the live app); `docs/design/png/` re-render; SMTP for the digest; the older items (archetype calibration, v1 B26, GitGuardian).
+
+### 2026-11-05: first live runs (🤖 integration)
+- **Scheduled jobs live:** the hourly hero job at 01:05 UTC settled 1 day for 1 hero (`waitingForReauth=0`, nothing failed); the daily refresh started at 03:00:01 UTC as scheduled.
+- **B43 (open):** the 03:00 refresh got a GitHub 401 for the developer and marked them `needs_reauth`, two hours after the hero job used the same token fine. Not a revocation (GitHub's security log), not a leak, not our code. The developer logs in again; diagnostics requested from backend.
+- **Decided by the developer** (in three steps, the last one standing): every new user cost 5 LLM calls at each login past the cooldown. Now: **one combined call** per user for all five texts, made **inline at the first login** (real texts on the first Journal); afterwards **no LLM call on login, SAVE or redeploy**; the **daily job** fetches every user's insights from GitHub and regenerates the texts only when the data moved (thresholds: class changed, any score ±5, commits/PRs/stars ±10%, top repos/languages changed, texts 7+ days old, or a fallback), at most once a day. Not batching several users into one prompt (cross-user leakage, shared failure). Groq's Batch API noted for later. A redeploy already made no LLM calls. The digest intro already fits. REQUEST to backend.
