@@ -1,0 +1,53 @@
+# The production profile (B10): the Docker image sets SPRING_PROFILES_ACTIVE=prod (docs/deploy.md).
+# The backend runs on an EC2 t3.micro (2 vCPU, 1 GB + 2 GB swap) behind Caddy in the same compose
+# project; Neon (us-east-2, through its -pooler PgBouncer endpoint) and Upstash as everywhere else.
+# Only what differs from application.yml lives here. Secrets still come from the environment.
+server:
+  # Caddy reaches the backend from the compose network (172.16.0.0/12); the host binds 8080 to
+  # 127.0.0.1 only. "native" turns on Tomcat's RemoteIpValve, which takes X-Forwarded-For and
+  # X-Forwarded-Proto ONLY when the connection comes from an internal address (Boot's default
+  # server.tomcat.remoteip.internal-proxies: loopback, 10/8, 172.16/12, 192.168/16, 169.254/16,
+  # 100.64/10, ::1, fc00::/7, fe80::/10). A forwarded header from any other address is ignored, so
+  # a client can't pick its own IP. Caddy replaces any X-Forwarded-For a visitor sends (it trusts no
+  # upstream proxies by default), so the address the IP-keyed rate limits see is the visitor's.
+  forward-headers-strategy: native
+  shutdown: graceful  # Boot's default, stated: finish in-flight requests, refuse new ones
+spring:
+  lifecycle:
+    # Compose gives the container 45 s after SIGTERM. Running jobs are awaited first (below, up to
+    # 20 s), then in-flight requests (up to 15 s), then the pool closes: about 35 s at worst.
+    # Anything cut off is safe to repeat: every job write is idempotent (ON CONFLICT, CAS).
+    timeout-per-shutdown-phase: 15s
+  task:
+    scheduling:
+      shutdown:
+        await-termination: true  # let a running hero/digest/sync job finish its users before the pool closes
+        await-termination-period: 20s
+  datasource:
+    hikari:
+      # Neon free tier: a compute suspends after 5 min with no active queries; idle connections
+      # don't hold it up (Neon closes them at suspend), but any query does. Hikari 7's defaults (10
+      # connections kept open for good, each validated every 2 min by keepalive-time) send a
+      # validation query through the pooler to Postgres every few seconds to minutes, so the
+      # compute is never quiet for 5 minutes.
+      # Here connections open on demand and close a minute after their last use, and no keepalive
+      # runs, so the compute can suspend between the hourly jobs. Cost: the first query after a
+      # quiet minute opens a new TLS connection to Ohio (a few round trips, ~0.5-1 s), and after a
+      # suspend Neon's cold start adds a few hundred ms.
+      maximum-pool-size: 4  # 2 job workers + requests; GitHub and LLM calls never hold a connection
+      minimum-idle: 0
+      idle-timeout: 60000  # ms (Hikari takes plain milliseconds); its housekeeper retires idle connections every 30 s
+      keepalive-time: 0  # off: a keepalive would wake the compute (and idle-timeout comes first anyway)
+      max-lifetime: 1800000  # ms, Hikari's default (30 min), stated
+  output:
+    ansi:
+      enabled: never  # plain lines for `docker compose logs` (no TTY anyway)
+insightshub:
+  # 2 vCPU and 1 GB: two users at a time per job. Each worker holds at most one DB connection, and
+  # only for short writes, so two jobs overlapping (03:00 sync and 03:05 hero) fit the pool of 4.
+  sync:
+    concurrency: 2
+  hero:
+    concurrency: 2
+  digest:
+    concurrency: 2

@@ -68,9 +68,13 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * {@code <policy>:ip:<address>} or {@code <policy>:user:<githubId>}. The IP is the connection's
-     * address: {@code X-Forwarded-For} is not trusted, because any client can set it to dodge the limit.
-     * Behind a real proxy (Phase 14), {@code server.forward-headers-strategy} makes Spring resolve it safely.
+     * {@code <policy>:ip:<address>} or {@code <policy>:user:<githubId>}. The IP is
+     * {@link HttpServletRequest#getRemoteAddr()}; this class never reads forwarding headers itself.
+     * Locally that's the connection's address. In production ({@code application-prod.yml},
+     * {@code server.forward-headers-strategy: native}) Tomcat's {@code RemoteIpValve} replaces it with
+     * the client address from {@code X-Forwarded-For}, but only when the connection comes from an
+     * internal address (Caddy on the compose network); the header from any other address is ignored,
+     * so a client can't choose the key it is limited under ({@code ForwardedClientIpTest}).
      */
     static String key(RateLimit limit, HttpServletRequest request) {
         if (limit.key() == KeyType.USER) {
