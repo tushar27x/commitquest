@@ -544,6 +544,8 @@ Keeping v1's response shape meant the v1 Next.js client could be pointed at v2. 
 - [x] Swagger UI documents every endpoint (B9, #45: `API_DOCS_ENABLED=true`, `OpenApiDocsTest` checks paths and schemas against the contract and fixtures)
 - [ ] The app runs in production, and the daily sync + digest fire there (running since 2026-11-04: Vercel + the backend image on EC2, #51; the first live daily refresh and hourly hero job still to check; the digest waits on SMTP)
 
+**As built (B10, `backend/b10-prod-profile`):** `application-prod.yml` (the image's `SPRING_PROFILES_ACTIVE=prod`). `server.forward-headers-strategy: native`: Tomcat's `RemoteIpValve` takes `X-Forwarded-For` only from internal addresses (Boot's default `internal-proxies`, which cover Caddy on `172.16.0.0/12`), so the IP-keyed limits see the visitor (`ForwardedClientIpTest` runs Boot's own Tomcat customizer on the profile). Hikari: 4 connections at most, `minimum-idle: 0`, `idle-timeout` 60 s, `keepalive-time` 0. Hikari 7's defaults (10 connections for good, a validation query every 2 min each) would keep Neon's compute from ever being quiet for the 5 minutes it needs to suspend; idle connections themselves don't hold it up. Jobs at concurrency 2; graceful shutdown awaits a running job 20 s, then requests 15 s, inside compose's 45 s. `ProdProfileTest` binds every value the way Boot does.
+
 ---
 
 # Part D: Hero-pet plan (2026-10-16)
