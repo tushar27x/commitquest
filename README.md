@@ -1,11 +1,22 @@
 # Insight Hub
 
-A hero-pet habit tracker for your GitHub activity. Sign in with GitHub, and a scored D&D-class
-character — your hero — lives or dies by your commits: it loses a heart for every day you go
-quiet, gains XP and levels up the days you don't, and reads its own class off your real coding
-habits.
+A GitHub habit tracker and activity dashboard. Sign in with GitHub and get a Tamagotchi-style
+hero avatar that turns your commit habit into something you'd feel bad about neglecting: it loses
+a heart for every day you go quiet, gains XP and levels up the days you don't, and its D&D class
+is read off your real coding habits — alongside a journal of your commits, PRs, top repos and
+AI-written reviews.
 
 **Live app:** https://insights-hub-v2-one.vercel.app/
+
+![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4-6DB33F?logo=springboot&logoColor=white)
+![Spring AI](https://img.shields.io/badge/Spring%20AI-1C1C1C?logo=spring&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-Upstash-DC382D?logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 
 <p align="center">
   <img src="docs/screenshots/landing.jpg" width="200" alt="Landing screen">
@@ -20,9 +31,10 @@ habits.
 
 ## What it does
 
-- **Hero & hearts** — 3 hearts, XP and levels. A day with GitHub activity (a commit, PR, issue —
-  public activity only) feeds the hero; a day without one costs a heart. Pick weekly rest days
-  that never cost a heart or break your streak.
+- **Hero & hearts** — the hero avatar is a layer on top of the tracking, not the point of it: 3
+  hearts, XP and levels. A day with GitHub activity (a commit, PR, issue — public activity only)
+  feeds the hero; a day without one costs a heart. Pick weekly rest days that never cost a heart
+  or break your streak.
 - **Class from your habits** — an archetype classifier scores you 0–100 across 8 D&D classes
   (Wizard, Monk, Paladin, Artificer, Barbarian, Bard, Rogue, Cleric) from real signals: language
   spread, commit cadence, PR size, and more. Your class can change once it's clearly warranted.
