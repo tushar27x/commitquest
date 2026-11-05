@@ -31,10 +31,9 @@ AI-written reviews.
 
 ## What it does
 
-- **Hero & hearts** — the hero avatar is a layer on top of the tracking, not the point of it: 3
-  hearts, XP and levels. A day with GitHub activity (a commit, PR, issue — public activity only)
-  feeds the hero; a day without one costs a heart. Pick weekly rest days that never cost a heart
-  or break your streak.
+- **Hero & hearts** — 3 hearts, XP and levels. A day with GitHub activity (a commit, PR, issue —
+  public activity only) feeds the hero; a day without one costs a heart. Pick weekly rest days
+  that never cost a heart or break your streak.
 - **Class from your habits** — an archetype classifier scores you 0–100 across 8 D&D classes
   (Wizard, Monk, Paladin, Artificer, Barbarian, Bard, Rogue, Cleric) from real signals: language
   spread, commit cadence, PR size, and more. Your class can change once it's clearly warranted.
