@@ -187,6 +187,42 @@ class GitHubGraphQlClientTest {
     }
 
     @Test
+    void aRejectedTokenCarriesGitHubsRequestIdAndMessage() {
+        // B43: what GitHub support needs to trace the request
+        github.expect(requestTo(GRAPHQL_URL)).andRespond(withStatus(HttpStatus.UNAUTHORIZED)
+                .header("X-GitHub-Request-Id", "C0DE:1234:ABCD:5678")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"message\":\"Bad credentials\",\"documentation_url\":\"https://docs.github.com/graphql\"}"));
+
+        assertThatThrownBy(() -> client.fetchUserInsights("revoked-token", "octocat"))
+                .isInstanceOfSatisfying(GitHubAuthException.class, e -> {
+                    assertThat(e.requestId()).isEqualTo("C0DE:1234:ABCD:5678");
+                    assertThat(e.gitHubMessage()).isEqualTo("Bad credentials");
+                    assertThat(e.getMessage()).contains("C0DE:1234:ABCD:5678", "Bad credentials")
+                            .doesNotContain("revoked-token");
+                });
+    }
+
+    @Test
+    void aRejectedTokenWithoutHeaderOrJsonBodyStillBecomesAuthException() {
+        github.expect(requestTo(GRAPHQL_URL)).andRespond(withStatus(HttpStatus.UNAUTHORIZED).body("<html>nope</html>"));
+
+        assertThatThrownBy(() -> client.fetchUserInsights("revoked-token", "octocat"))
+                .isInstanceOfSatisfying(GitHubAuthException.class, e -> {
+                    assertThat(e.requestId()).isNull();
+                    assertThat(e.gitHubMessage()).isNull();
+                    assertThat(e.getMessage()).contains("request id unknown");
+                });
+    }
+
+    @Test
+    void gitHubsMessageIsOneShortLine() {
+        assertThat(GitHubAuthException.clean("Bad\r\ncredentials\u0007")).isEqualTo("Bad  credentials");
+        assertThat(GitHubAuthException.clean("x".repeat(500))).hasSize(GitHubAuthException.MAX_MESSAGE_CHARS);
+        assertThat(GitHubAuthException.clean("  ")).isNull();
+    }
+
+    @Test
     void serverErrorBecomesApiException() {
         github.expect(requestTo(GRAPHQL_URL)).andRespond(withServerError());
 

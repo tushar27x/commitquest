@@ -32,6 +32,7 @@ class AuthServiceTest {
 
     private static final String REDIRECT_URI = "http://localhost:8080/api/auth/callback";
     private static final long GITHUB_ID = 583231L;
+    private static final java.time.Instant LOGIN_AT = java.time.Instant.parse("2026-11-05T02:30:00Z");
 
     private final GitHubOAuthClient gitHub = mock(GitHubOAuthClient.class);
     private final UsersRepository usersRepository = mock(UsersRepository.class);
@@ -44,7 +45,7 @@ class AuthServiceTest {
         JwtService jwtService = new JwtService(JwtConfig.encoder(SecurityTestData.JWT_SECRET),
                 Clock.systemUTC(), SecurityTestData.authProperties());
         service = new AuthService(gitHub, usersRepository, cipher, jwtService, syncService,
-                SecurityTestData.authProperties());
+                SecurityTestData.authProperties(), Clock.fixed(LOGIN_AT, java.time.ZoneOffset.UTC));
 
         when(gitHub.exchangeCode("code", REDIRECT_URI)).thenReturn("gho_secret");
         when(gitHub.fetchAccount("gho_secret")).thenReturn(new GitHubAccount(GITHUB_ID, "octocat"));
@@ -77,6 +78,7 @@ class AuthServiceTest {
         assertThat(saved.getEmail()).isEqualTo("octocat@example.com");
         assertThat(saved.getEncryptedGithubToken()).isNotEqualTo("gho_secret");
         assertThat(cipher.decrypt(saved.getEncryptedGithubToken(), GITHUB_ID)).isEqualTo("gho_secret");
+        assertThat(saved.getGithubTokenObtainedAt()).isEqualTo(LOGIN_AT); // B43
         assertThat(result.login()).isEqualTo("octocat");
         assertThat(result.token().value()).isNotBlank();
     }
@@ -98,6 +100,7 @@ class AuthServiceTest {
         assertThat(saved.isAlertsEnabled()).isTrue();
         assertThat(saved.getNoCommitDays()).isEqualTo(7);
         assertThat(saved.isPublicProfile()).isTrue();
+        assertThat(saved.getGithubTokenObtainedAt()).isEqualTo(LOGIN_AT); // each login's token has its own time
         assertThat(saved.isNeedsReauth()).isFalse();
     }
 

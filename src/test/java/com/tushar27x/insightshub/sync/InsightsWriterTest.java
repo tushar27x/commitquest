@@ -145,10 +145,12 @@ class InsightsWriterTest {
     }
 
     @Test
-    void markNeedsReauthFlagsTheUser() {
-        writer.markNeedsReauth(ID);
+    void markNeedsReauthFlagsTheUserOnlyIfTheRejectedTokenIsStillStored() {
+        when(usersRepository.markNeedsReauth(ID, "rejected-ciphertext")).thenReturn(1);
+        when(usersRepository.markNeedsReauth(ID, "replaced-ciphertext")).thenReturn(0);
 
-        assertThat(user.isNeedsReauth()).isTrue();
+        assertThat(writer.markNeedsReauth(ID, "rejected-ciphertext")).isTrue();
+        assertThat(writer.markNeedsReauth(ID, "replaced-ciphertext")).isFalse();
     }
 
     private Insights saved() {

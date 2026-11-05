@@ -131,7 +131,7 @@ public class GitHubGraphQlClient {
                     .body(Map.of("query", query, "variables", variables))
                     .retrieve()
                     .onStatus(status -> status.isSameCodeAs(HttpStatus.UNAUTHORIZED), (request, res) -> {
-                        throw new GitHubAuthException("GitHub rejected the token for " + what + " (HTTP 401)");
+                        throw GitHubAuthException.of(what, res); // request id + GitHub's message, never the token
                     })
                     .onStatus(HttpStatusCode::isError, (request, res) -> {
                         throw new GitHubApiException("GitHub GraphQL request failed for " + what

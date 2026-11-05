@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.time.Clock;
 
 /**
  * The login round trip: build GitHub's authorize URL, then turn the returned code into
@@ -27,15 +28,17 @@ public class AuthService {
     private final JwtService jwtService;
     private final SyncService syncService;
     private final AuthProperties properties;
+    private final Clock clock;
 
     public AuthService(GitHubOAuthClient gitHub, UsersRepository usersRepository, TokenCipher tokenCipher,
-                       JwtService jwtService, SyncService syncService, AuthProperties properties) {
+                       JwtService jwtService, SyncService syncService, AuthProperties properties, Clock clock) {
         this.gitHub = gitHub;
         this.usersRepository = usersRepository;
         this.tokenCipher = tokenCipher;
         this.jwtService = jwtService;
         this.syncService = syncService;
         this.properties = properties;
+        this.clock = clock;
     }
 
     public URI authorizeUri(String state, String redirectUri) {
@@ -64,7 +67,7 @@ public class AuthService {
         boolean isNew = user.getCreatedAt() == null;
         user.setLogin(account.login()); // logins can be renamed; the id is what stays
         user.setEmail(email);
-        user.setEncryptedGithubToken(tokenCipher.encrypt(githubToken, account.id()));
+        user.replaceGithubToken(tokenCipher.encrypt(githubToken, account.id()), clock.instant()); // B43: its age
         user.setNeedsReauth(false); // a fresh token clears a revoked one (Phase 10)
         usersRepository.save(user);
         log.info("Login for '{}' ({}): {} user, verified email {}",
