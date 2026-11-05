@@ -2,6 +2,8 @@
 
 Decided by the developer on 2026-11-04 (PR #51): everything on free tiers, the backend as a Docker image.
 
+**Live since 2026-11-04:** web <https://insights-hub-v2-one.vercel.app>, backend <https://insighthubv2.duckdns.org> (DuckDNS → the Elastic IP; the instance runs Ubuntu, user `ubuntu`). Deploy a new image: `cd /opt/insightshub && ./deploy.sh`, and let it finish (it prints `deploy: … is up`).
+
 | Piece | Where | Notes |
 |---|---|---|
 | Web app (`web/`) | **Vercel** (Hobby) | Builds from `main` by itself; `/api/*` is rewritten to the backend |
