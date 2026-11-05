@@ -102,7 +102,7 @@ public class GitHubOAuthClient {
                 .headers(headers -> headers.setBearerAuth(token))
                 .retrieve()
                 .onStatus(status -> status.isSameCodeAs(HttpStatus.UNAUTHORIZED), (request, res) -> {
-                    throw new GitHubAuthException("GitHub rejected the token for " + path + " (HTTP 401)");
+                    throw GitHubAuthException.of(path, res); // request id + GitHub's message, never the token
                 })
                 .onStatus(HttpStatusCode::isError, (request, res) -> {
                     throw new GitHubApiException("GitHub " + path + " failed: HTTP " + res.getStatusCode().value());

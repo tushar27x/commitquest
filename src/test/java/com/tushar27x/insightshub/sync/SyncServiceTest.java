@@ -33,6 +33,9 @@ import com.tushar27x.insightshub.sync.SyncService.SyncOutcome;
 import com.tushar27x.insightshub.sync.SyncService.SyncResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.mockito.ArgumentCaptor;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -201,7 +204,7 @@ class SyncServiceTest {
         when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenThrow(new GitHubAuthException("401"));
 
         assertThat(service.sync(ID)).isEqualTo(SyncOutcome.NEEDS_REAUTH);
-        verify(writer).markNeedsReauth(ID);
+        verify(writer).markNeedsReauth(ID, user.getEncryptedGithubToken());
         verify(writer, never()).save(anyLong(), any(), any(), any(), any());
         verifyNoInteractions(ai, activityWriter, branchScanner);
     }
@@ -290,7 +293,7 @@ class SyncServiceTest {
                 .thenThrow(new GitHubAuthException("401"));
 
         assertThat(service.refreshActivity(ID, OCT_13.date())).isEqualTo(SyncOutcome.NEEDS_REAUTH);
-        verify(writer).markNeedsReauth(ID);
+        verify(writer).markNeedsReauth(ID, user.getEncryptedGithubToken());
         verifyNoInteractions(activityWriter);
     }
 
@@ -381,7 +384,7 @@ class SyncServiceTest {
         when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenThrow(new GitHubAuthException("401"));
 
         assertThat(service.refreshInsights(ID)).isEqualTo(DailyOutcome.NEEDS_REAUTH);
-        verify(writer).markNeedsReauth(ID);
+        verify(writer).markNeedsReauth(ID, user.getEncryptedGithubToken());
         verifyNoInteractions(ai, activityWriter);
     }
 
@@ -400,5 +403,67 @@ class SyncServiceTest {
         assertThatThrownBy(() -> service.refreshInsights(ID)).isInstanceOf(GitHubApiException.class);
         verifyNoInteractions(activityWriter, ai);
         verify(writer, never()).saveKeepingTexts(anyLong(), any(), any(), any());
+    }
+
+    // --- B12: what a GitHub 401 logs (B43) ---
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void aRejectedTokenLogsGitHubsRequestIdMessageAndTheTokensAgeButNeverTheToken(CapturedOutput output) {
+        user.replaceGithubToken(user.getEncryptedGithubToken(), NOW.minus(Duration.ofHours(26).plusMinutes(5)));
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any()))
+                .thenThrow(new GitHubAuthException("GitHub rejected the token (HTTP 401)", "C0DE:1234:ABCD",
+                        "Bad credentials"));
+        when(writer.markNeedsReauth(ID, user.getEncryptedGithubToken())).thenReturn(true);
+
+        service.refreshActivity(ID, OCT_13.date());
+
+        assertThat(output).contains("Activity refresh for 'octocat': GitHub rejected the stored token",
+                "request id C0DE:1234:ABCD", "message \"Bad credentials\"",
+                "token obtained 2026-10-13T09:55:00Z (1d 2h 5m ago)", "marked needs_reauth");
+        assertThat(output).doesNotContain("gho_stored").doesNotContain(user.getEncryptedGithubToken());
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void aLoginThatReplacedTheTokenMeanwhileIsNotUndone(CapturedOutput output) {
+        when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenThrow(new GitHubAuthException("401"));
+        when(writer.markNeedsReauth(ID, user.getEncryptedGithubToken())).thenReturn(false); // the CAS lost
+
+        assertThat(service.sync(ID)).isEqualTo(SyncOutcome.NEEDS_REAUTH);
+
+        assertThat(output).contains("token obtained unknown (before V8)", "not flagged: a login stored a new token");
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void theDailyRefreshGetsTheSame401Handling(CapturedOutput output) {
+        when(gitHub.fetchUserInsights("gho_stored", "octocat"))
+                .thenThrow(new GitHubAuthException("GitHub rejected the token (HTTP 401)", "C0DE:9", "Bad credentials"));
+        when(writer.markNeedsReauth(ID, user.getEncryptedGithubToken())).thenReturn(false); // a login won the race
+
+        assertThat(service.refreshInsights(ID)).isEqualTo(DailyOutcome.NEEDS_REAUTH);
+
+        verify(writer).markNeedsReauth(ID, user.getEncryptedGithubToken()); // the CAS on the token it used (B45)
+        assertThat(output).contains("Daily insights refresh for 'octocat': GitHub rejected the stored token",
+                "request id C0DE:9", "not flagged: a login stored a new token");
+        assertThat(output).doesNotContain("gho_stored");
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void aSuccessfulDailyRefreshLogsWhichTokenWorked(CapturedOutput output) {
+        user.replaceGithubToken(user.getEncryptedGithubToken(), NOW.minus(Duration.ofHours(3)));
+
+        service.refreshInsights(ID);
+
+        assertThat(output).contains("token obtained 2026-10-14T09:00:00Z (3h 0m ago)");
+    }
+
+    @Test
+    void tokenAges() {
+        assertThat(SyncService.age(Duration.ofMinutes(5))).isEqualTo("0h 5m");
+        assertThat(SyncService.age(Duration.ofHours(49).plusMinutes(1))).isEqualTo("2d 1h 1m");
+        assertThat(SyncService.age(Duration.ofSeconds(-3))).isEqualTo("0m"); // clock skew
     }
 }

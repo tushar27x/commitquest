@@ -166,8 +166,7 @@ public class SyncService {
         try {
             data = gitHub.fetchUserInsights(token, user.getLogin());
         } catch (GitHubAuthException e) {
-            log.warn("Sync for '{}': GitHub rejected the stored token; marked needs_reauth", user.getLogin());
-            writer.markNeedsReauth(userId);
+            rejected("Sync", user, e);
             return SyncOutcome.NEEDS_REAUTH;
         }
 
@@ -213,9 +212,7 @@ public class SyncService {
         try {
             data = gitHub.fetchUserInsights(token, user.getLogin());
         } catch (GitHubAuthException e) {
-            log.warn("Daily insights refresh for '{}': GitHub rejected the stored token; marked needs_reauth",
-                    user.getLogin());
-            writer.markNeedsReauth(userId);
+            rejected("Daily insights refresh", user, e);
             return DailyOutcome.NEEDS_REAUTH;
         }
         Activity activity = writeActivity(user, token, data);
@@ -236,10 +233,10 @@ public class SyncService {
         }
         seedHeroQuietly(user);
         log.info("Daily insights refresh for '{}' done in {} ms: {}, {} activity days written, branch scan {}, "
-                        + "AI texts {}", user.getLogin(), (System.nanoTime() - start) / 1_000_000, result.archetype(),
-                activity.days(), activity.branchCounts(),
+                        + "AI texts {}, token obtained {}", user.getLogin(), (System.nanoTime() - start) / 1_000_000,
+                result.archetype(), activity.days(), activity.branchCounts(),
                 reason.map(r -> "rewritten (" + r + ")" + (outcome == DailyOutcome.FALLBACK ? " with fallbacks" : ""))
-                        .orElse("kept"));
+                        .orElse("kept"), obtained(user)); // B43: which token worked
         return outcome;
     }
 
@@ -280,14 +277,48 @@ public class SyncService {
         try {
             data = gitHub.fetchUserInsights(token, user.getLogin(), since, now);
         } catch (GitHubAuthException e) {
-            log.warn("Activity refresh for '{}': GitHub rejected the stored token; marked needs_reauth", user.getLogin());
-            writer.markNeedsReauth(userId);
+            rejected("Activity refresh", user, e);
             return SyncOutcome.NEEDS_REAUTH;
         }
         Activity activity = writeActivity(user, token, data);
-        log.info("Activity refresh for '{}': {} days written, branch scan {}", user.getLogin(), activity.days(),
-                activity.branchCounts());
+        log.info("Activity refresh for '{}': {} days written, branch scan {}, token obtained {}", user.getLogin(),
+                activity.days(), activity.branchCounts(), obtained(user)); // B43: which token worked
         return SyncOutcome.SYNCED;
+    }
+
+    /**
+     * B43: GitHub answered 401 for the stored token. Logs what GitHub support can trace (its request id and
+     * message) and which token it was (when it was obtained, and its age), never the token. Flags the user
+     * {@code needs_reauth} only if that token is still the stored one (B45).
+     */
+    private void rejected(String what, Users user, GitHubAuthException e) {
+        boolean flagged = writer.markNeedsReauth(user.getGithubId(), user.getEncryptedGithubToken());
+        log.warn("{} for '{}': GitHub rejected the stored token (HTTP 401, request id {}, message \"{}\"); "
+                        + "token obtained {}; {}", what, user.getLogin(), orUnknown(e.requestId()),
+                orUnknown(e.gitHubMessage()), obtained(user),
+                flagged ? "marked needs_reauth" : "not flagged: a login stored a new token meanwhile");
+    }
+
+    /** "2026-11-04T18:30:00Z (8h 30m ago)", or "unknown (before V8)" for a token stored before V8. */
+    private String obtained(Users user) {
+        Instant obtainedAt = user.getGithubTokenObtainedAt();
+        if (obtainedAt == null) {
+            return "unknown (before V8)";
+        }
+        return obtainedAt + " (" + age(Duration.between(obtainedAt, clock.instant())) + " ago)";
+    }
+
+    static String age(Duration age) {
+        if (age.isNegative()) {
+            return "0m";
+        }
+        long days = age.toDays();
+        String hoursMinutes = age.toHoursPart() + "h " + age.toMinutesPart() + "m";
+        return days > 0 ? days + "d " + hoursMinutes : hoursMinutes;
+    }
+
+    private static String orUnknown(String value) {
+        return value == null ? "unknown" : value;
     }
 
     /** The calendar, then the branch scan for the recent days it shows as empty, in the user's zone. */
