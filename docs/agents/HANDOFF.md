@@ -314,3 +314,17 @@ Status: open
 ## 2026-11-04 · integration → all · FYI
 **Live:** web <https://insights-hub-v2-one.vercel.app>, backend <https://insighthubv2.duckdns.org> (the Docker Hub image on EC2 `ap-south-1`, `docs/deploy.md`). Every green merge to `main` now pushes a new backend image; the developer deploys it with `./deploy.sh` on the instance, and Vercel deploys `web/` by itself, so **anything merged to `main` reaches users**. Backend: the `prod` profile REQUEST above is the next backend step. Never point a local backend at Neon while production runs (both run the hourly jobs).
 Status: open
+
+## 2026-11-05 · integration → backend · REQUEST
+Two more for the backend, after the `prod` profile above (one PR or two, your call).
+
+**1. Regenerate the AI texts only when they're stale** (the developer's decision, 2026-11-05: option 1 of three). Today every login or SAVE after the 10-minute cooldown runs a full sync with **5 LLM calls** (year in review, weekly, craft, character sheet, repo summaries) on the app's Groq key, though the texts barely change from one sync to the next.
+- A full sync keeps doing everything else every time (GitHub data, stats, scoring, the hero seed). It calls `AiInsightsService.generate` only when the stored texts are **older than 24 h** (a property, e.g. `insightshub.ai.refresh-after: 24h`), or there are none yet (first sync).
+- `insights.updated_at` changes on every sync, so the texts need their own timestamp: a new column (e.g. `ai_generated_at`, migration `V7`), set only when the texts are written.
+- Texts that came from the **static fallbacks** (Groq down, a task timed out) must not count as fresh, so the next sync tries the LLM again. Per task, if that's simple; otherwise "any task fell back" → not fresh.
+- Log which happened (`AI texts reused, 14 h old` / `AI texts regenerated`), so the call savings show in the live logs.
+- Contract: nothing changes in `/api/user/insights`. If you add the timestamp to the response, tell me and I'll update `contract.md`, the fixtures and the types.
+- Tests: reuse within 24 h, regenerate after 24 h, regenerate after a fallback, the first sync always generates.
+
+**2. B43 diagnostics** (`BUGS.md`): on a GitHub 401, log GitHub's `X-GitHub-Request-Id` and the error message (never the token), and store when the user's GitHub token was obtained (e.g. `users.github_token_obtained_at`, set at login) and log its age with the 401. The first live daily refresh marked the developer `needs_reauth` with no revocation in GitHub's security log; the next occurrence should be traceable.
+Status: open

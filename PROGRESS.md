@@ -877,7 +877,13 @@ One entry per session: what was built, what was learned, open questions. Bug det
 - **Lessons:** a UI change that removes something the e2e specs assert must ship with its spec change in the same PR (#49/#50 were each red against the other half). A stale `web/.next` cache fails `next build`'s type check after a route is deleted. A value meant as a GitHub Actions *variable* added as a *secret* is invisible to `vars.*` (the image job now reads either).
 - **Open for next session:**
   - 🤖 backend: the `prod` profile (`application-prod.yml`, HANDOFF REQUEST of 2026-11-04). Until it lands, the per-IP rate limits (`login`, `callback`, `unsubscribe`) see every visitor as Caddy and are shared.
+  - 🤖 backend (HANDOFF REQUEST of 2026-11-05): regenerate the AI texts only when older than 24 h, or after a fallback (the developer's decision: every login/SAVE past the cooldown spent 5 LLM calls on near-identical texts); B43 diagnostics.
   - Release checklist (`docs/deploy.md` §8): SAVE twice (cooldown), a Settings save; on the instance, the first 03:00 UTC refresh and the hourly hero runs in `docker compose --env-file deploy.env logs backend`; an AWS budget alert; Neon compute hours and Upstash commands after a few days; page latency (move v2 to a Neon project in Asia if it's slow).
   - Don't run the local backend against Neon while production runs (both would run the hourly jobs; digests could go out twice). Check whether `DIGEST_ENABLED` is on in production.
   - Docs: fold the setup notes above into `docs/deploy.md`.
   - 🤖 integration I6 (responsive/a11y on the live app); `docs/design/png/` re-render; SMTP for the digest; the older items (archetype calibration, v1 B26, GitGuardian).
+
+### 2026-11-05: first live runs (🤖 integration)
+- **Scheduled jobs live:** the hourly hero job at 01:05 UTC settled 1 day for 1 hero (`waitingForReauth=0`, nothing failed); the daily refresh started at 03:00:01 UTC as scheduled.
+- **B43 (open):** the 03:00 refresh got a GitHub 401 for the developer and marked them `needs_reauth`, two hours after the hero job used the same token fine. Not a revocation (GitHub's security log), not a leak, not our code. The developer logs in again; diagnostics requested from backend.
+- **Decided by the developer:** the AI texts are regenerated only when older than 24 h (or after a fallback), not on every login/SAVE past the 10-minute cooldown. REQUEST to backend.

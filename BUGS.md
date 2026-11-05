@@ -43,6 +43,8 @@ New bugs get the next `B` number. PR descriptions list the bugs found while buil
 | [B36](#b36) | 2.6 | `daily_contributions` SQL is unqualified and resolves outside `v2`, so every sync fails at the activity write | Code |
 | [B40](#b40) | 14 (B9) | springdoc failed with `NoSuchMethodError: Schema.$dynamicRef()`: Spring AI pulls older swagger annotations | Dependency |
 | [B41](#b41) | 14 (B9) | The OpenAPI schemas showed camelCase keys: swagger-core can't see Jackson 3's `@JsonNaming` | Dependency |
+| [B42](#b42) | U10 | The top row of CLASS SCORES drew a shorter bar than the others | UI |
+| [B43](#b43) | 14 (live) | The live daily refresh marked the developer `needs_reauth`: GitHub 401 on a token that worked two hours earlier | Open |
 
 ---
 
@@ -331,3 +333,10 @@ New bugs get the next `B` number. PR descriptions list the bugs found while buil
 - **Root cause:** the highlighted row sits on `bg-stone-lit`, which is also the colour of the bar's empty cells, so they vanished into the row and only the filled cells showed.
 - **Fix:** the top row's empty cells use `bg-stone`, a shade darker than the row, so its bar keeps the full 10 (phone) or 20 (desktop) cells.
 - **Lesson:** a highlight background must differ from every fill drawn on it; check the "empty" states of meters on highlighted rows.
+
+### B43
+**The live daily refresh marked the developer `needs_reauth`: GitHub answered 401 on a token that worked two hours earlier** · Phase 14 (first live run, 2026-11-05) · **Open**
+- **Symptom:** in production, the hourly hero job at 01:05 UTC refreshed the developer's activity with the stored token and settled a day (`waitingForReauth=0`). The daily refresh at 03:00:02 UTC got HTTP 401 from GitHub for the same user (`Activity refresh for 'tushar27x': GitHub rejected the stored token; marked needs_reauth`, summary `needsReauth=1`). The hero job skips the user until they log in again.
+- **Ruled out:** only a real GitHub 401 sets `needs_reauth` (`GitHubGraphQlClient`, `GitHubOAuthClient`); a decryption failure or a network error doesn't. Our app never revokes tokens (LOG OUT only drops the JWT). GitHub's security log shows no `oauth_authorization.destroy` for the production app (`insighthubv2`) after its creation at the production login, and none by "GitHub System" (secret scanning), so the authorization wasn't revoked and the token didn't leak.
+- **Still open:** whether anything logged in between 01:05 and 03:00 UTC (each login stores a new token in the user's row), and what the Authorized OAuth Apps page says about the app. Next: the developer logs in again; watch the next 01:05 and 03:00 runs. If it recurs with no login, it's ours.
+- **Asked of backend:** on a GitHub 401, log GitHub's `X-GitHub-Request-Id` and error message (traceable by GitHub support), and keep when the stored token was obtained (a timestamp, never the token), so the next occurrence can be pinned to a token.
