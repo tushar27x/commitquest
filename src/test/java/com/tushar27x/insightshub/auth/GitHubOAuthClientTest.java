@@ -97,10 +97,13 @@ class GitHubOAuthClientTest {
     @Test
     void revokedTokenIsAuthError() {
         github.expect(requestTo("https://api.github.com/user"))
-                .andRespond(withStatus(HttpStatus.UNAUTHORIZED));
+                .andRespond(withStatus(HttpStatus.UNAUTHORIZED).header("X-GitHub-Request-Id", "C0DE:42")
+                        .body("{\"message\":\"Bad credentials\"}"));
 
         assertThatThrownBy(() -> client.fetchAccount("revoked"))
                 .isInstanceOf(GitHubAuthException.class)
+                .hasMessageContaining("C0DE:42")
+                .hasMessageContaining("Bad credentials")
                 .hasMessageNotContaining("revoked");
     }
 

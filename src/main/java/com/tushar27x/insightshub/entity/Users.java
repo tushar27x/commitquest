@@ -10,6 +10,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
 
@@ -17,8 +18,14 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 
+/**
+ * {@code @DynamicUpdate} (B45): an UPDATE writes only the columns that changed. Without it Hibernate writes every
+ * column, so a short transaction that only stamps {@code last_synced_at} or {@code needs_reauth} could write back the
+ * GitHub token it had read, over the new one a login stored in the meantime.
+ */
 @Entity
 @Table(name = "users")
+@DynamicUpdate
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class Users {
@@ -94,6 +101,16 @@ public class Users {
     /** Starts the class-switch cooldown. */
     @Setter
     private Instant archetypeChangedAt;
+
+    /** When {@link #encryptedGithubToken} was obtained (V8, B43): its age goes into the log of a GitHub 401. */
+    @Setter
+    private Instant githubTokenObtainedAt;
+
+    /** A login's new token, and when it was obtained. */
+    public void replaceGithubToken(String encryptedToken, Instant obtainedAt) {
+        this.encryptedGithubToken = encryptedToken;
+        this.githubTokenObtainedAt = obtainedAt;
+    }
 
     public Users(Long githubId, String login) {
         this.githubId = githubId;

@@ -46,6 +46,7 @@ New bugs get the next `B` number. PR descriptions list the bugs found while buil
 | [B42](#b42) | U10 | The top row of CLASS SCORES drew a shorter bar than the others | UI |
 | [B43](#b43) | 14 (live) | The live daily refresh marked the developer `needs_reauth`: GitHub 401 on a token that worked two hours earlier | Open |
 | [B44](#b44) | 14 (B11) | Every context failed to start: a second constructor on the `AiProperties` record hid its binding constructor | Config |
+| [B45](#b45) | 14 (B12) | A short `users` write could put back the GitHub token a login had just replaced, and a job's 401 could flag a user who had just logged in | Concurrency |
 
 ---
 
@@ -341,6 +342,11 @@ New bugs get the next `B` number. PR descriptions list the bugs found while buil
 - **Ruled out:** only a real GitHub 401 sets `needs_reauth` (`GitHubGraphQlClient`, `GitHubOAuthClient`); a decryption failure or a network error doesn't. Our app never revokes tokens (LOG OUT only drops the JWT). GitHub's security log shows no `oauth_authorization.destroy` for the production app (`insighthubv2`) after its creation at the production login, and none by "GitHub System" (secret scanning), so the authorization wasn't revoked and the token didn't leak.
 - **Still open:** whether anything logged in between 01:05 and 03:00 UTC (each login stores a new token in the user's row), and what the Authorized OAuth Apps page says about the app. Next: the developer logs in again; watch the next 01:05 and 03:00 runs. If it recurs with no login, it's ours.
 - **Asked of backend:** on a GitHub 401, log GitHub's `X-GitHub-Request-Id` and error message (traceable by GitHub support), and keep when the stored token was obtained (a timestamp, never the token), so the next occurrence can be pinned to a token.
+- **Backend findings (B12, 2026-11-05):**
+  - **No code path sends a different token.** Each run reads `users.encrypted_github_token` once per user and decrypts it with the user's GitHub id as AAD; the calendar/insights fetch and the branch scan then use that same string. A decryption failure throws (it isn't a 401), and a 401 from the branch scan is only logged (its day is skipped, the user isn't flagged). The 03:00 line came from the calendar fetch.
+  - **But the stored token could go back to an older one (B45, fixed here):** `Users` had no `@DynamicUpdate`, so every write of the row (`last_synced_at` after a sync, `needs_reauth`, preferences) wrote **every** column, the token included, as read at the start of that short transaction. A login committing in that window would have its new token overwritten by the old one. Also, a job that got a 401 on the token it had read flagged the row even if a login had stored a new token in the meantime. Neither needs a revocation, but both make the stored token older than the newest one, and that matters with the next point.
+  - **A GitHub-side cause that fits the symptoms:** GitHub issues at most 10 tokens per user, OAuth app and scope set. The 11th login revokes the **oldest token**. The authorization stays, so there's no `oauth_authorization.destroy` in the security log. Every login stores a new token, so after ten or more logins to the production app (deploy testing counts), any older token that was still the stored one, or got written back by B45, gets a 401. Worth checking: how many times the developer logged in to the production app on 2026-11-04/05.
+  - **Next occurrence:** every successful refresh (the hourly hero job's activity refresh and, since B11, the 03:00 daily insights refresh) now logs `token obtained <time>`, and a 401 logs GitHub's request id, its message and the token's time and age. If the 01:05 and 03:00 lines show the same time, GitHub rejected the token our app stored; if they differ, a login happened in between.
 
 ### B44
 **Every context failed to start: a second constructor on the `AiProperties` record hid its binding constructor** · Phase 14 (B11) · Config · caught by `./mvnw verify` before the PR
@@ -348,3 +354,12 @@ New bugs get the next `B` number. PR descriptions list the bugs found while buil
 - **Root cause:** B11 added `regenerate` to the record and kept a 4-argument constructor so existing callers compile. Boot binds a `@ConfigurationProperties` record through its constructor only when there is exactly one; with two it falls back to JavaBean binding, which needs a no-argument constructor. The unit tests build the record by hand, so none of them went through the binder.
 - **Fix:** `@ConstructorBinding` on the canonical (compact) constructor. `AiPropertiesTest` binds `insightshub.ai` from `application.yml` with Boot's `Binder`, so the next one fails in `./mvnw test`.
 - **Lesson:** an extra constructor on a properties record needs `@ConstructorBinding` on the canonical one; test the binding itself, not only the record.
+
+### B45
+**A short `users` write could put back the GitHub token a login had just replaced, and a job's 401 could flag a user who had just logged in** · Phase 14 (B12, while looking into B43) · Concurrency · found by reading the code, reproduced in `it/GitHubTokenIT`
+- **Symptom:** none seen yet. A row could keep an older GitHub token than the one the last login stored, or end up `needs_reauth` with a fresh, working token.
+- **Root cause:**
+  1. `Users` had no `@DynamicUpdate`, so Hibernate's UPDATE wrote every column. `InsightsWriter.save` (stamps `last_synced_at`), `markNeedsReauth` and `PreferencesService` load the row, change one field and commit, writing back the `encrypted_github_token` they had read. A login committing between that read and commit lost its new token. `GitHubTokenIT` fails exactly so without the annotation.
+  2. `markNeedsReauth` flagged the row by id only. A job that read token A, started a slow GitHub call, and got a 401 on A would flag the user even if a login had stored token B in the meantime.
+- **Fix:** `@DynamicUpdate` on `Users` (an UPDATE writes only the changed columns), and `UsersRepository.markNeedsReauth(id, rejectedToken)`, a compare-and-set on the encrypted token the job used (AES-GCM ciphertext is unique per login). A lost race is logged as "not flagged: a login stored a new token meanwhile".
+- **Lesson:** an entity read-modify-write rewrites every column by default; on a row that another path writes (here, the login), use `@DynamicUpdate` or a targeted UPDATE, and make "mark it bad" conditional on the value that was found bad.

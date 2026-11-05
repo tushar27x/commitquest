@@ -288,6 +288,11 @@ Keeping v1's response shape meant the v1 Next.js client could be pointed at v2. 
 - [x] `users` has your email and an encrypted token that decrypts back to a working GitHub token (live: `GET /user` 200, scopes `read:user, user:email`)
 - [x] `GET /api/user/insights` returns 401 without a token and 200 with one (404 until Phase 7 syncs the user)
 
+**As built** (B43 diagnostics, B12, `backend/b12-reauth-diagnostics`)
+- A GitHub 401 (GraphQL and REST) now carries GitHub's `X-GitHub-Request-Id` and the `message` of its JSON body (one cleaned line, at most 200 characters; never the token) in `GitHubAuthException`. `SyncService` logs both with the stored token's `github_token_obtained_at` and age (V8, set by every login), and every successful activity refresh logs the token's time, so two runs can be compared token by token.
+- B45 fixed on the way: `@DynamicUpdate` on `Users` (a short write no longer puts back an older token over a login's new one), and `needs_reauth` is a compare-and-set on the encrypted token GitHub rejected (`UsersRepository.markNeedsReauth`).
+- V8 needs V7 (B11) first. Tests: `GitHubGraphQlClientTest`, `GitHubOAuthClientTest`, `SyncServiceTest` (the log line, a lost race), `AuthServiceTest`, `InsightsWriterTest`, `it/GitHubTokenIT` (V8, the CAS, the lost update reproduced without `@DynamicUpdate`).
+
 ---
 
 ## Phase 7: Sync orchestration & Redis caching ✅

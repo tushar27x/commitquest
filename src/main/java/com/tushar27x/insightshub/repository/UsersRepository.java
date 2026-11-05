@@ -92,4 +92,20 @@ public interface UsersRepository extends JpaRepository<Users, Long> {
             """)
     int changeClassSince(@Param("id") long id, @Param("chosen") Archetype chosen, @Param("now") Instant now,
                          @Param("expected") Instant expected);
+
+    /**
+     * GitHub rejected {@code rejectedToken}: flags the user {@code needs_reauth}, but only if that is still the stored
+     * token (B45). A login that stored a new token while the job's GitHub call was in flight wins: the new token is
+     * untested, not rejected. The ciphertext is unique per login (AES-GCM with a random nonce), so comparing it
+     * compares the tokens without decrypting anything.
+     *
+     * @return 1 if flagged, 0 if the token changed in the meantime (or there's no such user)
+     */
+    @Transactional
+    @Modifying
+    @Query("""
+            update Users u set u.needsReauth = true
+            where u.githubId = :id and u.encryptedGithubToken = :rejectedToken
+            """)
+    int markNeedsReauth(@Param("id") long id, @Param("rejectedToken") String rejectedToken);
 }

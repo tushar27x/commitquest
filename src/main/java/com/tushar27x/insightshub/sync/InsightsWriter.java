@@ -114,10 +114,15 @@ public class InsightsWriter {
     record GeneratedTexts(AiInsights texts, AiInputs inputs, Instant generatedAt) {
     }
 
-    /** GitHub rejected the stored token: stop syncing this user until they log in again (Phase 10). */
-    @Transactional
-    public void markNeedsReauth(long userId) {
-        usersRepository.findById(userId).ifPresent(user -> user.setNeedsReauth(true));
+    /**
+     * GitHub rejected the stored token: stop syncing this user until they log in again (Phase 10). Only if
+     * {@code rejectedToken} (encrypted, as read before the GitHub call) is still the stored one, so a login in the
+     * meantime isn't undone (B45).
+     *
+     * @return whether the user was flagged
+     */
+    public boolean markNeedsReauth(long userId, String rejectedToken) {
+        return usersRepository.markNeedsReauth(userId, rejectedToken) == 1;
     }
 
     private static Map<String, Integer> byName(Map<Archetype, Integer> scores) {
