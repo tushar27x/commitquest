@@ -53,3 +53,9 @@ Thumbs.db
 
 ### AI agent tools (local-only settings) ###
 .claude/settings.local.json
+
+### Internal workflow docs (kept on disk / in agent worktrees, not published) ###
+/PROGRESS.md
+/BUGS.md
+/docs/agents/WORKFLOW.md
+/docs/agents/HANDOFF.md
