@@ -6,6 +6,7 @@ import { Screen } from "@/components/game/Screen";
 import { Parchment } from "@/components/Parchment";
 import { Portrait } from "@/components/art/Portrait";
 import { Arrow } from "@/components/ui/Arrow";
+import { InfoNote } from "@/components/ui/InfoNote";
 import type { Insights } from "@/lib/api/types";
 import { calendarDays, longDate, repoBars, shortDate, type CalendarDay } from "@/lib/journal";
 import { useHero, useInsights } from "@/lib/queries";
@@ -102,10 +103,13 @@ function JournalPanel({ tab, onReadMore }: { tab: TabId; onReadMore: () => void 
 const CARD = "flex flex-col bg-stone shadow-btn-flat";
 const fmt = (n: number) => n.toLocaleString("en-US");
 
+const COMMIT_COUNT_NOTE =
+  "This is GitHub's own commit count for your account. It only ever grows — squashing, rebasing or force-pushing history doesn't lower it, so it can read higher than what a repo shows on GitHub today.";
+
 function StatsPanel({ insights, timeZone, onReadMore }: { insights: Insights; timeZone: string; onReadMore: () => void }) {
   const { stats } = insights;
   const cards = [
-    { label: "COMMITS", value: stats.total_commits, gold: true },
+    { label: "COMMITS", value: stats.total_commits, gold: true, note: COMMIT_COUNT_NOTE },
     { label: "PULL REQUESTS", value: stats.total_prs },
     { label: "ISSUES", value: stats.total_issues },
     { label: "STARS", value: stats.total_stars },
@@ -115,7 +119,10 @@ function StatsPanel({ insights, timeZone, onReadMore }: { insights: Insights; ti
       <dl className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
         {cards.map((c) => (
           <div key={c.label} className={`${CARD} gap-1.5 px-3 pt-3 pb-2.5 md:gap-2.5 md:p-5`}>
-            <dt className="font-display text-[7px] text-muted-2 md:text-[9px]">{c.label}</dt>
+            <dt className="flex items-center font-display text-[7px] text-muted-2 md:text-[9px]">
+              {c.label}
+              {c.note && <InfoNote label="Why this might not match GitHub">{c.note}</InfoNote>}
+            </dt>
             <dd className={`font-display text-[18px] md:text-[24px] ${c.gold ? "text-gold" : "text-bone"}`}>{fmt(c.value)}</dd>
           </div>
         ))}
@@ -197,8 +204,9 @@ function TopReposCard({ insights }: { insights: Insights }) {
   const repos = repoBars(insights.stats.ranked_repos).slice(0, 3);
   return (
     <section aria-labelledby="repos-title" className={`${CARD} gap-2.5 px-3 pt-3 pb-3.5 md:gap-3.5 md:p-5`}>
-      <h2 id="repos-title" className="font-display text-[8px] md:text-[10px]">
+      <h2 id="repos-title" className="flex items-center font-display text-[8px] md:text-[10px]">
         TOP REPOS
+        <InfoNote label="Why these might not match GitHub">{COMMIT_COUNT_NOTE}</InfoNote>
       </h2>
       {repos.length === 0 ? (
         <p className="text-muted">No commits to public repos this year.</p>
