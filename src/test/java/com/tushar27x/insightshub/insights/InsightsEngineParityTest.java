@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <pre>
  * python3: m.calculate_user_insights(json.load(open("v1-parity-user.json")))
  * </pre>
- * The input has no empty repository, because v1 crashes on those (BUGS.md B20).
+ * The input has no empty repository, because v1 crashes on those.
  * <p>
  * Only {@code stats} is compared: archetypes intentionally differ from v1 (scored D&amp;D classes
  * instead of v1's five first-match rules, from the PR #3 review).

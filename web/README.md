@@ -1,7 +1,7 @@
 # Insight Hub web
 
 Next.js 16 (App Router) + React 19 + TypeScript + Tailwind 4 + TanStack Query, in the Pixel Realm style.
-Spec: `../docs/v2-hero-plan.md` §4–5. API shapes: `../docs/api/contract.md`.
+API shapes: `../docs/api/contract.md`.
 
 ## Commands
 

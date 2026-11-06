@@ -1,10 +1,10 @@
 # Insight Hub v2: API contract (backend ⇄ web)
 
-**Owner: the integration agent.** The backend and UI agents implement against this file. Neither edits it directly: they propose changes in their PR description or in `docs/agents/HANDOFF.md`, and the integration agent updates the contract, the fixtures and the shared types together.
+The backend and web app both implement against this file; changes to the shapes here are made alongside the fixtures and the shared types, in one PR.
 
 The TypeScript form of this contract is `web/lib/api/types.ts`; `web/lib/api/fixtures.test.ts` checks every fixture against it and fails when `web/public/fixtures/` drifts from `docs/api/fixtures/`.
 
-Example payloads live in `docs/api/fixtures/` and follow the fixture story in `docs/v2-hero-plan.md` §5. The web app's mock mode serves the same files (copied to `web/public/fixtures/`), and contract tests on both sides assert against them.
+Example payloads live in `docs/api/fixtures/` and follow one continuous 14-day user story. The web app's mock mode serves the same files (copied to `web/public/fixtures/`), and contract tests on both sides assert against them.
 
 ## Conventions
 

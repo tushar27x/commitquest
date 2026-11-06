@@ -200,7 +200,7 @@ Not measured: real LLM responses, and the hourly jobs with many users (capped by
 - **Docker Hub:** free accounts have pull rate limits; one instance pulling once per deploy is far below them.
 - **Neon:** the compute suspends after 5 idle minutes and wakes on the next query. The hourly jobs
   wake it about 24 times a day. Idle pool connections may keep it awake; the backend's `prod` profile
-  lets them close (`HANDOFF.md`). Watch compute hours in the Neon console during the first week.
+  lets them close. Watch compute hours in the Neon console during the first week.
 - **Upstash:** every rate-limited request is a Redis call, plus the insights cache. Watch the
   monthly command count.
 - **Vercel Hobby:** for non-commercial use, which this is.

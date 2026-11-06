@@ -76,7 +76,6 @@ required. For the full stack against real services (GitHub OAuth, Groq, Neon, Re
 
 ## More docs
 
-- [`docs/v2-hero-plan.md`](docs/v2-hero-plan.md) — the product spec and game rules
 - [`docs/api/contract.md`](docs/api/contract.md) — the backend ⇄ web API contract
 - [`docs/deploy.md`](docs/deploy.md) — how it's deployed
 - [`AGENTS.md`](AGENTS.md) — repo layout and architecture notes

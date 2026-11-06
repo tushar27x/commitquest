@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * The game rules of docs/v2-hero-plan.md §2, as pure functions: no clock, no database, no Spring.
+ * The hero's game rules, as pure functions: no clock, no database, no Spring.
  * The backend is the source of truth; the hero job (B5) only reads the inputs and stores the results.
  * <table>
  *   <caption>Settling one day</caption>

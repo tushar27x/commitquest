@@ -25,7 +25,7 @@ public class LlmChain {
 
     /**
      * Extra tokens for reasoning models: their hidden reasoning counts against {@code max_tokens}, and with
-     * v1's small caps it used the whole budget and returned empty content (BUGS.md B27).
+     * v1's small caps it used the whole budget and returned empty content.
      */
     static final int REASONING_HEADROOM = 300;
 

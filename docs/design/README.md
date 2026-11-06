@@ -1,6 +1,6 @@
 # Design: Pixel Realm mockups
 
-The approved UI. Build `web/` to match it. The rules behind it are in `docs/v2-hero-plan.md` §4–5.
+The approved UI. Build `web/` to match it.
 
 **Live canvas** (claude.ai, owner only; since 2026-11-02):
 - **Hero Design (hi-res):** https://claude.ai/artifact/WpSMuuZevpRYoK9M99honc. It replaces the two canvases below for the art and the boards.

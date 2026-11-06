@@ -1,4 +1,4 @@
-// I5: Playwright e2e (docs/agents/WORKFLOW.md). Two runs, each on its own production build of web/
+// Playwright e2e. Two runs, each on its own production build of web/
 // (NEXT_PUBLIC_* is baked in at build time, and both builds use web/.next, so they run one after the other):
 //   E2E_SUITE=mock - project `mock`: the build in mock mode. Every screen, mood, tier and the GET errors.
 //   E2E_SUITE=web  - project `stubbed`: the real build with /api/* answered by Playwright from

@@ -1,8 +1,7 @@
 # AGENTS.md
 
 Insight Hub v2: a Spring Boot + Spring AI rewrite of the Insight Hub backend, plus a Next.js web UI in `web/`.
-v1 reference (Python/FastAPI): `~/dev/insight_hub/server`. Roadmap and status: `PROGRESS.md`.
-Product spec: `docs/v2-hero-plan.md` (wins over this file and `PROGRESS.md` where they disagree).
+v1 reference (Python/FastAPI): `~/dev/insight_hub/server`.
 
 ## Project index
 
@@ -11,7 +10,7 @@ _Last indexed: 2026-10-14, after Phase 8 (commit `a51a427`). Updated 2026-10-16 
 ### What it is
 
 Hero-pet habit tracker for GitHub activity: the user's scored D&D class character has 3 hearts, XP and levels,
-and loses a heart for each day without GitHub activity (rules: `docs/v2-hero-plan.md` §2).
+and loses a heart for each day without GitHub activity (rules in `hero/HeroRules.java`).
 Backend: `com.tushar27x:insightshub:0.0.1-SNAPSHOT`, Java 21, Spring Boot 4.1.1, Spring AI 2.0.0 (BOM), Maven wrapper,
 virtual threads on. Web: Next.js 16 + React 19 + TypeScript + Tailwind 4 + TanStack Query in `web/` (Home, Journal, Hero, Change class, Settings; the Arena is **off for the first release** (U10): no tab, no route, no Settings switch, though the backend keeps its endpoints). `/api/*` is proxied to the backend by a Next rewrite (`web/next.config.ts`, 120 s timeout).
 Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13, Part D). HTTP surface today:
@@ -26,37 +25,19 @@ Shapes in `docs/api/contract.md`.
 - **Open v1 issue:** B26 — v1 production still calls Groq models that were retired.
 - **Done in Part D:** I0 (#9), B1 (#10), U1 (#11), B2 / Phase 9 (#12), I1 (#13), U2 (#14), I2 Testcontainers + CI (#15), B36 fix (#16, #17), U3 Home (#18), closed-eye sprites (#19), B3 / Phase 10 daily sync (#20), B4 hero schema + rules (#22), U4 Journal + Hero sheet (#23), B4 contract (#24), B5 hero job + hero/preferences API (#25), B5 contract + B6 contract (#26), U5 Change class + Settings (#27), U6 Arena shell (#28), I3 contract tests (#29), B6 class change (#30), I4 wiring (#31), tab icons + class info from the developer's feedback (`0ef3d35`), activity-only daily sync (#32), browser zone on login (#34), B7 / Phase 12 digest (#35). I5 Playwright e2e (#36), B38 + B39 (#37), B7 contract (#38), B8 contract (#40), hi-res design import (#41), B8 / Phase 13 Arena (#42), U7 hi-res art (#43), B8 close-out (#44), B9 OpenAPI + Swagger UI (#45), redrawn backdrops (#46) + U8 (#47), U9 Home layout + quest wording (#48), U10 Hero/Settings centred + Arena removed (#49), docs (#50), deployment: Dockerfile + CI image job + `docs/deploy/` (#51).
 - **Live since 2026-11-04:** web <https://insights-hub-v2-one.vercel.app> (Vercel), backend <https://insighthubv2.duckdns.org> (the Docker Hub image `tushar2703/insight-hub` on EC2 `ap-south-1`, compose + Caddy). Setup: `docs/deploy.md`.
-- **Next up:** backend: the `prod` profile (HANDOFF) · the release checklist's open items (`docs/deploy.md` §8) · integration **I6** (responsive/a11y) · the digest's first live send (needs SMTP). Full order: `docs/agents/WORKFLOW.md`.
-- **Open items:** see the latest "End of session" entry at the bottom of `PROGRESS.md`.
-- Working agreement & phase details: `PROGRESS.md` (status table at the top, learning log at the bottom).
+- **Next up:** the backend `prod` profile · the release checklist's open items (`docs/deploy.md` §8) · a responsive/accessibility pass · the digest's first live send (needs SMTP).
 
 ### Repo layout
 
 | Path | Contents |
 |---|---|
 | `src/`, `pom.xml` | The Spring Boot backend (layout below) |
-| `web/` | The Next.js web UI (from U1). `web/lib/api/types.ts` and `web/public/fixtures/` belong to the integration lane |
-| `docs/v2-hero-plan.md` | The full spec: product, game rules, backend, UI, visual spec |
+| `web/` | The Next.js web UI (from U1). `web/lib/api/types.ts` and `web/public/fixtures/` mirror the backend contract in `docs/api/` |
 | `docs/api/` | `contract.md` (backend ⇄ web API) and `fixtures/*.json` (insights, hero, hero-events, preferences, hero-variants) |
 | `docs/design/` | `README.md` (index), `art/` (hi-res PNG sprite sheets, mood sheets, backdrops, UI sheets; since 2026-11-02), `source/*.dc.html` + `canvas.json` (hi-res board markup, reference only), `tokens.json`, `png/` (renders of the old canvases: layout only), `sprites.json` (16×16 grids, superseded by `art/` in U7) |
 | `docs/deploy.md`, `docs/deploy/`, `Dockerfile` | Production (2026-11-04): web on Vercel; the backend as a Docker image (root `Dockerfile` + `.dockerignore`: layered jar on `eclipse-temurin:21-jre`, non-root, JVM flags for 1 GB, `prod` profile) pushed to Docker Hub by CI, pulled by an EC2 t3.micro in `ap-south-1`. `docs/deploy/`: `compose.yaml` (backend + Caddy), `Caddyfile`, `deploy.sh` (pull, restart, health check, roll back to `:previous`), `deploy.env.example`; Neon + Upstash as now |
-| `docs/agents/` | `WORKFLOW.md` (lanes, worktrees, step order) and `HANDOFF.md` (message board between the agents) |
-| `.claude/agents/` | Agent definitions: `backend-engineer.md`, `ui-engineer.md`, `integration-qa.md` |
 | `.github/workflows/ci.yml` | CI on every PR and push to `main`: backend `./mvnw verify` (Testcontainers), web design check + lint + test + build + wiring, e2e (Playwright: mock, stubbed, full stack). No secrets. Docker image: `image-check` builds it on PRs (no login, no push, no secrets); `image-publish` pushes `latest` + `sha-<7>` to Docker Hub only on a push to `main`, once the other jobs pass (the only job with secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`; variable `DOCKERHUB_IMAGE`) |
 | `e2e/` | `wiring/proxy-check.mjs` (I4: the Next rewrite and its timeout). I5 Playwright, its own `package.json`: `playwright.config.ts`, `specs/{mock,stubbed,fullstack}/`, `support/` (fixtures from `docs/api/fixtures/`, `stubApi`, a runtime-built fake JWT). All in CI |
-
-### Agent lanes
-
-Three agents, one worktree and branch each; the developer reviews and merges every PR. Details: `docs/agents/WORKFLOW.md`.
-
-| Agent | Worktree · branches | May edit |
-|---|---|---|
-| **backend** | `../ih-backend` · `backend/bN-…` | `src/main/**`, `src/test/**` (not `src/test/**/it/**`), migrations, `application.yml`, `pom.xml` main deps, its `BUGS.md` entries |
-| **ui** | `../ih-ui` · `ui/uN-…` | `web/**` except `web/lib/api/types.ts` and `web/public/fixtures/**` |
-| **integration** | `../ih-integration` · `int/iN-…` | `docs/**`, `PROGRESS.md`, `AGENTS.md`, `web/lib/api/types.ts`, `web/public/fixtures/**`, `e2e/**`, `.github/workflows/**`, `src/test/**/it/**`, `pom.xml` test deps |
-
-- Changes outside your lane: post a `REQUEST` in `docs/agents/HANDOFF.md`; the owner makes them. Read `HANDOFF.md` at the start of every session.
-- Agents never merge and never push to `main`. Force-push only with `--force-with-lease`, on your own open PR branch after a rebase (rule in `WORKFLOW.md`). One PR per step, then stop.
 
 ### Source layout (`src/main/java/com/tushar27x/insightshub/`)
 
@@ -121,17 +102,12 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 
 ### Conventions
 
-- One PR per step (B1–B9, U1–U10, I0–I6): three agents implement everything, including Phases 2.6 and 10–13; the developer reviews and merges (see Agent lanes).
+- One PR per step (B1–B9, U1–U10, I0–I6), each reviewed and merged before the next.
 - No AI-agent attribution in commits or PR descriptions (no co-author lines, no "generated with" footers).
-- Bugs go to `BUGS.md` with the next `B` number (currently B1–B42); PR descriptions list the phase's bugs.
+- Known issues are numbered (B1–B42) and referenced in commit messages and PR descriptions.
 - No key- or token-shaped literals in code or tests, even fake ones: build test keys at runtime (B31).
 - DTOs only from controllers (never entities); no secrets in logs; AI output always has a static fallback;
   the LLM never decides the archetype (code scores it, the LLM adds flavour).
-
-### Agent tooling
-
-- Neon agent skills (`neon`, `neon-postgres`) live in `.claude/skills/`, pinned by `skills-lock.json`
-  (installed with `npx neon@latest skills -s neon -s neon-postgres -y`). Claude Code only for now.
 
 ### Commands
 
@@ -141,5 +117,3 @@ Three agents, one worktree and branch each; the developer reviews and merges eve
 - `web/`: `npm run dev`, `npm run lint`, `npm run build` (from U1); `NEXT_PUBLIC_MOCK=1` serves fixtures for everything. With `NEXT_PUBLIC_MOCK=0`, `/api/*` goes to `BACKEND_URL` (default `http://localhost:8080`). Full guide: `docs/run-locally.md`.
 - `node e2e/wiring/proxy-check.mjs` — the proxy wiring check (fake backend + `next dev`, about a minute).
 - `e2e/` (needs `web/node_modules`; once: `npm ci && npx playwright install chromium`): `npm run test:mock` (mock-mode production build, port 3201), `npm run test:web` (real build on 3202, `/api/*` stubbed by Playwright), `npm run test:fullstack` (plus `it/E2eBackend` on 18081: Testcontainers, so Docker; GitHub stubbed, LLM off; never Neon, GitHub or Groq). `npm test` runs mock + web. Each suite builds `web/` itself, so they run one after the other.
-
-<!-- Remaining sections to be added as directed by the user. -->

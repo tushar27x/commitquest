@@ -19,7 +19,7 @@ import static com.tushar27x.insightshub.hero.HeroEventType.RESTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** §2 of docs/v2-hero-plan.md, rule by rule. */
+/** The hero's game rules, rule by rule. */
 class HeroRulesTest {
 
     private static final LocalDate MON = LocalDate.of(2026, 10, 12);

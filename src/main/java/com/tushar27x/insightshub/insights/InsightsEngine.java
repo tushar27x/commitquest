@@ -31,7 +31,7 @@ import java.util.Optional;
  * Deliberate differences from v1:
  * <ul>
  *   <li>Null objects from GitHub (e.g. an empty repo's {@code defaultBranchRef}) are handled;
- *       v1 crashed on them (BUGS.md B20).</li>
+ *       v1 crashed on them.</li>
  *   <li>The weekly heatmap is always exactly 7 entries; v1 returned empty lists when the
  *       calendar had no weeks.</li>
  *   <li>Archetypes are scored D&amp;D-style classes ({@link ScoringArchetypeClassifier}), not v1's
