@@ -59,3 +59,11 @@ Thumbs.db
 /BUGS.md
 /docs/agents/WORKFLOW.md
 /docs/agents/HANDOFF.md
+/docs/v2-hero-plan.md
+/CLAUDE.md
+/skills-lock.json
+/.claude/agents/backend-engineer.md
+/.claude/agents/ui-engineer.md
+/.claude/agents/integration-qa.md
+/.claude/skills/neon/
+/.claude/skills/neon-postgres/
