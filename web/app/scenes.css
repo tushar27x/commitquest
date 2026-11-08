@@ -1,0 +1,62 @@
+/* The animated tier backdrops of Home (components/home/SceneStage.tsx, scene-layers.ts): a 960×540
+   stage of layers, from the "Level 1-4 … 15+" boards of the landing-page design canvas. Keyframe
+   names are prefixed `sc-`. Everything stops under prefers-reduced-motion. */
+
+.sc2{width:960px;height:540px;overflow:hidden;background:#13111c;image-rendering:pixelated}
+.sc2 .p{position:absolute;background-repeat:no-repeat;background-size:100% 100%;image-rendering:pixelated;pointer-events:none}
+.sc2 .sh4{background-size:400% 100%;animation:sc-sh4 .9s steps(4) infinite}
+.sc2 .sh6{background-size:600% 100%;animation:sc-sh6 .8s steps(6) infinite}
+.sc2 .sh8{background-size:800% 100%;animation:sc-sh8 .8s steps(8) infinite}
+@keyframes sc-sh4{from{background-position:0 0}to{background-position:133.3333% 0}}
+@keyframes sc-sh6{from{background-position:0 0}to{background-position:120% 0}}
+@keyframes sc-sh8{from{background-position:0 0}to{background-position:114.2857% 0}}
+.sc2 .dr{position:absolute;left:0;width:1920px;display:flex;animation:sc-dr 80s linear infinite;pointer-events:none}
+.sc2 .dr i{flex:none;width:960px;height:100%;background-size:960px 100%;background-repeat:no-repeat;image-rendering:pixelated}
+@keyframes sc-dr{from{transform:translateX(0)}to{transform:translateX(-960px)}}
+.sc2 .tw{animation:sc-tw 3.2s steps(1) infinite}
+@keyframes sc-tw{0%{opacity:1}35%{opacity:.6}55%{opacity:.9}75%{opacity:.5}100%{opacity:1}}
+.sc2 .fl{animation:sc-fl .6s steps(1) infinite}
+@keyframes sc-fl{0%{opacity:1}25%{opacity:.78}50%{opacity:.95}75%{opacity:.7}100%{opacity:1}}
+.sc2 .pu{animation:sc-pu 3.6s ease-in-out infinite}
+@keyframes sc-pu{0%,100%{opacity:.35}50%{opacity:1}}
+.sc2 .bob{animation:sc-bobx 6s ease-in-out infinite}
+@keyframes sc-bobx{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.sc2 .flyl{animation:sc-flyl 24s linear infinite}
+@keyframes sc-flyl{from{transform:translateX(1040px)}to{transform:translateX(-140px)}}
+.sc2 .flyr{animation:sc-flyr 70s linear infinite}
+@keyframes sc-flyr{from{transform:translateX(-200px)}to{transform:translateX(1060px)}}
+.sc2 .em{position:absolute;width:4px;height:4px;animation:sc-riseA 2.6s linear infinite;opacity:0}
+.sc2 .em.b{animation-name:sc-riseB}
+@keyframes sc-riseA{0%{transform:translate(0,0);opacity:0}10%{opacity:1}100%{transform:translate(18px,-190px);opacity:0}}
+@keyframes sc-riseB{0%{transform:translate(0,0);opacity:0}10%{opacity:1}100%{transform:translate(-22px,-150px);opacity:0}}
+.sc2 .mote{position:absolute;width:4px;height:4px;animation:sc-riseM 9s linear infinite;opacity:0}
+@keyframes sc-riseM{0%{transform:translate(0,0);opacity:0}15%{opacity:.9}85%{opacity:.8}100%{transform:translate(30px,-300px);opacity:0}}
+.sc2 .ff{position:absolute;width:4px;height:4px;background:#d8ff90;box-shadow:0 0 6px 2px rgba(216,255,144,.5);animation:sc-ffm 7s ease-in-out infinite}
+@keyframes sc-ffm{0%,100%{transform:translate(0,0);opacity:.2}25%{transform:translate(18px,-14px);opacity:1}50%{transform:translate(4px,-28px);opacity:.3}75%{transform:translate(-16px,-12px);opacity:1}}
+.sc2 .rn1{animation:sc-rn1 .5s linear infinite;background-size:240px 240px;background-repeat:repeat;opacity:.6}
+.sc2 .rn2{animation:sc-rn2 .8s linear infinite;background-size:360px 360px;background-repeat:repeat;opacity:.3}
+@keyframes sc-rn1{from{background-position:0 0}to{background-position:-20px 240px}}
+@keyframes sc-rn2{from{background-position:0 0}to{background-position:-30px 360px}}
+.sc2 .flash{position:absolute;left:0;top:0;width:960px;height:540px;background:#c8b8ff;opacity:0;animation:sc-flash 7s steps(1) infinite;pointer-events:none}
+@keyframes sc-flash{0%,90%{opacity:0}91%{opacity:.5}92%{opacity:.05}93%{opacity:.35}95%,100%{opacity:0}}
+.sc2 .bolt{opacity:0;animation:sc-bolt 7s steps(1) infinite}
+@keyframes sc-bolt{0%,90%{opacity:0}91%,92%{opacity:1}93%{opacity:0}94%{opacity:.8}95%,100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.sc2 *{animation:none!important}}
+.sc2 .pl{position:absolute;left:-24px;top:0;width:1008px;height:540px;background-size:960px 540px;background-repeat:repeat-x;background-position:24px 0;image-rendering:pixelated;pointer-events:none}
+@keyframes sc-pan{from{transform:translateX(calc(var(--a) * -1))}to{transform:translateX(var(--a))}}
+.sc2 .b0{filter:blur(2.4px)}.sc2 .b1{filter:blur(1.6px)}.sc2 .b2{filter:blur(.9px)}.sc2 .b3{filter:blur(.4px)}.sc2 .b4{filter:blur(2px)}
+.sc2 .bl{mix-blend-mode:screen}
+.sc2 .vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 58%,rgba(0,0,0,0) 52%,rgba(8,6,16,.55) 100%)}
+.sc2 .grade{position:absolute;inset:0;pointer-events:none}
+.sc2 .shaft{position:absolute;pointer-events:none;mix-blend-mode:screen;filter:blur(22px);transform-origin:50% 0;animation:sc-shaft 9s ease-in-out infinite alternate}
+@keyframes sc-shaft{from{opacity:.55}to{opacity:1}}
+.sc2 .snow{position:absolute;width:4px;height:4px;background:#fff;opacity:0;animation:sc-snow 11s linear infinite}
+@keyframes sc-snow{0%{transform:translate(0,-10px);opacity:0}10%{opacity:.9}90%{opacity:.7}100%{transform:translate(-80px,560px);opacity:0}}
+.sc2 .lamp{position:absolute;width:140px;height:140px;border-radius:50%;mix-blend-mode:screen;pointer-events:none;animation:sc-fl .7s steps(1) infinite}
+.sc2 .ob{position:absolute}
+@media (prefers-reduced-motion: reduce){.sc2 .pl{animation:none}}
+
+/* Scaled down to a phone, nearest-neighbour makes uneven pixels: smooth them instead. */
+@media (max-width: 767px) {
+  .sc2, .sc2 .p, .sc2 .dr i, .sc2 .pl { image-rendering: auto; }
+}
