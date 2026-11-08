@@ -32,6 +32,7 @@ All PNGs, pixel art: render with `image-rendering: pixelated` at integer scales 
 | `scenes/<tier>-card.png` | 312×250 | The small tier cards on the "Level tiers" board | Optional in the app |
 | `scenes/title.png` | 390×600 | Title screen scene | |
 | `landing/*.png` (10) | 960 wide | Landing page scenery (`/`): `sky`, `far`, `mid`, `mist`, `near` (960×640 / 480), `clouds-high`, `clouds-low`, `castle`, `castle-lights` (316×416), `sun` (640×560) | Tiled and drawn at ×1 on phones, ×1.5 from 768 px (`web/app/landing.css`) |
+| `scenes/live/*.png` (55) | various | The animated Home backdrops (since 2026-11-08): the layers of the four tier scenes (Campfire boreal forest, Village river valley, Keep highland moor, Citadel alpine summit), named by the first 8 hex digits of their canvas id | Drawn on a 960×540 stage (`web/components/home/scene-layers.ts`, `SceneStage.tsx`, `app/scenes.css`), scaled to the screen height; the phone and desktop `scenes/<tier>-*.png` are no longer used by Home |
 | `ui/hearts.png` | 312×22 | 13 frames of 24×22. Frames 0–11: the full heart's beat loop. Frame 12 (`-288px`): the empty heart | Full: `steps(12)` over 1.2 s, each heart offset by −0.3 s |
 | `ui/nav-icons.png` | 120×48 | 5 tab icons of 24×24 (HOME, JOURNAL, HERO, ARENA, SETTINGS). Row 0 idle, row 1 active | `x = -(i × 24)px`, `y = 0` or `-24px` |
 | `ui/portraits.png` | 320×48 | 8 class portraits of 40×48, in class order (Paladin, Barbarian, Wizard, Artificer, Cleric, Bard, Monk, Rogue) | Change-class rows; `grayscale(1) brightness(0.7)` when not qualified |
