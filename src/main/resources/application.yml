@@ -87,7 +87,7 @@ insightshub:
       sync-global: { requests: 30, per: 1m }  # all users together: protects the shared Groq key; tune to the plan
   sync:
     min-interval: 10m  # per-user cooldown for login/refresh syncs (v1: 7 days, login only); only a new user's first one calls the LLM (B11)
-    cron: "0 0 3 * * *"  # daily insights refresh of every user, in UTC; the LLM only when the data moved (insightshub.ai.regenerate) (Spring cron: sec min hour day month weekday; "-" = off)
+    cron: "0 0/30 * * * *"  # activity refresh of every user every 30 min (on the hour and half past), in UTC; the LLM only when the data moved (insightshub.ai.regenerate) (Spring cron: sec min hour day month weekday; "-" = off)
     concurrency: 4  # users refreshed at once by the daily job (GitHub on each user's own token + DB writes)
     branch-scan-days: 2  # today and yesterday: days the calendar shows as empty get a branch scan
   hero:

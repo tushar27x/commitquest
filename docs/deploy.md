@@ -217,5 +217,5 @@ Not measured: real LLM responses, and the hourly jobs with many users (capped by
 - [ ] Log in from the Vercel URL: PRESS START → GitHub → `/home`, the hero is there
 - [ ] SAVE twice: the second one says RESTING (the cooldown); `/arena` is a 404
 - [ ] `https://api.<domain>/actuator/env` is a 404 and `/swagger-ui.html` isn't served (401: Swagger is off)
-- [ ] Next day: `docker compose --env-file deploy.env logs backend | grep -E "Scheduled activity refresh|Hero job done"` shows the 03:00 UTC refresh and the hourly hero runs
+- [ ] Next day: `docker compose --env-file deploy.env logs backend | grep -E "Scheduled activity refresh|Hero job done"` shows the half-hourly activity refresh and the hourly hero runs
 - [ ] A budget alert in AWS; Neon and Upstash usage checked after a week; page timings checked (see "Region")
