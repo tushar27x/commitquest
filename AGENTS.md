@@ -12,7 +12,7 @@ _Last indexed: 2026-10-14, after Phase 8 (commit `a51a427`). Updated 2026-10-16 
 Hero-pet habit tracker for GitHub activity: the user's scored D&D class character has 3 hearts, XP and levels,
 and loses a heart for each day without GitHub activity (rules in `hero/HeroRules.java`).
 Backend: `com.tushar27x:insightshub:0.0.1-SNAPSHOT`, Java 21, Spring Boot 4.1.1, Spring AI 2.0.0 (BOM), Maven wrapper,
-virtual threads on. Web: Next.js 16 + React 19 + TypeScript + Tailwind 4 + TanStack Query in `web/` (Home, Journal, Hero, Change class, Settings; the Arena is **off for the first release** (U10): no tab, no route, no Settings switch, though the backend keeps its endpoints). `/api/*` is proxied to the backend by a Next rewrite (`web/next.config.ts`, 120 s timeout).
+virtual threads on. Web: Next.js 16 + React 19 + TypeScript + Tailwind 4 + TanStack Query in `web/` (landing page at `/` from `components/landing`, Home, Journal, Hero, Change class, Settings; the Arena is **off for the first release** (U10): no tab, no route, no Settings switch, though the backend keeps its endpoints). `/api/*` is proxied to the backend by a Next rewrite (`web/next.config.ts`, 120 s timeout).
 Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13, Part D). HTTP surface today:
 `/api/auth/{login,callback,logout}` (public; the callback 302s to `${FRONTEND_URL}/dashboard#token=<jwt>`), `GET /api/user/insights`, `POST /api/user/sync`,
 `GET /api/user/hero`, `GET /api/user/hero/events`, `PUT /api/user/hero/class`, `GET/PUT /api/user/preferences`, `GET /api/leaderboard`, `GET /api/user/rank` (JWT; the Arena pair is unused by the web app for now), `GET/POST /api/notifications/unsubscribe` (public, signed token, HTML pages), `/actuator/health`.
