@@ -9,7 +9,7 @@ test("401: SESSION ENDED over the screen, then back to the title", async ({ page
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "BACK TO TITLE" }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("link", { name: "PRESS START" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "PRESS START" }).first()).toBeVisible();
 });
 
 test("404: NEW GAME, and ROLL CHARACTER runs the first save", async ({ page }) => {

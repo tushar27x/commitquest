@@ -1,0 +1,172 @@
+/* The landing page (components/landing). The scenery layers are 960-wide PNGs from
+   docs/design/art/landing: drawn at ×1 on phones and ×1.5 from 768 px up. Animations are hard
+   steps, and all of them stop under prefers-reduced-motion. */
+
+html {
+  scroll-behavior: smooth;
+}
+
+.landing {
+  --l-castle-w: 316px;
+  --l-castle-h: 416px;
+}
+
+.l-layer,
+.l-cloud {
+  position: absolute;
+  inset-inline: 0;
+  background-repeat: repeat-x;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.l-layer {
+  bottom: 0;
+  background-position: -830px bottom;
+}
+.l-sky { height: 640px; background-size: 960px 640px; background-image: url(/art/landing/sky.png); }
+.l-far { height: 480px; background-size: 960px 480px; background-image: url(/art/landing/far.png); }
+.l-mid { height: 480px; background-size: 960px 480px; background-image: url(/art/landing/mid.png); }
+.l-mist { height: 480px; background-size: 960px 480px; background-image: url(/art/landing/mist.png); opacity: 0.9; }
+.l-near { height: 480px; background-size: 960px 480px; background-image: url(/art/landing/near.png); }
+
+.l-cloud-high {
+  top: 110px;
+  height: 220px;
+  background-size: 960px 220px;
+  background-image: url(/art/landing/clouds-high.png);
+  animation: l-drift-phone 200s linear infinite;
+}
+.l-cloud-low {
+  bottom: 120px;
+  height: 140px;
+  background-size: 960px 140px;
+  background-image: url(/art/landing/clouds-low.png);
+  animation: l-drift-phone 320s linear infinite;
+}
+
+.l-castle,
+.l-lights,
+.l-sun {
+  position: absolute;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.l-castle,
+.l-lights {
+  width: 316px;
+  height: 416px;
+  left: calc(50% - 130px);
+  bottom: 34px;
+  background-size: 316px 416px;
+}
+.l-castle { background-image: url(/art/landing/castle.png); }
+.l-lights { background-image: url(/art/landing/castle-lights.png); animation: l-flick 2.4s infinite steps(1); }
+.l-sun {
+  width: 640px;
+  height: 560px;
+  left: calc(50% - 428px);
+  bottom: -15px;
+  background-size: 640px 560px;
+  background-image: url(/art/landing/sun.png);
+}
+
+@media (min-width: 768px) {
+  .l-layer { background-position: center bottom; }
+  .l-sky { height: 960px; background-size: 1440px 960px; }
+  .l-far, .l-mid, .l-mist, .l-near { height: 720px; background-size: 1440px 720px; }
+  .l-cloud-high { top: 64px; height: 330px; background-size: 1440px 330px; animation: l-drift 240s linear infinite; }
+  .l-cloud-low { bottom: 176px; height: 210px; background-size: 1440px 210px; animation: l-drift 400s linear infinite; }
+  .l-castle,
+  .l-lights {
+    width: 474px;
+    height: 624px;
+    left: min(calc(50% + 174px), calc(100% - 474px));
+    bottom: 51px;
+    background-size: 474px 624px;
+  }
+  .l-sun { width: 960px; height: 840px; left: calc(50% - 282px); bottom: -23px; background-size: 960px 840px; }
+}
+
+@keyframes l-drift-phone { from { background-position-x: -830px; } to { background-position-x: -1790px; } }
+@keyframes l-drift { from { background-position-x: 0; } to { background-position-x: -1440px; } }
+@keyframes l-flick {
+  0%, 60% { opacity: 1; }
+  62%, 70% { opacity: 0.45; }
+  72%, 100% { opacity: 1; }
+}
+
+/* A hero from the idle sheet (60 frames of 96×128), sized by its box: 3:4, any width. */
+.l-hero {
+  aspect-ratio: 3 / 4;
+  background-repeat: no-repeat;
+  background-size: 6000% 100%;
+  image-rendering: pixelated;
+  animation: l-sheet 6.2832s steps(60) infinite;
+}
+@keyframes l-sheet {
+  from { background-position: 0 0; }
+  to { background-position: 101.6949% 0; }
+}
+
+.l-twinkle { animation: l-twinkle 3s infinite steps(1); }
+.l-twinkle-late { animation: l-twinkle 3s infinite steps(1) 1.5s; }
+@keyframes l-twinkle {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.25; }
+}
+
+.l-glow { animation: l-glow 1.6s infinite steps(1); }
+@keyframes l-glow {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.7; }
+}
+
+.l-ember {
+  position: absolute;
+  bottom: 70px;
+  width: 4px;
+  height: 4px;
+  background: var(--color-gold);
+  opacity: 0;
+  animation: l-rise linear infinite;
+}
+@media (min-width: 768px) {
+  .l-ember { bottom: 100px; }
+}
+@keyframes l-rise {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 1; }
+  80% { opacity: 0.9; }
+  100% { transform: translate(24px, -340px); opacity: 0; }
+}
+
+/* Class cards: a swipeable rail on phones, a grid from 768 px up. */
+.l-rail {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 6px 20px 22px;
+  margin-inline: -20px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-pedestal) var(--color-outline);
+}
+.l-rail > * { scroll-snap-align: center; }
+@media (min-width: 768px) {
+  .l-rail {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 32px;
+    overflow: visible;
+    padding: 6px 0 0;
+    margin-inline: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .l-cloud, .l-lights, .l-hero, .l-twinkle, .l-twinkle-late, .l-glow, .l-ember {
+    animation: none;
+  }
+}

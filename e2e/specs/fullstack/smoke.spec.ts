@@ -48,7 +48,7 @@ test.afterAll(async () => {
 
 test("PRESS START → GitHub → callback → /dashboard#token → Home, with the hero from the first sync", async () => {
   await page.goto("/");
-  const start = page.getByRole("link", { name: "PRESS START" });
+  const start = page.getByRole("link", { name: "PRESS START" }).first();
   await expect(start).toHaveAttribute("href", `${BACKEND_URL}/api/auth/login`);
   await start.click();
   await page.waitForURL(`${WEB_URL}/home`, { timeout: 120_000 }); // the login sync runs inside the callback

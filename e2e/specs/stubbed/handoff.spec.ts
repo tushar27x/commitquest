@@ -36,7 +36,7 @@ test("the token survives a reload; without one, a tab screen goes back to the ti
   await page.evaluate(() => window.localStorage.clear());
   await page.goto("/journal");
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("link", { name: "PRESS START" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "PRESS START" }).first()).toBeVisible();
 });
 
 test("an expired token in the fragment isn't kept: back to the title", async ({ page }) => {

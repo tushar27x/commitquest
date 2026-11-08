@@ -6,7 +6,7 @@ const nav = (page: import("@playwright/test").Page) => page.getByRole("navigatio
 
 test("PRESS START on the title goes home, where the hero from hero.json waits", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "PRESS START" }).click();
+  await page.getByRole("link", { name: "PRESS START" }).first().click();
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByText(heroSummary(fixtures.hero))).toBeAttached();
   await expect(page.getByRole("heading", { level: 1, name: "HOME" })).toBeAttached();

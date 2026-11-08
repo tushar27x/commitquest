@@ -31,6 +31,7 @@ All PNGs, pixel art: render with `image-rendering: pixelated` at integer scales 
 | `scenes/<tier>-desktop.png` | 380×260 | Home backdrop, desktop | Drawn at ×2: `background-size: 760px 520px` |
 | `scenes/<tier>-card.png` | 312×250 | The small tier cards on the "Level tiers" board | Optional in the app |
 | `scenes/title.png` | 390×600 | Title screen scene | |
+| `landing/*.png` (10) | 960 wide | Landing page scenery (`/`): `sky`, `far`, `mid`, `mist`, `near` (960×640 / 480), `clouds-high`, `clouds-low`, `castle`, `castle-lights` (316×416), `sun` (640×560) | Tiled and drawn at ×1 on phones, ×1.5 from 768 px (`web/app/landing.css`) |
 | `ui/hearts.png` | 312×22 | 13 frames of 24×22. Frames 0–11: the full heart's beat loop. Frame 12 (`-288px`): the empty heart | Full: `steps(12)` over 1.2 s, each heart offset by −0.3 s |
 | `ui/nav-icons.png` | 120×48 | 5 tab icons of 24×24 (HOME, JOURNAL, HERO, ARENA, SETTINGS). Row 0 idle, row 1 active | `x = -(i × 24)px`, `y = 0` or `-24px` |
 | `ui/portraits.png` | 320×48 | 8 class portraits of 40×48, in class order (Paladin, Barbarian, Wizard, Artificer, Cleric, Bard, Monk, Rogue) | Change-class rows; `grayscale(1) brightness(0.7)` when not qualified |
