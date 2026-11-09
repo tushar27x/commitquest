@@ -129,6 +129,6 @@ export function loginUrl(): string {
  * backend, so it reloads Settings as if GitHub had granted it.
  */
 export function privateLoginUrl(): string {
-  if (MOCK_MODE) return "/settings?mock=private_granted";
+  if (MOCK_MODE) return "/settings?mock=private_granted&private=back";
   return `${loginUrl()}?private=true`;
 }

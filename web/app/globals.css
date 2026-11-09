@@ -186,6 +186,18 @@
   80% { opacity: 0.95; }
 }
 
+/* Settings: the private-repos resync bar, a gold block stepping along a track. */
+.resync-bar {
+  background-image: linear-gradient(var(--color-gold), var(--color-gold));
+  background-repeat: no-repeat;
+  background-size: 25% 100%;
+  animation: resync-scan 2s steps(8) infinite;
+}
+@keyframes resync-scan {
+  from { background-position: 0% 0; }
+  to { background-position: 100% 0; }
+}
+
 /* Every animation is off for users who ask for less motion. */
 @media (prefers-reduced-motion: reduce) {
   *,
