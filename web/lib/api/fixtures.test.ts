@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   ARCHETYPES, BASE_MOODS, HERO_EVENT_TYPES, LEADERBOARD_MAX_SIZE, MOODS, NOT_IN_ARENA_TITLE, TIERS, WEEK_STATUSES, WEEKDAYS,
   type Hero, type HeroEvent, type HeroEventDetails, type HeroEventType, type HeroEvents, type Insights, type Leaderboard,
-  type Preferences, type ProblemDetail, type Rank,
+  PRIVATE_ACCESS, type Preferences, type ProblemDetail, type Rank,
 } from "./types";
 
 const DOCS = join(__dirname, "../../../docs/api/fixtures");
@@ -94,6 +94,7 @@ const heroEvents = obj<HeroEvents>({
 
 const preferences = obj<Preferences>({
   timezone: str, rest_days: array(weekday), alerts_enabled: bool, public_profile: bool,
+  include_private: bool, private_access: oneOf(PRIVATE_ACCESS),
 });
 
 const leaderboard = obj<Leaderboard>({
