@@ -55,6 +55,25 @@ for (const [label, viewport] of [
   });
 }
 
+test("the phone Hero header keeps its title centred with the back link in it", async ({ page }) => {
+  for (const width of [360, 390, 430]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/hero");
+    const title = await page.getByRole("heading", { level: 1, name: "HERO" }).boundingBox();
+    expect(title, `HERO title at ${width} px`).not.toBeNull();
+    expect(Math.abs(title!.x + title!.width / 2 - width / 2), `title centre at ${width} px`).toBeLessThan(2);
+    await expect(page.getByRole("link", { name: "Back to the landing page" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /CHANGE/ })).toBeVisible();
+  }
+});
+
+test("Change class has its own BACK and no link to the landing page", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/hero/change");
+  await expect(page.getByRole("heading", { name: "CHANGE CLASS" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to the landing page" })).toHaveCount(0);
+});
+
 test("Settings has the Arena switch, and it saves", async ({ page }) => {
   await page.goto("/settings");
   const arena = page.getByRole("switch", { name: "SHOW ME IN THE ARENA" });

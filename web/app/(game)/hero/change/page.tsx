@@ -24,7 +24,8 @@ export default function Page() {
       flush
       actions={back}
       header={
-        <MobileHeader className="justify-between">
+        /* Its own BACK leads to Hero, so no second back link to the landing page here. */
+        <MobileHeader back={false} className="justify-between">
           {back}
           <MobileTitle>CHANGE CLASS</MobileTitle>
           <span className="w-12" />

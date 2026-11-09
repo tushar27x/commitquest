@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent, type Ref } from "react";
-import { MobileHeader } from "@/components/game/MobileHeader";
+import { BackToLanding, MobileHeader } from "@/components/game/MobileHeader";
 import { Screen } from "@/components/game/Screen";
 import { Parchment } from "@/components/Parchment";
 import { HeroSprite } from "@/components/art/HeroSprite";
@@ -28,10 +28,14 @@ export function HeroSheetScreen() {
         </Link>
       }
       header={
-        <MobileHeader className="justify-between">
-          <span className="w-16 font-display text-[9px] text-muted-2">{level ? `LV ${level}` : ""}</span>
+        <MobileHeader back={false} className="justify-between">
+          {/* Both side parts are w-20, so the title stays centred. */}
+          <span className="flex w-20 items-center gap-2 font-display text-[9px] text-muted-2">
+            <BackToLanding />
+            {level ? `LV ${level}` : ""}
+          </span>
           <h1 className="font-display text-[11px]">HERO</h1>
-          <Link href="/hero/change" className="flex w-16 items-center justify-end gap-1.5 py-3 font-display text-[8px] text-gold">
+          <Link href="/hero/change" className="flex w-20 items-center justify-end gap-1.5 py-3 font-display text-[8px] text-gold">
             CHANGE <Arrow />
           </Link>
         </MobileHeader>
