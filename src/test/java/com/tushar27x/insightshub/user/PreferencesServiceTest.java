@@ -3,10 +3,13 @@ package com.tushar27x.insightshub.user;
 import com.tushar27x.insightshub.entity.Users;
 import com.tushar27x.insightshub.hero.RestDays;
 import com.tushar27x.insightshub.repository.UsersRepository;
+import com.tushar27x.insightshub.sync.ResyncWriter;
+import com.tushar27x.insightshub.sync.SyncService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -30,7 +33,13 @@ class PreferencesServiceTest {
     private static final Instant NOW = Instant.parse("2026-10-16T20:00:00Z");
 
     private final UsersRepository usersRepository = mock(UsersRepository.class);
-    private final PreferencesService service = new PreferencesService(usersRepository, Clock.fixed(NOW, ZoneOffset.UTC));
+    private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+    private final PrivateProperties privateProperties = new PrivateProperties(Duration.ofDays(7));
+    private final SyncService syncService = mock(SyncService.class);
+    private final ResyncWriter resyncWriter = mock(ResyncWriter.class);
+    private final PreferencesService service = new PreferencesService(usersRepository,
+            new PreferencesWriter(usersRepository, resyncWriter, clock, privateProperties), syncService,
+            privateProperties, clock);
     private Users user;
 
     @BeforeEach
@@ -45,14 +54,16 @@ class PreferencesServiceTest {
 
     @Test
     void aNewUserHasUtcNoRestDaysAndNoAlerts() {
-        assertThat(service.get(ID)).contains(new Preferences("UTC", List.of(), false, false));
+        assertThat(service.get(ID)).contains(new Preferences("UTC", List.of(), false, false, false, Preferences.PrivateAccess.NONE));
     }
 
     @Test
     void savesEverythingAndReturnsWhatWasSaved() {
-        Preferences sent = new Preferences("Asia/Kolkata", List.of(SUNDAY), true, true);
+        Preferences sent = new Preferences("Asia/Kolkata", List.of(SUNDAY), true, true, true, null);
 
-        assertThat(service.update(ID, sent)).contains(sent);
+        assertThat(service.update(ID, sent)).contains(
+                new Preferences("Asia/Kolkata", List.of(SUNDAY), true, true, true, Preferences.PrivateAccess.NONE));
+        assertThat(user.isIncludePrivate()).isTrue();
         assertThat(user.getTimezone()).isEqualTo("Asia/Kolkata");
         assertThat(user.isAlertsEnabled()).isTrue();
         assertThat(user.isPublicProfile()).isTrue();
@@ -60,7 +71,7 @@ class PreferencesServiceTest {
 
     @Test
     void aRestDayChangeAppliesFromTomorrowInTheNewZone() {
-        service.update(ID, new Preferences("Asia/Kolkata", List.of(SUNDAY, SATURDAY), false, false));
+        service.update(ID, new Preferences("Asia/Kolkata", List.of(SUNDAY, SATURDAY), false, false, false, null));
 
         assertThat((int) user.getRestDays()).isEqualTo(mask(SATURDAY, SUNDAY));
         assertThat((int) user.getRestDaysPrevious()).isZero();
@@ -73,7 +84,7 @@ class PreferencesServiceTest {
         user.setRestDaysPrevious((short) mask(FRIDAY));
         user.setRestDaysFrom(LocalDate.of(2026, 10, 17)); // changed earlier today (UTC)
 
-        service.update(ID, new Preferences("UTC", List.of(SATURDAY), false, false));
+        service.update(ID, new Preferences("UTC", List.of(SATURDAY), false, false, false, null));
 
         assertThat((int) user.getRestDays()).isEqualTo(mask(SATURDAY));
         assertThat((int) user.getRestDaysPrevious()).isEqualTo(mask(FRIDAY)); // what Friday 16th is settled with
@@ -86,7 +97,7 @@ class PreferencesServiceTest {
         user.setRestDaysPrevious((short) mask(FRIDAY));
         user.setRestDaysFrom(LocalDate.of(2026, 9, 1));
 
-        service.update(ID, new Preferences("UTC", List.of(), false, false));
+        service.update(ID, new Preferences("UTC", List.of(), false, false, false, null));
 
         assertThat((int) user.getRestDays()).isZero();
         assertThat((int) user.getRestDaysPrevious()).isEqualTo(mask(SUNDAY));
@@ -97,7 +108,7 @@ class PreferencesServiceTest {
         user.setRestDays((short) mask(SATURDAY, SUNDAY));
         user.setRestDaysFrom(LocalDate.of(2026, 9, 1));
 
-        service.update(ID, new Preferences("UTC", List.of(SUNDAY, SATURDAY), true, false));
+        service.update(ID, new Preferences("UTC", List.of(SUNDAY, SATURDAY), true, false, false, null));
 
         assertThat(user.getRestDaysFrom()).isEqualTo(LocalDate.of(2026, 9, 1));
         assertThat(service.get(ID).orElseThrow().restDays()).containsExactly(SATURDAY, SUNDAY); // Monday first
@@ -106,6 +117,33 @@ class PreferencesServiceTest {
     @Test
     void anUnknownUserIsEmpty() {
         assertThat(service.get(42L)).isEmpty();
-        assertThat(service.update(42L, new Preferences("UTC", List.of(), false, false))).isEmpty();
+        assertThat(service.update(42L, new Preferences("UTC", List.of(), false, false, false, null))).isEmpty();
+    }
+
+    @Test
+    void privateAccessFollowsTheRecordedScopesAndIsNeverTakenFromTheBody() {
+        user.setGithubScopes("read:user,user:email,repo");
+        assertThat(service.get(ID).orElseThrow().privateAccess()).isEqualTo(Preferences.PrivateAccess.GRANTED);
+
+        // a client claiming "none" (or "granted" without the scope) changes nothing
+        Preferences sent = new Preferences("UTC", List.of(), false, false, false, Preferences.PrivateAccess.NONE);
+        assertThat(service.update(ID, sent).orElseThrow().privateAccess()).isEqualTo(Preferences.PrivateAccess.GRANTED);
+
+        user.setGithubScopes("read:user,user:email");
+        sent = new Preferences("UTC", List.of(), false, false, true, Preferences.PrivateAccess.GRANTED);
+        assertThat(service.update(ID, sent).orElseThrow().privateAccess()).isEqualTo(Preferences.PrivateAccess.NONE);
+        assertThat(user.isIncludePrivate()).isTrue(); // saved even without the scope: the UI then asks to re-authorize
+    }
+
+    @Test
+    void turningItOffWhileWaitingKeepsTheRecordedScopes() {
+        user.setGithubScopes("read:user,user:email");
+        user.setIncludePrivate(true);
+
+        Preferences saved = service.update(ID, new Preferences("UTC", List.of(), false, false, false, null)).orElseThrow();
+
+        assertThat(saved.includePrivate()).isFalse();
+        assertThat(saved.privateAccess()).isEqualTo(Preferences.PrivateAccess.NONE);
+        assertThat(user.getGithubScopes()).isEqualTo("read:user,user:email");
     }
 }

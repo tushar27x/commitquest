@@ -53,6 +53,6 @@ describe("art", () => {
     expect(pngSize(UI_ART.navIcons)).toEqual([120, 48]);
     expect(pngSize(UI_ART.portraits)).toEqual([320, 48]);
     expect(pngSize(UI_ART.campfire)).toEqual([256, 48]);
-    expect(Object.values(NAV_ICON).sort()).toEqual([0, 1, 2, 4]);
+    expect(Object.values(NAV_ICON).sort()).toEqual([0, 1, 2, 3, 4]);
   });
 });

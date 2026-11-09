@@ -18,6 +18,12 @@ public class TooManyRequestsException extends ErrorResponseException {
         getHeaders().set(HttpHeaders.RETRY_AFTER, Long.toString(retryAfterSeconds));
     }
 
+    /** B11: with its own {@code title}, so a client can tell a lock from the plain rate limit. */
+    public TooManyRequestsException(String title, String detail, Duration retryAfter) {
+        this(detail, retryAfter);
+        getBody().setTitle(title);
+    }
+
     public long retryAfterSeconds() {
         return retryAfterSeconds;
     }

@@ -3,6 +3,9 @@ package com.tushar27x.insightshub.user;
 import com.tushar27x.insightshub.ratelimit.RateLimit;
 import com.tushar27x.insightshub.ratelimit.RateLimit.KeyType;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.http.HttpHeaders;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -38,13 +41,21 @@ public class PreferencesController {
     }
 
     @Operation(summary = "Save the user's settings",
-            description = "The full object: all four fields are required. timezone is an IANA region id "
+            description = "The full object: timezone, rest_days, alerts_enabled, public_profile and include_private are required; private_access is read-only and ignored. timezone is an IANA region id "
                     + "(+05:30 and GMT+5 are refused); rest_days has at most 2 days, none repeated, and a change "
                     + "applies from the next local day.")
     @ApiResponse(responseCode = "200", useReturnTypeSchema = true, description = "Saved")
     @ApiResponse(responseCode = "400", description = "A validation problem with errors[{field, message}], field the "
             + "snake_case name. An unknown weekday string is a JSON error: Spring's own 400, no errors[].")
     @ApiResponse(responseCode = "404", description = "The JWT's user no longer exists.")
+    @ApiResponse(responseCode = "429", description = "The rate limit (title \"Too Many Requests\"), the global sync cap "
+            + "being busy during an effective private-access change (same title), or the private-access lock: "
+            + "title \"Private access locked\", and the whole PUT is refused. Retry-After in whole seconds.",
+            headers = @Header(name = HttpHeaders.RETRY_AFTER, schema = @Schema(type = "integer")))
+    @ApiResponse(responseCode = "409", description = "Only when the PUT changes the effective private-access state: "
+            + "GitHub no longer accepts the stored token. Nothing was saved.")
+    @ApiResponse(responseCode = "502", description = "Only when the PUT changes the effective private-access state: "
+            + "GitHub is unavailable during the resync. Nothing was saved.")
     @RateLimit(policy = "preferences", key = KeyType.USER)
     @PutMapping
     public Preferences put(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody Preferences preferences) {

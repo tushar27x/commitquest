@@ -23,7 +23,7 @@ const backend = createServer((req, res) => {
   req.on("data", (chunk) => (body += chunk));
   req.on("end", () => {
     const seen = { method: req.method, url: req.url, authorization: req.headers.authorization ?? null, body };
-    if (req.url === "/api/user/sync") {
+    if (req.url === "/api/user/sync" || req.url === "/api/user/preferences?slow=1") {
       setTimeout(() => send(res, 200, "application/json", seen), SYNC_DELAY_MS);
     } else if (req.url === "/api/user/insights") {
       res.setHeader("Retry-After", "42");
@@ -92,11 +92,19 @@ try {
   check(limited.headers.get("retry-after") === "42", `Retry-After kept (${limited.headers.get("retry-after")})`);
   check((limited.headers.get("content-type") ?? "").startsWith("application/problem+json"), "problem+json kept");
 
-  // 4. A sync slower than Next's 30 s default still comes back.
+  // 4. A sync slower than Next's 30 s default still comes back. B11: so does the PUT /preferences that flips
+  //    private access, which resyncs inside the request (up to ~90 s). Both wait at once to keep the run short.
   const started = Date.now();
-  const sync = await fetch(`${BASE}/api/user/sync`, { method: "POST", headers: { Authorization: AUTH } });
+  const [sync, flip] = await Promise.all([
+    fetch(`${BASE}/api/user/sync`, { method: "POST", headers: { Authorization: AUTH } }),
+    fetch(`${BASE}/api/user/preferences?slow=1`, {
+      method: "PUT", headers: { Authorization: AUTH, "Content-Type": "application/json" }, body: JSON.stringify({ ...prefs, include_private: true }),
+    }),
+  ]);
   const took = Math.round((Date.now() - started) / 1000);
   check(sync.status === 200, `POST /sync after ${took} s: ${sync.status} (needs experimental.proxyTimeout > ${SYNC_DELAY_MS / 1000} s)`);
+  const seenFlip = await flip.json();
+  check(flip.status === 200 && seenFlip.method === "PUT" && JSON.parse(seenFlip.body).include_private === true, `slow PUT /preferences (the private flip) after ${took} s: ${flip.status}, body intact`);
 } catch (err) {
   failures.push(String(err));
   console.error(err);

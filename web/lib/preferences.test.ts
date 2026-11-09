@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "./api";
 import type { Preferences } from "./api/types";
-import { adoptBrowserZone, fieldErrors, restDayLocked, samePreferences, sameTimeZone, timeZoneOptions, toggleRestDay } from "./preferences";
+import { adoptBrowserZone, fieldErrors, privateState, restDayLocked, samePreferences, sameTimeZone, timeZoneOptions, toggleRestDay } from "./preferences";
 
-const prefs: Preferences = { timezone: "Asia/Kolkata", rest_days: ["SUNDAY"], alerts_enabled: true, public_profile: false };
+const prefs: Preferences = { timezone: "Asia/Kolkata", rest_days: ["SUNDAY"], alerts_enabled: true, public_profile: false, include_private: false, private_access: "none", private_locked_until: null };
 
 describe("rest-day picker", () => {
   it("adds up to 2 days, Monday first", () => {
@@ -94,5 +94,19 @@ describe("sameTimeZone", () => {
     expect(sameTimeZone("Asia/Kolkata", "Europe/Berlin")).toBe(false);
     expect(sameTimeZone("Asia/Kolkata", null)).toBe(false);
     expect(sameTimeZone("Nope/Zone", "Asia/Kolkata")).toBe(false);
+  });
+});
+
+describe("privateState (B10 four states)", () => {
+  const state = (include_private: boolean, private_access: "none" | "granted") => privateState({ include_private, private_access });
+  it("maps include_private x private_access to the UI state", () => {
+    expect(state(false, "none")).toBe("off");
+    expect(state(false, "granted")).toBe("off");
+    expect(state(true, "none")).toBe("needs-permission");
+    expect(state(true, "granted")).toBe("active");
+  });
+  it("counts include_private as a change", () => {
+    expect(samePreferences(prefs, { ...prefs, include_private: true })).toBe(false);
+    expect(samePreferences(prefs, { ...prefs, private_access: "granted" })).toBe(true);
   });
 });

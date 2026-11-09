@@ -1,0 +1,33 @@
+{
+  "_doc": "Partial overrides of preferences.json for mock mode (?mock=<variant>), one per B10/B11 state. Merge over preferences.json. Fixture story: now is 2026-10-16T09:30:00Z, so a change made now locks until 2026-10-23T09:30:00Z.",
+  "private_off_granted": {
+    "include_private": false,
+    "private_access": "granted",
+    "private_locked_until": null
+  },
+  "private_granted": {
+    "include_private": true,
+    "private_access": "granted",
+    "private_locked_until": null
+  },
+  "private_reauth": {
+    "include_private": true,
+    "private_access": "none",
+    "private_locked_until": null
+  },
+  "private_locked_on": {
+    "include_private": true,
+    "private_access": "granted",
+    "private_locked_until": "2026-10-23T09:30:00Z"
+  },
+  "private_locked_off": {
+    "include_private": false,
+    "private_access": "granted",
+    "private_locked_until": "2026-10-23T09:30:00Z"
+  },
+  "private_lock_lost_scope": {
+    "include_private": true,
+    "private_access": "none",
+    "private_locked_until": "2026-10-23T09:30:00Z"
+  }
+}

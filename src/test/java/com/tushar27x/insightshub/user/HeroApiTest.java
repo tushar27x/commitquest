@@ -32,8 +32,11 @@ import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -276,7 +279,7 @@ class HeroApiTest {
     @Test
     void preferencesAreServedInTheContractShape() throws Exception {
         String fixture = Fixtures.read("preferences.json");
-        when(preferencesService.get(ID)).thenReturn(Optional.of(jsonMapper.readValue(fixture, Preferences.class)));
+        when(preferencesService.get(ID)).thenReturn(Optional.of(fixturePreferences(fixture)));
 
         mvc.perform(as(get("/api/user/preferences")))
                 .andExpect(status().isOk())
@@ -286,20 +289,66 @@ class HeroApiTest {
     @Test
     void validPreferencesAreSavedAndEchoed() throws Exception {
         String fixture = Fixtures.read("preferences.json");
-        Preferences sent = jsonMapper.readValue(fixture, Preferences.class);
-        when(preferencesService.update(ID, sent)).thenReturn(Optional.of(sent));
+        Preferences saved = fixturePreferences(fixture);
+        // private_access is read-only: the body's value is dropped before the service sees it
+        Preferences received = new Preferences(saved.timezone(), saved.restDays(), saved.alertsEnabled(),
+                saved.publicProfile(), saved.includePrivate(), null);
+        when(preferencesService.update(ID, received)).thenReturn(Optional.of(saved));
 
         mvc.perform(as(put("/api/user/preferences")).contentType(MediaType.APPLICATION_JSON).content(fixture))
                 .andExpect(status().isOk())
                 .andExpect(content().json(fixture, JsonCompareMode.STRICT));
-        verify(preferencesService).update(ID, sent);
+        verify(preferencesService).update(ID, received);
+    }
+
+    /** The fixture as the server holds it: private_access is read-only, so it is not read from JSON. */
+    private Preferences fixturePreferences(String fixture) {
+        Preferences read = jsonMapper.readValue(fixture, Preferences.class);
+        assertThat(read.privateAccess()).isNull();
+        return new Preferences(read.timezone(), read.restDays(), read.alertsEnabled(), read.publicProfile(),
+                read.includePrivate(), Preferences.PrivateAccess.NONE);
+    }
+
+    @Test
+    void privateAccessInThePutBodyIsIgnoredEvenWhenItIsNotAValidValue() throws Exception {
+        when(preferencesService.update(org.mockito.ArgumentMatchers.eq(ID), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(inv -> Optional.of(inv.<Preferences>getArgument(1)));
+
+        for (String junk : new String[]{"\"granted\"", "\"bogus\"", "7", "null"}) {
+            putPreferences("""
+                    {"timezone": "UTC", "rest_days": [], "alerts_enabled": true, "public_profile": false,
+                     "include_private": true, "private_access": %s}
+                    """.formatted(junk))
+                    .andExpect(status().isOk());
+        }
+        org.mockito.ArgumentCaptor<Preferences> captor = org.mockito.ArgumentCaptor.forClass(Preferences.class);
+        verify(preferencesService, org.mockito.Mockito.times(4)).update(org.mockito.ArgumentMatchers.eq(ID), captor.capture());
+        assertThat(captor.getAllValues()).allSatisfy(p -> assertThat(p.privateAccess()).isNull());
+    }
+
+    @Test
+    void includePrivateIsRequiredAndMustBeABoolean() throws Exception {
+        putPreferences("""
+                {"timezone": "UTC", "rest_days": [], "alerts_enabled": true, "public_profile": false}
+                """)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors", hasSize(1)))
+                .andExpect(jsonPath("$.errors[0].field").value("include_private"))
+                .andExpect(jsonPath("$.errors[0].message").value("must not be null"));
+        putPreferences("""
+                {"timezone": "UTC", "rest_days": [], "alerts_enabled": true, "public_profile": false,
+                 "include_private": "yes"}
+                """)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors").doesNotExist()); // Spring's own 400
+        verifyNoInteractions(preferencesService);
     }
 
     @Test
     void anOffsetIsNotAnIanaZone() throws Exception {
         for (String zone : new String[]{"+05:30", "GMT+5", "Mars/Olympus_Mons", ""}) {
             putPreferences("""
-                    {"timezone": "%s", "rest_days": [], "alerts_enabled": true, "public_profile": false}
+                    {"timezone": "%s", "rest_days": [], "alerts_enabled": true, "public_profile": false, "include_private": false}
                     """.formatted(zone))
                     .andExpect(status().isBadRequest())
                     .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -313,7 +362,7 @@ class HeroApiTest {
     @Test
     void atMostTwoRestDays() throws Exception {
         putPreferences("""
-                {"timezone": "UTC", "rest_days": ["MONDAY", "SATURDAY", "SUNDAY"], "alerts_enabled": true, "public_profile": false}
+                {"timezone": "UTC", "rest_days": ["MONDAY", "SATURDAY", "SUNDAY"], "alerts_enabled": true, "public_profile": false, "include_private": false}
                 """)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0].field").value("rest_days"))
@@ -323,7 +372,7 @@ class HeroApiTest {
     @Test
     void noDuplicateRestDays() throws Exception {
         putPreferences("""
-                {"timezone": "UTC", "rest_days": ["SUNDAY", "SUNDAY"], "alerts_enabled": true, "public_profile": false}
+                {"timezone": "UTC", "rest_days": ["SUNDAY", "SUNDAY"], "alerts_enabled": true, "public_profile": false, "include_private": false}
                 """)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0].field").value("rest_days"))
@@ -334,20 +383,84 @@ class HeroApiTest {
     void everyFieldIsRequired() throws Exception {
         putPreferences("{}")
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors", hasSize(4)))
+                .andExpect(jsonPath("$.errors", hasSize(5)))
                 .andExpect(jsonPath("$.errors[*].field").value(org.hamcrest.Matchers.containsInAnyOrder(
-                        "timezone", "rest_days", "alerts_enabled", "public_profile")));
+                        "timezone", "rest_days", "alerts_enabled", "public_profile", "include_private")));
         verifyNoInteractions(preferencesService);
     }
 
     @Test
     void anUnknownWeekdayIsSpringsOwn400() throws Exception {
         putPreferences("""
-                {"timezone": "UTC", "rest_days": ["FUNDAY"], "alerts_enabled": true, "public_profile": false}
+                {"timezone": "UTC", "rest_days": ["FUNDAY"], "alerts_enabled": true, "public_profile": false, "include_private": false}
                 """)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
         verify(preferencesService, org.mockito.Mockito.never()).update(anyLong(), any());
+    }
+
+    // --- B11: the lock ---
+
+    @Test
+    void theLockEndIsServedAsAnIsoInstantAndNullWhenNotLocked() throws Exception {
+        Instant until = Instant.parse("2026-10-23T09:30:00Z"); // preferences-variants.json: private_locked_on
+        when(preferencesService.get(ID)).thenReturn(Optional.of(new Preferences("Asia/Kolkata",
+                List.of(java.time.DayOfWeek.SUNDAY), true, false, true, Preferences.PrivateAccess.GRANTED, until)));
+
+        mvc.perform(as(get("/api/user/preferences")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.private_locked_until").value("2026-10-23T09:30:00Z"))
+                .andExpect(jsonPath("$.include_private").value(true))
+                .andExpect(jsonPath("$.private_access").value("granted"));
+    }
+
+    @Test
+    void theLockEndInThePutBodyIsIgnoredEvenWhenItIsNotAValidValue() throws Exception {
+        when(preferencesService.update(org.mockito.ArgumentMatchers.eq(ID), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(inv -> Optional.of(inv.<Preferences>getArgument(1)));
+
+        for (String junk : new String[]{"\"2030-01-01T00:00:00Z\"", "\"never\"", "7", "null"}) {
+            putPreferences("""
+                    {"timezone": "UTC", "rest_days": [], "alerts_enabled": true, "public_profile": false,
+                     "include_private": true, "private_locked_until": %s}
+                    """.formatted(junk))
+                    .andExpect(status().isOk());
+        }
+        org.mockito.ArgumentCaptor<Preferences> captor = org.mockito.ArgumentCaptor.forClass(Preferences.class);
+        verify(preferencesService, org.mockito.Mockito.times(4)).update(org.mockito.ArgumentMatchers.eq(ID), captor.capture());
+        assertThat(captor.getAllValues()).allSatisfy(p -> assertThat(p.privateLockedUntil()).isNull());
+    }
+
+    @Test
+    void theLockIs429WithRetryAfterAndItsOwnTitle() throws Exception {
+        when(preferencesService.update(org.mockito.ArgumentMatchers.eq(ID), org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new TooManyRequestsException("Private access locked",
+                        "Private repo access was changed recently; it can change again at 2026-10-23T09:30:00Z",
+                        Duration.ofDays(7)));
+
+        putPreferences("""
+                {"timezone": "UTC", "rest_days": [], "alerts_enabled": true, "public_profile": false, "include_private": false}
+                """)
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "604800"))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.title").value("Private access locked"))
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("2026-10-23T09:30:00Z")))
+                .andExpect(jsonPath("$.instance").value("/api/user/preferences"));
+    }
+
+    @Test
+    void theGlobalSyncCapKeepsThePlainRateLimitTitle() throws Exception {
+        when(preferencesService.update(org.mockito.ArgumentMatchers.eq(ID), org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new TooManyRequestsException("Too many syncs right now; try again shortly", Duration.ofSeconds(17)));
+
+        putPreferences("""
+                {"timezone": "UTC", "rest_days": [], "alerts_enabled": true, "public_profile": false, "include_private": true}
+                """)
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "17"))
+                .andExpect(jsonPath("$.title").value("Too Many Requests"));
     }
 
     private org.springframework.test.web.servlet.ResultActions putPreferences(String body) throws Exception {

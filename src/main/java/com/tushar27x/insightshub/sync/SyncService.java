@@ -6,7 +6,9 @@ import com.tushar27x.insightshub.ai.AiInsightsService;
 import com.tushar27x.insightshub.ai.AiProperties;
 import com.tushar27x.insightshub.ai.Regeneration;
 import com.tushar27x.insightshub.entity.Users;
+import com.tushar27x.insightshub.entity.GitHubScopes;
 import com.tushar27x.insightshub.github.GitHubAuthException;
+import com.tushar27x.insightshub.github.GitHubScopeException;
 import com.tushar27x.insightshub.github.GitHubGraphQlClient;
 import com.tushar27x.insightshub.github.model.GitHubUser;
 import com.tushar27x.insightshub.github.model.GitHubUser.ContributionDay;
@@ -162,18 +164,21 @@ public class SyncService {
         long start = System.nanoTime();
         String token = tokenCipher.decrypt(user.getEncryptedGithubToken(), userId);
 
-        UserInsightsData data;
+        Fetched fetched;
         try {
-            data = gitHub.fetchUserInsights(token, user.getLogin());
+            Instant to = clock.instant();
+            fetched = fetch(user, token, to.minus(MAX_REFRESH), to);
         } catch (GitHubAuthException e) {
             rejected("Sync", user, e);
             return SyncOutcome.NEEDS_REAUTH;
         }
+        UserInsightsData data = fetched.data();
 
         // First, so the hero's activity is saved even if a later step fails
-        Activity activity = writeActivity(user, token, data);
+        boolean full = user.isPrivateResyncDue() || fetched.scopeLost(); // B11: a full resync owed, or private just lost
+        Activity activity = writeActivity(user, token, data, fetched.includePrivate(), full, full);
 
-        InsightsResult result = engine.calculate(data.user());
+        InsightsResult result = engine.calculate(data.user(), fetched.includePrivate());
         Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP); // snake_case, v1's shape
 
         // B11: the LLM only for a user with no texts yet; everyone else keeps theirs until the daily job
@@ -184,6 +189,7 @@ public class SyncService {
         } else {
             writer.saveKeepingTexts(userId, stats, result, clock.instant());
         }
+        resyncDone(user);
         seedHeroQuietly(user);
         log.info("Sync for '{}' done in {} ms: {}, {} activity days written, branch scan {}, AI texts {}",
                 user.getLogin(), (System.nanoTime() - start) / 1_000_000, result.archetype(), activity.days(),
@@ -208,16 +214,19 @@ public class SyncService {
         long start = System.nanoTime();
         String token = tokenCipher.decrypt(user.getEncryptedGithubToken(), userId);
 
-        UserInsightsData data;
+        Fetched fetched;
         try {
-            data = gitHub.fetchUserInsights(token, user.getLogin());
+            Instant to = clock.instant();
+            fetched = fetch(user, token, to.minus(MAX_REFRESH), to);
         } catch (GitHubAuthException e) {
             rejected("Daily insights refresh", user, e);
             return DailyOutcome.NEEDS_REAUTH;
         }
-        Activity activity = writeActivity(user, token, data);
+        UserInsightsData data = fetched.data();
+        boolean full = user.isPrivateResyncDue() || fetched.scopeLost();
+        Activity activity = writeActivity(user, token, data, fetched.includePrivate(), full, full);
 
-        InsightsResult result = engine.calculate(data.user());
+        InsightsResult result = engine.calculate(data.user(), fetched.includePrivate());
         Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP);
         Optional<Regeneration.Reason> reason = Regeneration.decide(writer.storedTexts(userId), AiInputs.of(result),
                 clock.instant(), regenerate);
@@ -231,6 +240,7 @@ public class SyncService {
             writer.saveKeepingTexts(userId, stats, result, clock.instant());
             outcome = DailyOutcome.UNCHANGED;
         }
+        resyncDone(user);
         seedHeroQuietly(user);
         log.info("Daily insights refresh for '{}' done in {} ms: {}, {} activity days written, branch scan {}, "
                         + "AI texts {}, token obtained {}", user.getLogin(), (System.nanoTime() - start) / 1_000_000,
@@ -263,6 +273,11 @@ public class SyncService {
         if (user.isNeedsReauth() || user.getEncryptedGithubToken() == null) {
             return SyncOutcome.NEEDS_REAUTH;
         }
+        if (user.isPrivateResyncDue()) {
+            log.info("Activity refresh for '{}': a full resync is owed (private access changed), running it first",
+                    user.getLogin());
+            return sync(user); // B11: the full sync clears the flag
+        }
         String token = tokenCipher.decrypt(user.getEncryptedGithubToken(), userId);
         Instant now = clock.instant();
         Instant since = from.minusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
@@ -273,17 +288,79 @@ public class SyncService {
             since = now.minus(Duration.ofDays(1));
         }
 
-        UserInsightsData data;
+        Fetched fetched;
         try {
-            data = gitHub.fetchUserInsights(token, user.getLogin(), since, now);
+            fetched = fetch(user, token, since, now);
         } catch (GitHubAuthException e) {
             rejected("Activity refresh", user, e);
             return SyncOutcome.NEEDS_REAUTH;
         }
-        Activity activity = writeActivity(user, token, data);
+        if (fetched.scopeLost()) {
+            // B11: private access was lost; this path is activity-only, so the insights still hold private work:
+            // the next hero or daily run does a full sync first
+            markResyncDue(user);
+        }
+        Activity activity = writeActivity(user, token, fetched.data(), fetched.includePrivate(), false,
+                fetched.scopeLost());
         log.info("Activity refresh for '{}': {} days written, branch scan {}, token obtained {}", user.getLogin(),
                 activity.days(), activity.branchCounts(), obtained(user)); // B43: which token worked
         return SyncOutcome.SYNCED;
+    }
+
+    /**
+     * B10: the one GitHub fetch of every sync path. Private repos are requested only when the user opted in
+     * ({@code include_private}) <b>and</b> the recorded scopes include {@code repo}; otherwise the query asks for PUBLIC
+     * repositories only, so nothing private is fetched. If GitHub refuses the private part (FORBIDDEN) or the response
+     * shows the token lost {@code repo}, the new scopes are recorded ({@code private_access} becomes {@code none}) and
+     * the sync goes on with public data: no error, no {@code needs_reauth}. A 401 still propagates.
+     */
+    private Fetched fetch(Users user, String token, Instant from, Instant to) {
+        return fetch(user, token, from, to, user.isIncludePrivate());
+    }
+
+    /** {@code includeChoice} is the switch's value to fetch for: the stored one, or the one a PUT is about to store. */
+    private Fetched fetch(Users user, String token, Instant from, Instant to, boolean includeChoice) {
+        boolean wantPrivate = includeChoice && user.hasRepoScope();
+        UserInsightsData data;
+        try {
+            data = gitHub.fetchUserInsights(token, user.getLogin(), from, to, wantPrivate);
+        } catch (GitHubScopeException e) {
+            if (!wantPrivate) {
+                throw e;
+            }
+            log.warn("GitHub refused private access for '{}'; going on with public repos only", user.getLogin());
+            recordScopes(user, withoutRepo(user.getGithubScopes()));
+            return new Fetched(gitHub.fetchUserInsights(token, user.getLogin(), from, to, false), false, true);
+        }
+        boolean includePrivate = wantPrivate;
+        boolean scopeLost = false;
+        String reported = data.oauthScopes();
+        if (reported != null && !GitHubScopes.sameSet(reported, user.getGithubScopes())) {
+            recordScopes(user, GitHubScopes.normalize(reported));
+            if (wantPrivate && !GitHubScopes.hasRepo(reported)) {
+                log.warn("The token of '{}' no longer has the repo scope; private repos are not read", user.getLogin());
+                includePrivate = false; // GitHub returned public data only
+                scopeLost = true;
+            }
+        }
+        return new Fetched(data, includePrivate, scopeLost);
+    }
+
+    private void recordScopes(Users user, String scopes) {
+        try {
+            usersRepository.updateGithubScopes(user.getGithubId(), scopes);
+        } catch (RuntimeException e) {
+            log.error("Could not record the GitHub scopes of '{}'", user.getLogin(), e);
+        }
+    }
+
+    private static String withoutRepo(String scopes) {
+        return GitHubScopes.parse(scopes).stream().filter(s -> !s.equals(GitHubScopes.REPO))
+                .collect(java.util.stream.Collectors.joining(","));
+    }
+
+    /** @param scopeLost B11: private access was wanted and effective on paper, but GitHub no longer grants it */
+    private record Fetched(UserInsightsData data, boolean includePrivate, boolean scopeLost) {
     }
 
     /**
@@ -322,16 +399,97 @@ public class SyncService {
     }
 
     /** The calendar, then the branch scan for the recent days it shows as empty, in the user's zone. */
-    private Activity writeActivity(Users user, String token, UserInsightsData data) {
+    private Activity writeActivity(Users user, String token, UserInsightsData data, boolean includePrivate,
+                                   boolean fullCalendar, boolean resetBranches) {
         long userId = user.getGithubId();
         List<ContributionDay> calendar = InsightsEngine.sortedDays(contributions(data.user()));
-        int days = activityWriter.writeCalendar(userId, calendar);
+        int days = fullCalendar ? activityWriter.writeCalendarInFull(userId, calendar)
+                : activityWriter.writeCalendar(userId, calendar);
         ZoneId zone = HeroService.zoneOf(user.getTimezone());
-        Map<LocalDate, Integer> branchCounts = branchScanner.scan(token, nodeId(data.user()), calendar, zone);
-        if (!branchCounts.isEmpty()) {
+        Map<LocalDate, Integer> branchCounts = branchScanner.scan(token, nodeId(data.user()), calendar, zone, includePrivate);
+        if (resetBranches) {
+            // B11: the scan replaces the stored counts; with private access off, nothing else may keep a private count
+            activityWriter.replaceBranchCounts(userId, branchCounts, !includePrivate);
+        } else if (!branchCounts.isEmpty()) {
             activityWriter.writeBranchCounts(userId, branchCounts);
         }
         return new Activity(days, branchCounts);
+    }
+
+    /** B11: a full sync is done, so an owed resync is paid. */
+    private void resyncDone(Users user) {
+        if (user.isPrivateResyncDue()) {
+            usersRepository.setPrivateResyncDue(user.getGithubId(), false);
+        }
+    }
+
+    private void markResyncDue(Users user) {
+        try {
+            usersRepository.setPrivateResyncDue(user.getGithubId(), true);
+        } catch (RuntimeException e) {
+            log.error("Could not flag the owed resync of '{}'", user.getLogin(), e);
+        }
+    }
+
+    /**
+     * B11: the global sync cap ({@code sync-global}) for a sync the user started outside {@link #syncIfDue} (the
+     * private switch's resync inside the PUT).
+     *
+     * @return empty if a slot was taken, else when a new attempt can succeed
+     */
+    public Optional<Duration> acquireGlobalSlot() {
+        Decision global = rateLimiter.tryAcquire("sync:global", rateLimits.policy(RateLimitProperties.SYNC_GLOBAL));
+        return global.allowed() ? Optional.empty() : Optional.of(global.retryAfter());
+    }
+
+    /**
+     * B11: everything a full resync computes, with the GitHub calls and the LLM already done, and nothing written.
+     * The private switch commits it together with the new switch value in one transaction ({@link ResyncWriter}), so
+     * a failure before that leaves the stored data and the switch as they were.
+     *
+     * @param includePrivate what was actually fetched: false if the token turned out not to have {@code repo}
+     * @param texts          null = keep the stored AI texts
+     */
+    public record PreparedResync(long userId, boolean includePrivate, boolean scopeLost,
+                                 List<ContributionDay> calendar, Map<LocalDate, Integer> branchCounts,
+                                 Map<String, Object> stats, InsightsResult result, AiInsights texts, Instant at) {
+    }
+
+    /**
+     * B11: the fetch, scan, engine and AI of a full resync for {@code includeChoice} as the private switch's new
+     * value, without the cooldown (the caller took a global slot) and without writing anything.
+     *
+     * @return empty when GitHub rejects the token (the user is flagged {@code needs_reauth}) or there is none
+     * @throws com.tushar27x.insightshub.github.GitHubApiException any other GitHub failure
+     */
+    public Optional<PreparedResync> prepareResync(long userId, boolean includeChoice) {
+        Users user = load(userId);
+        if (user.isNeedsReauth() || user.getEncryptedGithubToken() == null) {
+            return Optional.empty();
+        }
+        String token = tokenCipher.decrypt(user.getEncryptedGithubToken(), userId);
+        Fetched fetched;
+        Instant to = clock.instant();
+        try {
+            fetched = fetch(user, token, to.minus(MAX_REFRESH), to, includeChoice);
+        } catch (GitHubAuthException e) {
+            rejected("Private switch resync", user, e);
+            return Optional.empty();
+        }
+        UserInsightsData data = fetched.data();
+        List<ContributionDay> calendar = InsightsEngine.sortedDays(contributions(data.user()));
+        Map<LocalDate, Integer> branchCounts = branchScanner.scan(token, nodeId(data.user()), calendar,
+                HeroService.zoneOf(user.getTimezone()), fetched.includePrivate());
+        InsightsResult result = engine.calculate(data.user(), fetched.includePrivate());
+        Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP);
+        AiInsights texts = writer.storedTexts(userId).hasTexts() ? null : ai.generate(user.getLogin(), result);
+        return Optional.of(new PreparedResync(userId, fetched.includePrivate(), fetched.scopeLost(), calendar,
+                branchCounts, stats, result, texts, clock.instant()));
+    }
+
+    /** After a committed {@link PreparedResync}: a new user's hero is created from the activity just written. */
+    public void afterResync(long userId) {
+        seedHeroQuietly(load(userId));
     }
 
     /** A new user's hero is created from the activity just written. Its failure mustn't fail the sync: the next one retries. */

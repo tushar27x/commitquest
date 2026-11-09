@@ -2,7 +2,7 @@
 // plus helpers to read them the way the screens show them.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { Hero, HeroEvents, Insights, Preferences } from "../../web/lib/api/types";
+import type { Hero, HeroEvents, Insights, Leaderboard, Preferences, ProblemDetail, Rank } from "../../web/lib/api/types";
 
 const DIR = fileURLToPath(new URL("../../docs/api/fixtures/", import.meta.url));
 
@@ -15,6 +15,9 @@ export const fixtures = {
   hero: load<Hero>("hero"),
   heroEvents: load<HeroEvents>("hero-events"),
   preferences: load<Preferences>("preferences"),
+  leaderboard: load<Leaderboard>("leaderboard"),
+  rank: load<Rank>("rank"),
+  rankNotInArena: load<ProblemDetail>("rank-not-in-arena"),
   heroVariants: load<Record<string, Partial<Hero> | string>>("hero-variants"),
 };
 

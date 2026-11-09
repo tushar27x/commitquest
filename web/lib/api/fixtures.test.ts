@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   ARCHETYPES, BASE_MOODS, HERO_EVENT_TYPES, LEADERBOARD_MAX_SIZE, MOODS, NOT_IN_ARENA_TITLE, TIERS, WEEK_STATUSES, WEEKDAYS,
   type Hero, type HeroEvent, type HeroEventDetails, type HeroEventType, type HeroEvents, type Insights, type Leaderboard,
-  type Preferences, type ProblemDetail, type Rank,
+  PRIVATE_ACCESS, PRIVATE_LOCKED_TITLE, type Preferences, type ProblemDetail, type Rank,
 } from "./types";
 
 const DOCS = join(__dirname, "../../../docs/api/fixtures");
@@ -94,6 +94,7 @@ const heroEvents = obj<HeroEvents>({
 
 const preferences = obj<Preferences>({
   timezone: str, rest_days: array(weekday), alerts_enabled: bool, public_profile: bool,
+  include_private: bool, private_access: oneOf(PRIVATE_ACCESS), private_locked_until: nullable(instant),
 });
 
 const leaderboard = obj<Leaderboard>({
@@ -162,6 +163,22 @@ describe("fixtures", () => {
     ["rank-not-in-arena.json", problem],
   ] as const)("%s matches the types", (name, check) => {
     expect(check(load(name), name)).toEqual([]);
+  });
+
+  it("preferences-variants.json: every variant merged over preferences.json matches the types (B11)", () => {
+    const base = load("preferences.json");
+    const { _doc, ...variants } = load("preferences-variants.json");
+    expect(typeof _doc).toBe("string");
+    expect(Object.keys(variants).sort()).toEqual([
+      "private_granted", "private_lock_lost_scope", "private_locked_off", "private_locked_on", "private_off_granted", "private_reauth",
+    ]);
+    // The default is off and never changed, so it is unlocked.
+    expect(base).toMatchObject({ include_private: false, private_access: "none", private_locked_until: null });
+    for (const [name, patch] of Object.entries(variants)) {
+      const merged = { ...base, ...(patch as object) } as Preferences;
+      expect(preferences(merged, name), name).toEqual([]);
+    }
+    expect(PRIVATE_LOCKED_TITLE).toBe("Private access locked");
   });
 
   it("hero.json keeps the contract's invariants", () => {

@@ -60,4 +60,17 @@ class UsersRepositoryIT {
         Instant now = Instant.parse("2026-10-16T12:00:00Z");
         assertThat(users.claimSync(USER + 1, now, now.minus(COOLDOWN))).isZero();
     }
+
+    @Test
+    void v9AddsScopesAndAnOffByDefaultChoiceAndTheScopeUpdateTouchesOnlyThatColumn() {
+        assertThat(jdbc.queryForMap("SELECT github_scopes, include_private FROM v2.users WHERE github_id = ?", USER))
+                .containsEntry("github_scopes", null).containsEntry("include_private", false);
+        jdbc.update("UPDATE v2.users SET include_private = TRUE WHERE github_id = ?", USER);
+
+        assertThat(users.updateGithubScopes(USER, "read:user,user:email")).isEqualTo(1);
+
+        assertThat(jdbc.queryForMap("SELECT github_scopes, include_private FROM v2.users WHERE github_id = ?", USER))
+                .containsEntry("github_scopes", "read:user,user:email").containsEntry("include_private", true);
+        assertThat(users.updateGithubScopes(USER + 5_000, "x")).isZero();
+    }
 }

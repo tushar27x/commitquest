@@ -2,6 +2,7 @@ package com.tushar27x.insightshub.auth;
 
 import com.jayway.jsonpath.JsonPath;
 import com.tushar27x.insightshub.auth.GitHubOAuthClient.GitHubAccount;
+import com.tushar27x.insightshub.auth.GitHubOAuthClient.OAuthToken;
 import com.tushar27x.insightshub.auth.GitHubOAuthClient.OAuthCodeRejectedException;
 import com.tushar27x.insightshub.config.ClockConfig;
 import com.tushar27x.insightshub.config.InsightsHubProperties;
@@ -259,7 +260,7 @@ class AuthApiTest {
     void fullRoundTripYieldsJwtThatOpensUserEndpoints() throws Exception {
         Cookie stateCookie = mvc.perform(get("/api/auth/login")).andReturn()
                 .getResponse().getCookie(AuthController.STATE_COOKIE);
-        when(gitHub.exchangeCode("the-code", REDIRECT_URI)).thenReturn("gho_secret");
+        when(gitHub.exchangeCode("the-code", REDIRECT_URI)).thenReturn(new OAuthToken("gho_secret", "read:user,user:email"));
         when(gitHub.fetchAccount("gho_secret")).thenReturn(new GitHubAccount(GITHUB_ID, "octocat"));
         when(gitHub.fetchPrimaryEmail("gho_secret")).thenReturn("octocat@example.com");
         when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
@@ -298,13 +299,105 @@ class AuthApiTest {
     }
 
     @Test
-    void cancelledLoginIs400() throws Exception {
+    void cancelledLoginGoesBackToSettings() throws Exception {
         mvc.perform(get("/api/auth/callback").param("error", "access_denied").param("state", "s")
+                        .cookie(new Cookie(AuthController.STATE_COOKIE, "s")))
+                .andExpect(status().isFound())
+                .andExpect(header().string(HttpHeaders.LOCATION, "http://localhost:3000/settings"))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Max-Age=0")));
+        verifyNoInteractions(gitHub); // nothing is exchanged, stored or synced
+        verifyNoInteractions(syncService);
+    }
+
+    @Test
+    void cancelledPrivateLoginAlsoGoesBackToSettings() throws Exception {
+        mvc.perform(get("/api/auth/callback").param("error", "access_denied").param("state", "s")
+                        .cookie(new Cookie(AuthController.STATE_COOKIE, "s.private")))
+                .andExpect(status().isFound())
+                .andExpect(header().string(HttpHeaders.LOCATION, "http://localhost:3000/settings"));
+    }
+
+    @Test
+    void cancelWithAForgedStateIs400NotARedirect() throws Exception {
+        mvc.perform(get("/api/auth/callback").param("error", "access_denied").param("state", "forged")
+                        .cookie(new Cookie(AuthController.STATE_COOKIE, "s")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/auth/callback").param("error", "access_denied").param("state", "s"))
+                .andExpect(status().isBadRequest()); // no cookie
+    }
+
+    @Test
+    void otherGitHubErrorsAreStill400() throws Exception {
+        mvc.perform(get("/api/auth/callback").param("error", "redirect_uri_mismatch").param("state", "s")
                         .cookie(new Cookie(AuthController.STATE_COOKIE, "s")))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.detail").value("GitHub login did not complete: access_denied"))
+                .andExpect(jsonPath("$.detail").value("GitHub login did not complete: redirect_uri_mismatch"))
                 .andExpect(jsonPath("$.instance").value("/api/auth/callback")); // path only, no query
+        mvc.perform(get("/api/auth/callback").param("state", "s").cookie(new Cookie(AuthController.STATE_COOKIE, "s")))
+                .andExpect(status().isBadRequest()); // no code, no error
+    }
+
+    // --- B10: ?private=true ---
+
+    @Test
+    void privateLoginAsksForTheRepoScopeAndKeepsTheIntentInTheCookieOnly() throws Exception {
+        MvcResult result = mvc.perform(get("/api/auth/login").param("private", "true"))
+                .andExpect(status().isFound())
+                .andReturn();
+
+        Cookie cookie = result.getResponse().getCookie(AuthController.STATE_COOKIE);
+        String location = result.getResponse().getRedirectedUrl();
+        var params = UriComponentsBuilder.fromUriString(location).build().getQueryParams();
+        assertThat(location).contains("scope=read:user%20user:email%20repo");
+        assertThat(cookie.getValue()).endsWith(".private");
+        assertThat(params.getFirst("state")).isEqualTo(cookie.getValue().substring(0, cookie.getValue().indexOf('.')));
+        assertThat(location).doesNotContain("private"); // the host never sees the intent
+        assertThat(cookie.isHttpOnly()).isTrue();
+    }
+
+    @Test
+    void onlyTheExactStringTrueMeansPrivate() throws Exception {
+        for (String value : new String[]{"false", "TRUE", "1", "yes", ""}) {
+            MvcResult result = mvc.perform(get("/api/auth/login").param("private", value)).andReturn();
+            assertThat(result.getResponse().getRedirectedUrl()).doesNotContain("repo");
+            assertThat(result.getResponse().getCookie(AuthController.STATE_COOKIE).getValue()).doesNotContain(".");
+        }
+    }
+
+    @Test
+    void aPrivateCallbackPassesTheIntentToTheLogin() throws Exception {
+        Cookie cookie = mvc.perform(get("/api/auth/login").param("private", "true")).andReturn()
+                .getResponse().getCookie(AuthController.STATE_COOKIE);
+        String bare = cookie.getValue().substring(0, cookie.getValue().indexOf('.'));
+        when(gitHub.exchangeCode("the-code", REDIRECT_URI))
+                .thenReturn(new OAuthToken("gho_secret", "read:user,user:email,repo"));
+        when(gitHub.fetchAccount("gho_secret")).thenReturn(new GitHubAccount(GITHUB_ID, "octocat"));
+        when(gitHub.fetchPrimaryEmail("gho_secret")).thenReturn("octocat@example.com");
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
+        when(usersRepository.save(any(Users.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mvc.perform(get("/api/auth/callback").param("code", "the-code").param("state", bare).cookie(cookie))
+                .andExpect(status().isOk());
+
+        org.mockito.ArgumentCaptor<Users> saved = org.mockito.ArgumentCaptor.forClass(Users.class);
+        verify(usersRepository).save(saved.capture());
+        assertThat(saved.getValue().isIncludePrivate()).isTrue();
+        assertThat(saved.getValue().getGithubScopes()).isEqualTo("read:user,user:email,repo");
+        verify(syncService).sync(GITHUB_ID);
+    }
+
+    @Test
+    void theIntentCannotBeInjectedFromOutsideTheCookie() throws Exception {
+        // The query's state carries the suffix, the cookie doesn't: the bare states differ, so 400.
+        mvc.perform(get("/api/auth/callback").param("code", "c").param("state", "s.private")
+                        .cookie(new Cookie(AuthController.STATE_COOKIE, "s")))
+                .andExpect(status().isBadRequest());
+        // A forged cookie without the real state fails whatever the suffix.
+        mvc.perform(get("/api/auth/callback").param("code", "c").param("state", "attacker")
+                        .cookie(new Cookie(AuthController.STATE_COOKIE, "victim.private")))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(gitHub);
     }
 
     @Test
@@ -344,7 +437,8 @@ class AuthApiTest {
 
     /** The main class's {@code @ConfigurationPropertiesScan} doesn't apply in a slice test. */
     @TestConfiguration
-    @EnableConfigurationProperties({InsightsHubProperties.class, AuthProperties.class, RateLimitProperties.class})
+    @EnableConfigurationProperties({InsightsHubProperties.class, AuthProperties.class, RateLimitProperties.class,
+            com.tushar27x.insightshub.user.PrivateProperties.class})
     static class Properties {
         @Bean
         InMemoryRateLimiter rateLimiter() {

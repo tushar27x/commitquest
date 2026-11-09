@@ -50,6 +50,8 @@ import java.util.Base64;
 public class AuthController {
 
     static final String STATE_COOKIE = "oauth_state";
+    /** B10: the cookie value is "<state>.private" when the login asked for private repos. */
+    static final String PRIVATE_SUFFIX = ".private";
     static final String CALLBACK_PATH = "/api/auth/callback";
     private static final Duration STATE_TTL = Duration.ofMinutes(10);
     private static final int STATE_BYTES = 32;
@@ -78,11 +80,15 @@ public class AuthController {
             @Header(name = HttpHeaders.SET_COOKIE, description = "oauth_state", schema = @Schema(type = "string"))})
     @RateLimit(policy = "login", key = KeyType.IP)
     @GetMapping("/login")
-    public ResponseEntity<Void> login() {
+    public ResponseEntity<Void> login(@Parameter(description = "Exactly 'true' asks for the repo scope too, so "
+            + "insights can read private repos (B10). Anything else, or nothing, means false.")
+                                      @RequestParam(name = "private", required = false) String privateRepos) {
         String state = newState();
+        boolean includePrivate = "true".equals(privateRepos);
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(authService.authorizeUri(state, callbackUri()))
-                .header(HttpHeaders.SET_COOKIE, stateCookie(state, STATE_TTL).toString())
+                .location(authService.authorizeUri(state, callbackUri(), includePrivate)) // GitHub sees the bare state
+                .header(HttpHeaders.SET_COOKIE, stateCookie(includePrivate ? state + PRIVATE_SUFFIX : state, STATE_TTL)
+                        .toString())
                 .build();
     }
 
@@ -95,7 +101,8 @@ public class AuthController {
                     + "block the login) and hands the JWT to the web app.")
     @ApiResponse(responseCode = "302", description = "The default (insightshub.auth.redirect-to-frontend: true): "
             + "to ${FRONTEND_URL}/dashboard#token=<jwt>, a fragment, so the JWT never reaches a server log. "
-            + "Clears the oauth_state cookie.", headers = @Header(name = HttpHeaders.LOCATION,
+            + "Clears the oauth_state cookie. B10: if the user cancelled on GitHub (error=access_denied, no code) "
+            + "and the state is valid, it goes to ${FRONTEND_URL}/settings instead and nothing is touched.", headers = @Header(name = HttpHeaders.LOCATION,
             description = "${FRONTEND_URL}/dashboard#token=<jwt>", schema = @Schema(type = "string")))
     @ApiResponse(responseCode = "200", description = "Only with insightshub.auth.redirect-to-frontend: false: "
             + "the JWT as JSON.", content = @Content(mediaType = "application/json",
@@ -113,8 +120,18 @@ public class AuthController {
                                                   @Parameter(in = ParameterIn.COOKIE, name = STATE_COOKIE,
                                                           description = "Set by /api/auth/login")
                                                   @CookieValue(name = STATE_COOKIE, required = false) String expectedState) {
-        if (!sameState(expectedState, state)) {
+        // The cookie is "<state>" or "<state>.private" (state is URL-safe base64: no '.'). Only the bare state is
+        // compared with the query, so the intent can't be injected from outside the cookie.
+        int dot = expectedState == null ? -1 : expectedState.indexOf('.');
+        String bareState = dot < 0 ? expectedState : expectedState.substring(0, dot);
+        boolean privateIntent = dot >= 0 && PRIVATE_SUFFIX.equals(expectedState.substring(dot));
+        if (!sameState(bareState, state)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired OAuth state; start again at /api/auth/login");
+        }
+        if (code == null && "access_denied".equals(error)) {
+            // B10 Q3: the user cancelled on GitHub's consent page; back to Settings, nothing is touched
+            return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(frontendUrl + "/settings"))
+                    .header(HttpHeaders.SET_COOKIE, stateCookie("", Duration.ZERO).toString()).build();
         }
         if (error != null || code == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "GitHub login did not complete: " + (error == null ? "no code" : error));
@@ -122,7 +139,7 @@ public class AuthController {
 
         LoginResult result;
         try {
-            result = authService.completeLogin(code, callbackUri());
+            result = authService.completeLogin(code, callbackUri(), privateIntent);
         } catch (OAuthCodeRejectedException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "GitHub rejected the login: " + e.error(), e);
         }

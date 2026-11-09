@@ -27,6 +27,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -225,6 +226,120 @@ class ApiContractIT {
     }
 
     @Test
+    void includePrivateIsStoredAndPrivateAccessFollowsTheRecordedScopes() throws Exception {
+        long user = newUser(6, "it-contract-private");
+        String body = """
+                {"timezone": "UTC", "rest_days": [], "alerts_enabled": false, "public_profile": false,
+                 "include_private": true, "private_access": "granted"}""";
+
+        // Opting in without a repo-scoped token is accepted; the server's truth is "none" whatever the body said.
+        JsonNode saved = body(call(put("/api/user/preferences").contentType(MediaType.APPLICATION_JSON).content(body), user));
+        assertThat(saved.get("include_private").booleanValue()).isTrue();
+        assertThat(saved.get("private_access").stringValue()).isEqualTo("none");
+
+        jdbc.update("UPDATE v2.users SET github_scopes = 'read:user,user:email,repo' WHERE github_id = ?", user);
+        assertThat(body(call(get("/api/user/preferences"), user)).get("private_access").stringValue()).isEqualTo("granted");
+
+        // B11: turning it off is now an effective change that resyncs in the request. This user has no GitHub token,
+        // so the resync cannot run: 409 like POST /sync, and nothing is saved (no flip, no lock).
+        MvcResult refused = call(put("/api/user/preferences").contentType(MediaType.APPLICATION_JSON)
+                .content(body.replace("\"include_private\": true", "\"include_private\": false")), user);
+        assertProblem(refused, 409, "/api/user/preferences", false);
+        JsonNode unchanged = body(call(get("/api/user/preferences"), user));
+        assertThat(unchanged.get("include_private").booleanValue()).isTrue();
+        assertThat(unchanged.get("private_locked_until").isNull()).isTrue();
+    }
+
+    // ---- B11: the private-access lock ----
+
+    private static final String PREFS = """
+            {"timezone": "%s", "rest_days": [], "alerts_enabled": false, "public_profile": false,
+             "include_private": %s}""";
+
+    private MvcResult putPrefs(long user, String zone, boolean includePrivate) throws Exception {
+        return call(put("/api/user/preferences").contentType(MediaType.APPLICATION_JSON)
+                .content(PREFS.formatted(zone, includePrivate)), user);
+    }
+
+    private void lockedFor(long user, boolean includePrivate, String scopes, String changedAgo) {
+        jdbc.update("UPDATE v2.users SET include_private = ?, github_scopes = ?, "
+                + "private_changed_at = now() - ?::interval WHERE github_id = ?", includePrivate, scopes, changedAgo, user);
+    }
+
+    @Test
+    void theLockEndIsAnInstantWhileLockedAndNullOtherwise() throws Exception {
+        long user = newUser(7, "it-contract-lock-until");
+        Spec spec = new Spec(Set.of("$.private_locked_until"), Set.of(), Set.of(),
+                List.of(Rule.oneOf("$.rest_days[]", WEEKDAYS), Rule.format("$.private_locked_until", INSTANT)));
+        assertThat(body(call(get("/api/user/preferences"), user)).get("private_locked_until").isNull()).isTrue();
+
+        lockedFor(user, true, "read:user,user:email,repo", "1 day");
+        JsonNode locked = body(call(get("/api/user/preferences"), user));
+        assertFits(locked, "preferences.json", spec);
+        assertThat(java.time.Duration.between(java.time.Instant.now(),
+                java.time.Instant.parse(locked.get("private_locked_until").stringValue())).toHours())
+                .isBetween(143L, 144L); // 6 days from now, to the second
+
+        lockedFor(user, true, "read:user,user:email,repo", "8 days"); // the lock has passed
+        assertThat(body(call(get("/api/user/preferences"), user)).get("private_locked_until").isNull()).isTrue();
+    }
+
+    @Test
+    void aFlipWhileLockedIs429WithRetryAfterAndItsOwnTitleAndSavesNothing() throws Exception {
+        long user = newUser(8, "it-contract-lock-429");
+        lockedFor(user, true, "read:user,user:email,repo", "1 day");
+
+        MvcResult refused = putPrefs(user, "Asia/Kolkata", false);
+
+        JsonNode problem = assertProblem(refused, 429, "/api/user/preferences", false);
+        assertThat(problem.get("title").stringValue()).isEqualTo("Private access locked");
+        assertThat(problem.get("detail").stringValue())
+                .startsWith("Private repo access was changed recently; it can change again at ");
+        assertThat(Long.parseLong(refused.getResponse().getHeader("Retry-After")))
+                .isBetween(Duration.ofDays(6).toSeconds() - 5, Duration.ofDays(6).toSeconds());
+        JsonNode after = body(call(get("/api/user/preferences"), user));
+        assertThat(after.get("include_private").booleanValue()).isTrue();
+        assertThat(after.get("timezone").stringValue()).isEqualTo("UTC"); // the whole PUT was refused
+    }
+
+    @Test
+    void theSameValueWhileLockedIs200AndSavesTheOtherFields() throws Exception {
+        long user = newUser(9, "it-contract-lock-noop");
+        lockedFor(user, true, "read:user,user:email,repo", "1 day");
+
+        MvcResult saved = putPrefs(user, "Asia/Kolkata", true);
+
+        assertJson(saved, 200);
+        assertThat(body(saved).get("timezone").stringValue()).isEqualTo("Asia/Kolkata");
+        assertThat(body(saved).get("private_locked_until").isNull()).isFalse();
+    }
+
+    @Test
+    void aFlipWhileGitHubGrantsNothingOnlyStoresTheWishAndNeverLocks() throws Exception {
+        long user = newUser(10, "it-contract-lock-wish");
+
+        JsonNode saved = body(putPrefs(user, "UTC", true));
+
+        assertThat(saved.get("include_private").booleanValue()).isTrue();
+        assertThat(saved.get("private_access").stringValue()).isEqualTo("none");
+        assertThat(saved.get("private_locked_until").isNull()).isTrue();
+        assertThat(jdbc.queryForObject("SELECT private_changed_at FROM v2.users WHERE github_id = ?",
+                java.sql.Timestamp.class, user)).isNull();
+    }
+
+    @Test
+    void turningItOffWhileWaitingIsAllowedEvenWhenLocked() throws Exception {
+        long user = newUser(12, "it-contract-lock-waiting-off");
+        lockedFor(user, true, "read:user,user:email", "1 day"); // true + none, an old lock still running
+
+        MvcResult off = putPrefs(user, "UTC", false);
+
+        assertJson(off, 200);
+        assertThat(body(off).get("include_private").booleanValue()).isFalse();
+        assertThat(body(off).get("private_locked_until").isNull()).isFalse(); // the lock is untouched
+    }
+
+    @Test
     void invalidPreferencesAreAValidationProblemWithSnakeCaseFields() throws Exception {
         long user = newUser(5, "it-contract-prefs-400");
         String bad = """
@@ -234,7 +349,7 @@ class ApiContractIT {
         JsonNode problem = assertProblem(response, 400, "/api/user/preferences", true);
         assertThat(problem.get("detail").stringValue()).isEqualTo("The request is invalid; see 'errors'");
         assertThat(problem.get("errors").valueStream().map(e -> e.get("field").stringValue()).distinct())
-                .containsExactlyInAnyOrder("timezone", "rest_days", "alerts_enabled", "public_profile");
+                .containsExactlyInAnyOrder("timezone", "rest_days", "alerts_enabled", "public_profile", "include_private");
         assertThat(problem.get("errors")).allSatisfy(e -> {
             assertThat(e.propertyNames()).containsExactlyInAnyOrder("field", "message");
             assertThat(e.get("message").stringValue()).isNotBlank();

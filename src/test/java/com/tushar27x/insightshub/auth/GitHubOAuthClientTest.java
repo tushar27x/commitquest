@@ -56,7 +56,10 @@ class GitHubOAuthClientTest {
                         {"access_token":"gho_abc","token_type":"bearer","scope":"read:user,user:email"}
                         """, MediaType.APPLICATION_JSON));
 
-        assertThat(client.exchangeCode("the-code", REDIRECT_URI)).isEqualTo("gho_abc");
+        var grant = client.exchangeCode("the-code", REDIRECT_URI);
+        assertThat(grant.accessToken()).isEqualTo("gho_abc");
+        assertThat(grant.scope()).isEqualTo("read:user,user:email");
+        assertThat(grant.toString()).doesNotContain("gho_abc"); // the token never reaches a log line
         github.verify();
     }
 

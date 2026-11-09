@@ -5,14 +5,15 @@
 # - refs: the 25 branches with the newest tip commit; history counts commits reachable from each tip,
 #   so a commit on several branches counts several times. Only > 0 matters.
 # - pushedAt: lets the client skip repos not pushed since the day started.
-query BranchActivity($userId: ID!, $since: GitTimestamp!, $until: GitTimestamp!) {
+# - $privacy (B10): PUBLIC unless the user opted in AND the token has the repo scope (see user-insights.graphql).
+query BranchActivity($userId: ID!, $since: GitTimestamp!, $until: GitTimestamp!, $privacy: RepositoryPrivacy) {
   rateLimit {
     cost
     remaining
     resetAt
   }
   viewer {
-    repositories(first: 20, ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER],
+    repositories(first: 20, privacy: $privacy, ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER],
                  orderBy: {field: PUSHED_AT, direction: DESC}) {
       nodes {
         pushedAt

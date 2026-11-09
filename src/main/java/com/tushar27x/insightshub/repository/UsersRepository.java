@@ -94,6 +94,15 @@ public interface UsersRepository extends JpaRepository<Users, Long> {
                          @Param("expected") Instant expected);
 
     /**
+     * B10: records the scopes GitHub reported for the stored token (a sync saw the token lost {@code repo}).
+     * One column, so it can't write back anything else a login changed meanwhile.
+     */
+    @Transactional
+    @Modifying
+    @Query("update Users u set u.githubScopes = :scopes where u.githubId = :id")
+    int updateGithubScopes(@Param("id") long id, @Param("scopes") String scopes);
+
+    /**
      * GitHub rejected {@code rejectedToken}: flags the user {@code needs_reauth}, but only if that is still the stored
      * token (B45). A login that stored a new token while the job's GitHub call was in flight wins: the new token is
      * untested, not rejected. The ciphertext is unique per login (AES-GCM with a random nonce), so comparing it
@@ -108,4 +117,39 @@ public interface UsersRepository extends JpaRepository<Users, Long> {
             where u.githubId = :id and u.encryptedGithubToken = :rejectedToken
             """)
     int markNeedsReauth(@Param("id") long id, @Param("rejectedToken") String rejectedToken);
+
+    /**
+     * B11: flips {@code include_private} if nobody changed it since it was read, a compare-and-set like
+     * {@link #changeClass}. Must run inside the caller's transaction (it commits with the resync). The lock itself
+     * ({@code private_changed_at}) is set on the managed entity afterwards, under this statement's row lock.
+     *
+     * @return 1 if stored, 0 if the switch moved in the meantime (or there's no such user)
+     */
+    default int changeIncludePrivate(long id, boolean expectedInclude, boolean include, Instant expectedChangedAt) {
+        return expectedChangedAt == null
+                ? changeIncludePrivateFirstTime(id, expectedInclude, include)
+                : changeIncludePrivateSince(id, expectedInclude, include, expectedChangedAt);
+    }
+
+    @Modifying
+    @Query("""
+            update Users u set u.includePrivate = :include
+            where u.githubId = :id and u.includePrivate = :expectedInclude and u.privateChangedAt is null
+            """)
+    int changeIncludePrivateFirstTime(@Param("id") long id, @Param("expectedInclude") boolean expectedInclude,
+                                      @Param("include") boolean include);
+
+    @Modifying
+    @Query("""
+            update Users u set u.includePrivate = :include
+            where u.githubId = :id and u.includePrivate = :expectedInclude and u.privateChangedAt = :expected
+            """)
+    int changeIncludePrivateSince(@Param("id") long id, @Param("expectedInclude") boolean expectedInclude,
+                                  @Param("include") boolean include, @Param("expected") Instant expected);
+
+    /** B11: marks (or clears) the owed full resync. One column, so nothing a login changed meanwhile is written back. */
+    @Transactional
+    @Modifying
+    @Query("update Users u set u.privateResyncDue = :due where u.githubId = :id")
+    int setPrivateResyncDue(@Param("id") long id, @Param("due") boolean due);
 }

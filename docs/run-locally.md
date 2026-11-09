@@ -13,6 +13,7 @@ npm run dev                     # http://localhost:3000
 
 Mock mode plays the fixture story (Friday 16 Oct 2026, 18:20 in Asia/Kolkata) and serves every `/api/*` call from `web/public/fixtures/`. Add to any URL:
 - `?mock=<variant>` for moods and tiers: `happy okay weak sleeping level_up fainted tier_campfire tier_keep tier_citadel class_cooldown`.
+- `?mock_arena=hidden|empty` for the Arena: "Not in the Arena" (the 404 `rank-not-in-arena.json`) or an empty board. The default board is `leaderboard.json` (MONK).
 - `?mock_error=401|404|409|429|502` to force that status on the first call of the page load. Under `npm run dev` it currently does nothing (B38: React StrictMode spends it on a cancelled fetch); `npm run build && npx next start` works.
 
 ## B. Full stack: backend + web app

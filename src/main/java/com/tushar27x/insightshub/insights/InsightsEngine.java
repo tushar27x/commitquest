@@ -6,6 +6,7 @@ import com.tushar27x.insightshub.github.model.GitHubUser.Connection;
 import com.tushar27x.insightshub.github.model.GitHubUser.ContributionDay;
 import com.tushar27x.insightshub.github.model.GitHubUser.ContributionsCollection;
 import com.tushar27x.insightshub.github.model.GitHubUser.PullRequest;
+import com.tushar27x.insightshub.github.model.GitHubUser.RepositoryContributions;
 import com.tushar27x.insightshub.github.model.GitHubUser.Repository;
 import com.tushar27x.insightshub.insights.UserStats.CodeChurn;
 import com.tushar27x.insightshub.insights.UserStats.RankedRepo;
@@ -28,6 +29,10 @@ import java.util.Optional;
  * Turns raw GitHub data into {@link UserStats} (a port of v1's {@code calculate_user_insights}),
  * a {@link HabitProfile} and archetype scores. Pure logic with no I/O, so it is unit-tested directly.
  * <p>
+ * B10: a private repo (when the user opted in) counts in the aggregates (stars, languages, habit signals, the
+ * totals GitHub reports) but is never named: it is left out of {@code ranked_repos}, {@code repo_details} and
+ * {@code recent_commits}, so no private name, README, file list or commit message reaches storage or a prompt.
+ * <p>
  * Deliberate differences from v1:
  * <ul>
  *   <li>Null objects from GitHub (e.g. an empty repo's {@code defaultBranchRef}) are handled;
@@ -49,7 +54,55 @@ public class InsightsEngine {
 
     private final ArchetypeClassifier archetypeClassifier;
 
+    /** Ranked repos stay the top 5 (v1's shape), though the query now lists up to 100 repos for the totals (B11). */
+    static final int RANKED_REPOS = 5;
+
+    /** The user's data as fetched: private access, if it was in the query, counts. */
     public InsightsResult calculate(GitHubUser user) {
+        return calculate(user, true);
+    }
+
+    /**
+     * B11: with {@code includePrivate} false the totals are the sums of the per-repo lists with the private entries
+     * dropped (GitHub's {@code total*Contributions} have no privacy filter, so a token with the {@code repo} scope
+     * would count private work in them), and private pull requests leave the churn and the habit signals.
+     */
+    public InsightsResult calculate(GitHubUser user, boolean includePrivate) {
+        return compute(includePrivate ? user : publicOnly(user));
+    }
+
+    /** What the user's public work alone adds up to: see {@link #calculate(GitHubUser, boolean)}. */
+    static GitHubUser publicOnly(GitHubUser user) {
+        ContributionsCollection c = user.contributionsCollection();
+        ContributionsCollection publicContributions = c == null ? null : new ContributionsCollection(
+                publicEntries(c.commitContributionsByRepository()),
+                c.contributionCalendar(),
+                publicTotal(c.commitContributionsByRepository(), c.totalCommitContributions()),
+                publicTotal(c.pullRequestContributionsByRepository(), c.totalPullRequestContributions()),
+                publicTotal(c.issueContributionsByRepository(), c.totalIssueContributions()),
+                c.totalRepositoryContributions(),
+                publicEntries(c.pullRequestContributionsByRepository()),
+                publicEntries(c.issueContributionsByRepository()));
+        return new GitHubUser(user.id(), user.login(), user.name(), user.avatarUrl(), user.url(), user.bio(),
+                user.followers(), user.following(),
+                user.repositories() == null ? null : new Connection<>(
+                        nodes(user.repositories()).stream().filter(repo -> !repo.privateRepo()).toList()),
+                user.pullRequests() == null ? null : new Connection<>(
+                        nodes(user.pullRequests()).stream().filter(pr -> !pr.privateRepo()).toList()),
+                publicContributions);
+    }
+
+    private static List<RepositoryContributions> publicEntries(List<RepositoryContributions> byRepo) {
+        return byRepo == null ? null : byRepo.stream()
+                .filter(rc -> rc.repository() == null || !rc.repository().privateRepo()).toList();
+    }
+
+    /** The sum of the public entries; a list that wasn't fetched (null) keeps GitHub's own total. */
+    private static int publicTotal(List<RepositoryContributions> byRepo, int total) {
+        return byRepo == null ? total : publicEntries(byRepo).stream().mapToInt(rc -> totalCount(rc.contributions())).sum();
+    }
+
+    private InsightsResult compute(GitHubUser user) {
         ContributionsCollection contributions = user.contributionsCollection();
         List<Repository> repos = nodes(user.repositories());
         List<ContributionDay> days = sortedDays(contributions);
@@ -69,8 +122,8 @@ public class InsightsEngine {
                 contributions == null ? 0 : contributions.totalPullRequestContributions(),
                 contributions == null ? 0 : contributions.totalIssueContributions(),
                 rankedRepos(contributions),
-                repos.stream().map(InsightsEngine::repoDetail).toList(),
-                recentCommits(repos),
+                repos.stream().filter(repo -> !repo.privateRepo()).map(InsightsEngine::repoDetail).toList(),
+                recentCommits(repos.stream().filter(repo -> !repo.privateRepo()).toList()),
                 codeChurn(nodes(user.pullRequests())),
                 topLanguages(repos),
                 repos.stream().mapToInt(Repository::stargazerCount).sum(),
@@ -103,8 +156,10 @@ public class InsightsEngine {
             return List.of();
         }
         return contributions.commitContributionsByRepository().stream()
+                .filter(rc -> !rc.repository().privateRepo()) // B10: private repos are counted, never listed
                 .map(rc -> new RankedRepo(rc.repository().name(), totalCount(rc.contributions())))
                 .sorted(Comparator.comparingInt(RankedRepo::count).reversed()) // stable, like v1
+                .limit(RANKED_REPOS)
                 .toList();
     }
 

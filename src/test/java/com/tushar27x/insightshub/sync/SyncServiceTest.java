@@ -107,10 +107,10 @@ class SyncServiceTest {
         GitHubUser gitHubUser = new GitHubUser("U_octocat", "octocat", null, null, null, null, null, null, null, null,
                 new ContributionsCollection(List.of(), calendar, 4, 0, 0, 0));
         UserInsightsData data = new UserInsightsData(null, gitHubUser);
-        when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenReturn(data);
-        when(engine.calculate(any())).thenReturn(result);
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any(), eq(false))).thenReturn(data);
+        when(engine.calculate(any(), org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(result);
         when(ai.generate("octocat", result)).thenReturn(texts);
-        when(branchScanner.scan(any(), any(), any(), any())).thenReturn(Map.of());
+        when(branchScanner.scan(any(), any(), any(), any(), eq(false))).thenReturn(Map.of());
         when(writer.storedTexts(ID)).thenReturn(Regeneration.Stored.NONE); // a new user: no texts yet
     }
 
@@ -138,7 +138,7 @@ class SyncServiceTest {
     @Test
     void branchScanGetsTheNodeIdAndCalendarAndItsCountsAreWrittenBeforeAi() {
         List<ContributionDay> calendar = List.of(OCT_12, OCT_13, OCT_14);
-        when(branchScanner.scan("gho_stored", "U_octocat", calendar, ZoneOffset.UTC))
+        when(branchScanner.scan("gho_stored", "U_octocat", calendar, ZoneOffset.UTC, false))
                 .thenReturn(Map.of(OCT_12.date(), 2));
 
         service.sync(ID);
@@ -158,7 +158,7 @@ class SyncServiceTest {
 
     @Test
     void responseWithoutAUserWritesNoDays() {
-        when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenReturn(new UserInsightsData(null, null));
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any(), eq(false))).thenReturn(new UserInsightsData(null, null));
 
         assertThat(service.sync(ID)).isEqualTo(SyncOutcome.SYNCED);
         verify(activityWriter).writeCalendar(ID, List.of());
@@ -201,7 +201,7 @@ class SyncServiceTest {
 
     @Test
     void rejectedTokenFlagsTheUserInsteadOfFailing() {
-        when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenThrow(new GitHubAuthException("401"));
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any(), eq(false))).thenThrow(new GitHubAuthException("401"));
 
         assertThat(service.sync(ID)).isEqualTo(SyncOutcome.NEEDS_REAUTH);
         verify(writer).markNeedsReauth(ID, user.getEncryptedGithubToken());
@@ -219,7 +219,7 @@ class SyncServiceTest {
 
     @Test
     void otherFailuresPropagateAndWriteNothing() {
-        when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenThrow(new GitHubApiException("HTTP 502"));
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any(), eq(false))).thenThrow(new GitHubApiException("HTTP 502"));
 
         assertThatThrownBy(() -> service.sync(ID)).isInstanceOf(GitHubApiException.class);
         verifyNoInteractions(writer, activityWriter, branchScanner);
@@ -255,7 +255,7 @@ class SyncServiceTest {
 
         service.sync(ID);
 
-        verify(branchScanner).scan("gho_stored", "U_octocat", List.of(OCT_12, OCT_13, OCT_14), ZoneId.of("Asia/Kolkata"));
+        verify(branchScanner).scan("gho_stored", "U_octocat", List.of(OCT_12, OCT_13, OCT_14), ZoneId.of("Asia/Kolkata"), false);
     }
 
     @Test
@@ -263,9 +263,9 @@ class SyncServiceTest {
         UserInsightsData data = new UserInsightsData(null, new GitHubUser("U_octocat", "octocat", null, null, null, null,
                 null, null, null, null, new ContributionsCollection(List.of(),
                 new ContributionCalendar(1, List.of(new Week(List.of(OCT_13)))), 1, 0, 0, 0)));
-        when(gitHub.fetchUserInsights("gho_stored", "octocat", Instant.parse("2026-10-12T00:00:00Z"), NOW))
+        when(gitHub.fetchUserInsights("gho_stored", "octocat", Instant.parse("2026-10-12T00:00:00Z"), NOW, false))
                 .thenReturn(data);
-        when(branchScanner.scan("gho_stored", "U_octocat", List.of(OCT_13), ZoneOffset.UTC))
+        when(branchScanner.scan("gho_stored", "U_octocat", List.of(OCT_13), ZoneOffset.UTC, false))
                 .thenReturn(Map.of(OCT_14.date(), 1));
 
         assertThat(service.refreshActivity(ID, OCT_13.date())).isEqualTo(SyncOutcome.SYNCED);
@@ -279,17 +279,17 @@ class SyncServiceTest {
 
     @Test
     void refreshNeverAsksForMoreThanAYear() {
-        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), eq(NOW)))
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), eq(NOW), eq(false)))
                 .thenReturn(new UserInsightsData(null, null));
 
         service.refreshActivity(ID, LocalDate.parse("2020-01-01"));
 
-        verify(gitHub).fetchUserInsights("gho_stored", "octocat", NOW.minus(Duration.ofDays(365)), NOW);
+        verify(gitHub).fetchUserInsights("gho_stored", "octocat", NOW.minus(Duration.ofDays(365)), NOW, false);
     }
 
     @Test
     void refreshWithARejectedTokenFlagsTheUser() {
-        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any()))
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any(), eq(false)))
                 .thenThrow(new GitHubAuthException("401"));
 
         assertThat(service.refreshActivity(ID, OCT_13.date())).isEqualTo(SyncOutcome.NEEDS_REAUTH);
@@ -307,7 +307,7 @@ class SyncServiceTest {
 
     @Test
     void refreshLetsOtherGitHubFailuresThrough() {
-        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any()))
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any(), eq(false)))
                 .thenThrow(new GitHubApiException("HTTP 502"));
 
         assertThatThrownBy(() -> service.refreshActivity(ID, OCT_13.date())).isInstanceOf(GitHubApiException.class);
@@ -349,7 +349,7 @@ class SyncServiceTest {
 
         assertThat(service.refreshInsights(ID)).isEqualTo(DailyOutcome.UNCHANGED);
 
-        verify(gitHub).fetchUserInsights("gho_stored", "octocat"); // the full, year-long fetch: about 1 point
+        verify(gitHub).fetchUserInsights("gho_stored", "octocat", NOW.minus(Duration.ofDays(365)), NOW, false); // the full, year-long fetch: about 1 point
         verify(activityWriter).writeCalendar(ID, List.of(OCT_12, OCT_13, OCT_14));
         verify(writer).saveKeepingTexts(eq(ID), any(), eq(result), eq(NOW));
         verifyNoInteractions(ai, rateLimiter);
@@ -381,7 +381,7 @@ class SyncServiceTest {
 
     @Test
     void theDailyRefreshWithARejectedTokenFlagsTheUser() {
-        when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenThrow(new GitHubAuthException("401"));
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any(), eq(false))).thenThrow(new GitHubAuthException("401"));
 
         assertThat(service.refreshInsights(ID)).isEqualTo(DailyOutcome.NEEDS_REAUTH);
         verify(writer).markNeedsReauth(ID, user.getEncryptedGithubToken());
@@ -398,7 +398,7 @@ class SyncServiceTest {
 
     @Test
     void theDailyRefreshLetsOtherGitHubFailuresThroughAndWritesNothing() {
-        when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenThrow(new GitHubApiException("HTTP 502"));
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any(), eq(false))).thenThrow(new GitHubApiException("HTTP 502"));
 
         assertThatThrownBy(() -> service.refreshInsights(ID)).isInstanceOf(GitHubApiException.class);
         verifyNoInteractions(activityWriter, ai);
@@ -411,7 +411,7 @@ class SyncServiceTest {
     @ExtendWith(OutputCaptureExtension.class)
     void aRejectedTokenLogsGitHubsRequestIdMessageAndTheTokensAgeButNeverTheToken(CapturedOutput output) {
         user.replaceGithubToken(user.getEncryptedGithubToken(), NOW.minus(Duration.ofHours(26).plusMinutes(5)));
-        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any()))
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any(), eq(false)))
                 .thenThrow(new GitHubAuthException("GitHub rejected the token (HTTP 401)", "C0DE:1234:ABCD",
                         "Bad credentials"));
         when(writer.markNeedsReauth(ID, user.getEncryptedGithubToken())).thenReturn(true);
@@ -427,7 +427,7 @@ class SyncServiceTest {
     @Test
     @ExtendWith(OutputCaptureExtension.class)
     void aLoginThatReplacedTheTokenMeanwhileIsNotUndone(CapturedOutput output) {
-        when(gitHub.fetchUserInsights("gho_stored", "octocat")).thenThrow(new GitHubAuthException("401"));
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any(), eq(false))).thenThrow(new GitHubAuthException("401"));
         when(writer.markNeedsReauth(ID, user.getEncryptedGithubToken())).thenReturn(false); // the CAS lost
 
         assertThat(service.sync(ID)).isEqualTo(SyncOutcome.NEEDS_REAUTH);
@@ -438,7 +438,7 @@ class SyncServiceTest {
     @Test
     @ExtendWith(OutputCaptureExtension.class)
     void theDailyRefreshGetsTheSame401Handling(CapturedOutput output) {
-        when(gitHub.fetchUserInsights("gho_stored", "octocat"))
+        when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any(), eq(false)))
                 .thenThrow(new GitHubAuthException("GitHub rejected the token (HTTP 401)", "C0DE:9", "Bad credentials"));
         when(writer.markNeedsReauth(ID, user.getEncryptedGithubToken())).thenReturn(false); // a login won the race
 

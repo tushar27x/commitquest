@@ -13,6 +13,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -23,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,6 +41,9 @@ public class GitHubGraphQlClient {
 
     /** GitHub rejects contribution ranges longer than one year. */
     static final Duration MAX_RANGE = Duration.ofDays(365);
+
+    /** The scopes of the token that made the call (B10). */
+    static final String SCOPES_HEADER = "X-OAuth-Scopes";
 
     private static final ParameterizedTypeReference<GraphQlResponse<UserInsightsData>> INSIGHTS_RESPONSE =
             new ParameterizedTypeReference<>() {
@@ -70,6 +75,18 @@ public class GitHubGraphQlClient {
 
     /** Same, with contributions limited to {@code [from, to]} (at most one year). */
     public UserInsightsData fetchUserInsights(String token, String login, Instant from, Instant to) {
+        return fetchUserInsights(token, login, from, to, false);
+    }
+
+    /**
+     * B10: {@code includePrivate} false asks only for PUBLIC repositories, even when the token could see more; true
+     * lifts the filter (the caller has checked the user's choice and the repo scope). The result carries the
+     * response's X-OAuth-Scopes, so the caller learns when the token lost repo.
+     *
+     * @throws GitHubScopeException when GitHub refuses the private part of the query
+     */
+    public UserInsightsData fetchUserInsights(String token, String login, Instant from, Instant to,
+                                              boolean includePrivate) {
         if (!from.isBefore(to)) {
             throw new IllegalArgumentException("'from' must be before 'to'");
         }
@@ -77,10 +94,13 @@ public class GitHubGraphQlClient {
             throw new IllegalArgumentException("GitHub allows at most one year between 'from' and 'to'");
         }
 
-        GraphQlResponse<UserInsightsData> response = post(token, userInsightsQuery,
-                Map.of("login", login, "from", from.toString(), "to", to.toString()),
+        Map<String, Object> variables = new HashMap<>(Map.of("login", login, "from", from.toString(),
+                "to", to.toString()));
+        privacy(variables, includePrivate);
+        ResponseEntity<GraphQlResponse<UserInsightsData>> response = post(token, userInsightsQuery, variables,
                 INSIGHTS_RESPONSE, "'" + login + "'");
-        UserInsightsData data = unwrap(response, "'" + login + "'");
+        UserInsightsData data = unwrap(response.getBody(), "'" + login + "'")
+                .withOauthScopes(response.getHeaders().getFirst(SCOPES_HEADER));
         if (data.user() == null) {
             throw new GitHubApiException("GitHub returned no user for '" + login + "'");
         }
@@ -97,13 +117,21 @@ public class GitHubGraphQlClient {
      * @return the commit count; a commit on several branches counts once per branch
      */
     public int countBranchCommits(String token, String userNodeId, Instant since, Instant until) {
+        return countBranchCommits(token, userNodeId, since, until, false);
+    }
+
+    /** B10: with includePrivate, private repos' branches are counted too (a count, never a name). */
+    public int countBranchCommits(String token, String userNodeId, Instant since, Instant until,
+                                  boolean includePrivate) {
         if (!since.isBefore(until)) {
             throw new IllegalArgumentException("'since' must be before 'until'");
         }
-        GraphQlResponse<BranchActivityData> response = post(token, branchActivityQuery,
-                Map.of("userId", userNodeId, "since", since.toString(), "until", until.toString()),
+        Map<String, Object> variables = new HashMap<>(Map.of("userId", userNodeId, "since", since.toString(),
+                "until", until.toString()));
+        privacy(variables, includePrivate);
+        ResponseEntity<GraphQlResponse<BranchActivityData>> response = post(token, branchActivityQuery, variables,
                 BRANCH_RESPONSE, "the branch scan");
-        BranchActivityData data = unwrap(response, "the branch scan");
+        BranchActivityData data = unwrap(response.getBody(), "the branch scan");
         if (data.viewer() == null) {
             throw new GitHubApiException("GitHub returned no viewer for the branch scan");
         }
@@ -121,7 +149,14 @@ public class GitHubGraphQlClient {
                 .sum();
     }
 
-    private <T> GraphQlResponse<T> post(String token, String query, Map<String, Object> variables,
+    /** Omitting the variable lifts the filter; PUBLIC restricts. */
+    private static void privacy(Map<String, Object> variables, boolean includePrivate) {
+        if (!includePrivate) {
+            variables.put("privacy", "PUBLIC");
+        }
+    }
+
+    private <T> ResponseEntity<GraphQlResponse<T>> post(String token, String query, Map<String, Object> variables,
                                         ParameterizedTypeReference<GraphQlResponse<T>> type, String what) {
         try {
             return gitHubRestClient.post()
@@ -137,7 +172,7 @@ public class GitHubGraphQlClient {
                         throw new GitHubApiException("GitHub GraphQL request failed for " + what
                                 + ": HTTP " + res.getStatusCode().value());
                     })
-                    .body(type);
+                    .toEntity(type);
         } catch (GitHubApiException e) {
             throw e;
         } catch (RestClientException e) {
@@ -153,6 +188,9 @@ public class GitHubGraphQlClient {
             String messages = response.errors().stream()
                     .map(GraphQlResponse.Error::message)
                     .collect(Collectors.joining("; "));
+            if (response.errors().stream().anyMatch(e -> "FORBIDDEN".equals(e.type()))) {
+                throw new GitHubScopeException("GitHub refused private access for " + what + ": " + messages);
+            }
             throw new GitHubApiException("GitHub GraphQL errors for " + what + ": " + messages);
         }
         if (response.data() == null) {

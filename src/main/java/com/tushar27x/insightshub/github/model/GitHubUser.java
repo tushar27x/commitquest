@@ -36,7 +36,18 @@ public record GitHubUser(
             Connection<Language> languages,
             Ref defaultBranchRef,
             Blob readme,
-            Tree tree) {
+            Tree tree,
+            Boolean isPrivate) {
+
+        /** B10: absent counts as public (only a repo GitHub says is private is hidden). */
+        public boolean privateRepo() {
+            return Boolean.TRUE.equals(isPrivate);
+        }
+
+        public Repository(String name, int stargazerCount, Connection<Language> languages, Ref defaultBranchRef,
+                          Blob readme, Tree tree) {
+            this(name, stargazerCount, languages, defaultBranchRef, readme, tree, false);
+        }
     }
 
     public record Language(String name) {
@@ -68,7 +79,16 @@ public record GitHubUser(
     public record TreeEntry(String name, String type) {
     }
 
-    public record PullRequest(int additions, int deletions, String title) {
+    /** {@code repository} (B11) carries only {@code isPrivate}: a private PR is dropped from the churn when OFF. */
+    public record PullRequest(int additions, int deletions, String title, RepositoryName repository) {
+
+        public PullRequest(int additions, int deletions, String title) {
+            this(additions, deletions, title, null);
+        }
+
+        public boolean privateRepo() {
+            return repository != null && repository.privateRepo();
+        }
     }
 
     public record ContributionsCollection(
@@ -77,13 +97,32 @@ public record GitHubUser(
             int totalCommitContributions,
             int totalPullRequestContributions,
             int totalIssueContributions,
-            int totalRepositoryContributions) {
+            int totalRepositoryContributions,
+            List<RepositoryContributions> pullRequestContributionsByRepository,
+            List<RepositoryContributions> issueContributionsByRepository) {
+
+        /** Without the per-repo PR and issue lists (null = not fetched): the totals fall back to GitHub's own. */
+        public ContributionsCollection(List<RepositoryContributions> commitContributionsByRepository,
+                                       ContributionCalendar contributionCalendar, int totalCommitContributions,
+                                       int totalPullRequestContributions, int totalIssueContributions,
+                                       int totalRepositoryContributions) {
+            this(commitContributionsByRepository, contributionCalendar, totalCommitContributions,
+                    totalPullRequestContributions, totalIssueContributions, totalRepositoryContributions, null, null);
+        }
     }
 
     public record RepositoryContributions(RepositoryName repository, TotalCount contributions) {
     }
 
-    public record RepositoryName(String name) {
+    public record RepositoryName(String name, Boolean isPrivate) {
+
+        public boolean privateRepo() {
+            return Boolean.TRUE.equals(isPrivate);
+        }
+
+        public RepositoryName(String name) {
+            this(name, false);
+        }
     }
 
     public record ContributionCalendar(int totalContributions, List<Week> weeks) {

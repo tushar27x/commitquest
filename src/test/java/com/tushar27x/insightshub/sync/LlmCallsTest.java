@@ -36,6 +36,7 @@ import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -67,12 +68,12 @@ class LlmCallsTest {
         when(usersRepository.findById(ID)).thenReturn(Optional.of(user));
         when(usersRepository.claimSync(anyLong(), any(), any())).thenReturn(1);
         GitHubGraphQlClient gitHub = mock(GitHubGraphQlClient.class);
-        when(gitHub.fetchUserInsights(any(), any())).thenReturn(new UserInsightsData(null, null));
-        when(gitHub.fetchUserInsights(any(), any(), any(), any())).thenReturn(new UserInsightsData(null, null));
+        when(gitHub.fetchUserInsights(any(), any(), any(), any(), anyBoolean())).thenReturn(new UserInsightsData(null, null));
+        when(gitHub.fetchUserInsights(any(), any(), any(), any(), anyBoolean())).thenReturn(new UserInsightsData(null, null));
         InsightsEngine engine = mock(InsightsEngine.class);
-        when(engine.calculate(any())).thenReturn(AiTestData.insights());
+        when(engine.calculate(any(), org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(AiTestData.insights());
         BranchScanner branchScanner = mock(BranchScanner.class);
-        when(branchScanner.scan(any(), any(), any(), any())).thenReturn(Map.of());
+        when(branchScanner.scan(any(), any(), any(), any(), anyBoolean())).thenReturn(Map.of());
         RateLimiter rateLimiter = mock(RateLimiter.class);
         when(rateLimiter.tryAcquire("sync:global", GLOBAL)).thenReturn(new Decision(true, 30, 29, Duration.ZERO));
 

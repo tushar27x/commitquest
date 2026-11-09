@@ -74,6 +74,39 @@ class DailyContributionsRepositoryTest {
     }
 
     @Test
+    void theResyncBranchUpsertReplacesTheCountUpOrDown() { // B11
+        assertThat(repository.replaceBranchSql)
+                .contains("INSERT INTO v2.daily_contributions (user_id, date, branch_commit_count)")
+                .contains("SET branch_commit_count = EXCLUDED.branch_commit_count")
+                .doesNotContain("GREATEST")
+                .doesNotContain("calendar_count");
+    }
+
+    @Test
+    void replacingBatchesOneRowPerScannedDay() {
+        Map<LocalDate, Integer> counts = new LinkedHashMap<>();
+        counts.put(OCT_13, 0);
+        counts.put(OCT_14, 1);
+
+        repository.replaceBranchCounts(ID, counts);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Object[]>> rows = ArgumentCaptor.forClass(List.class);
+        verify(jdbc).batchUpdate(eq(repository.replaceBranchSql), rows.capture());
+        assertThat(rows.getValue()).containsExactly(new Object[]{ID, OCT_13, 0}, new Object[]{ID, OCT_14, 1});
+    }
+
+    @Test
+    void clearingZeroesOnlyTheUsersBranchCountsAndLeavesTheCalendarAlone() {
+        assertThat(repository.clearBranchSql).contains("UPDATE v2.daily_contributions SET branch_commit_count = 0")
+                .contains("WHERE user_id = ?").doesNotContain("calendar_count");
+
+        repository.clearBranchCounts(ID);
+
+        verify(jdbc).update(repository.clearBranchSql, ID);
+    }
+
+    @Test
     void everyStatementNamesTheSchemaBecauseOnlyJpaHasADefaultOne() { // B36
         assertThat(repository.latestDateSql).isEqualTo("SELECT max(date) FROM v2.daily_contributions WHERE user_id = ?");
     }

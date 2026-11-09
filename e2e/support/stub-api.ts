@@ -24,6 +24,12 @@ const DEFAULTS: Overrides = {
   "GET /api/user/hero/events": { body: fixtures.heroEvents },
   "GET /api/user/preferences": { body: fixtures.preferences },
   "PUT /api/user/preferences": (request) => ({ body: request.postDataJSON() }),
+  "GET /api/user/rank": { body: fixtures.rank },
+  // The fixture is the MONK board; any other class is a board nobody joined.
+  "GET /api/leaderboard": (request) => {
+    const archetype = new URL(request.url()).searchParams.get("archetype") ?? fixtures.leaderboard.archetype;
+    return { body: archetype === fixtures.leaderboard.archetype ? fixtures.leaderboard : { ...fixtures.leaderboard, archetype, page: 0, total: 0, entries: [] } };
+  },
   "PUT /api/user/hero/class": { body: fixtures.hero },
 };
 
@@ -37,7 +43,7 @@ const TITLES: Record<number, string> = {
 };
 
 /** A problem+json reply shaped like the backend's (B2): `type` about:blank, `instance` = path. */
-export function problem(status: number, path: string, extra: { retryAfter?: number; errors?: unknown[] } = {}): Reply {
+export function problem(status: number, path: string, extra: { retryAfter?: number; errors?: unknown[]; title?: string } = {}): Reply {
   const headers: Record<string, string> = { "Content-Type": "application/problem+json" };
   if (extra.retryAfter !== undefined) headers["Retry-After"] = String(extra.retryAfter);
   return {
@@ -45,7 +51,7 @@ export function problem(status: number, path: string, extra: { retryAfter?: numb
     headers,
     body: {
       type: "about:blank",
-      title: TITLES[status] ?? "Error",
+      title: extra.title ?? TITLES[status] ?? "Error",
       status,
       detail: `e2e: forced ${status}`,
       instance: path,
