@@ -5,17 +5,17 @@ v1 reference (Python/FastAPI): `~/dev/insight_hub/server`.
 
 ## Project index
 
-_Last indexed: 2026-10-14, after Phase 8 (commit `a51a427`). Updated 2026-10-16 for the hero-pet plan (I0), I2, B3 (Phase 10) and B4 (`23ed3e2`); 2026-10-19 for B5 (`df24904`); 2026-10-29 for I5; 2026-11-01 for B7 (#35); 2026-11-03 for B8 (#42) and U7 (#43); 2026-11-04 for B9 (#45), U8–U10 (#47–#49): the Arena is off for the first release._
+_Last indexed: 2026-10-14, after Phase 8 (commit `a51a427`). Updated 2026-10-16 for the hero-pet plan (I0), I2, B3 (Phase 10) and B4 (`23ed3e2`); 2026-10-19 for B5 (`df24904`); 2026-10-29 for I5; 2026-11-01 for B7 (#35); 2026-11-03 for B8 (#42) and U7 (#43); 2026-11-04 for B9 (#45), U8–U10 (#47–#49); 2026-11-09 for U11 and I7: the Arena is back in the web app and in the e2e suites._
 
 ### What it is
 
 Hero-pet habit tracker for GitHub activity: the user's scored D&D class character has 3 hearts, XP and levels,
 and loses a heart for each day without GitHub activity (rules in `hero/HeroRules.java`).
 Backend: `com.tushar27x:insightshub:0.0.1-SNAPSHOT`, Java 21, Spring Boot 4.1.1, Spring AI 2.0.0 (BOM), Maven wrapper,
-virtual threads on. Web: Next.js 16 + React 19 + TypeScript + Tailwind 4 + TanStack Query in `web/` (landing page at `/` from `components/landing`, Home, Journal, Hero, Change class, Settings; the Arena is **off for the first release** (U10): no tab, no route, no Settings switch, though the backend keeps its endpoints). `/api/*` is proxied to the backend by a Next rewrite (`web/next.config.ts`, 120 s timeout).
+virtual threads on. Web: Next.js 16 + React 19 + TypeScript + Tailwind 4 + TanStack Query in `web/` (landing page at `/` from `components/landing`, Home, Journal, Hero, Change class, Arena, Settings: five tabs; the Arena came back in U11 with the live leaderboard and the "Show me in the Arena" switch in Settings). `/api/*` is proxied to the backend by a Next rewrite (`web/next.config.ts`, 120 s timeout).
 Port of v1 (phases 0–9) plus new v2 features (2.6, 10–13, Part D). HTTP surface today:
 `/api/auth/{login,callback,logout}` (public; the callback 302s to `${FRONTEND_URL}/dashboard#token=<jwt>`), `GET /api/user/insights`, `POST /api/user/sync`,
-`GET /api/user/hero`, `GET /api/user/hero/events`, `PUT /api/user/hero/class`, `GET/PUT /api/user/preferences`, `GET /api/leaderboard`, `GET /api/user/rank` (JWT; the Arena pair is unused by the web app for now), `GET/POST /api/notifications/unsubscribe` (public, signed token, HTML pages), `/actuator/health`.
+`GET /api/user/hero`, `GET /api/user/hero/events`, `PUT /api/user/hero/class`, `GET/PUT /api/user/preferences`, `GET /api/leaderboard`, `GET /api/user/rank` (JWT; the Arena pair, read by the web Arena screen since U11), `GET/POST /api/notifications/unsubscribe` (public, signed token, HTML pages), `/actuator/health`.
 Shapes in `docs/api/contract.md`.
 
 ### Status snapshot

@@ -93,6 +93,34 @@ test("Settings saves to the backend and the change survives a reload", async () 
   expect((await api("/api/user/preferences")).body).toEqual({ ...before, alerts_enabled: !before.alerts_enabled });
 });
 
+test("the Arena: a new hero is not on the board (public_profile starts off), then the Settings switch puts them on it", async () => {
+  const nav = page.getByRole("navigation", { name: "Main" });
+  await nav.getByRole("link", { name: "ARENA" }).click();
+  await expect(page).toHaveURL(/\/arena$/);
+  // Private by default: the real 404 "Not in the Arena" from /user/rank is a card, not an error.
+  await expect(page.getByRole("heading", { name: "NOT IN THE ARENA" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "THE ROAD IS BLOCKED" })).toHaveCount(0);
+  expect((await api("/api/user/rank")).status).toBe(404);
+
+  await page.getByRole("link", { name: /SHOW ME IN SETTINGS/ }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await page.getByRole("switch", { name: "SHOW ME IN THE ARENA" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "SAVED" })).toBeVisible();
+  expect((await api("/api/user/preferences")).body.public_profile).toBe(true);
+
+  await nav.getByRole("link", { name: "ARENA" }).click();
+  await expect(page.getByRole("heading", { name: "YOUR PLACE" })).toBeVisible();
+  // Reload: the client keeps the board it read while private for 10 minutes (staleTime), so the
+  // in-app visit still shows it empty. A UI follow-up (invalidate ["leaderboard"] after a
+  // public_profile save), reported to the UI lane; a fresh load reads the real board.
+  await page.reload();
+  const you = page.getByRole("listitem").filter({ hasText: "(you)" });
+  await expect(you).toHaveCount(1);
+  await expect(you).toContainText("octocat");
+  const rank = (await api("/api/user/rank")).body;
+  expect(rank.total).toBeGreaterThanOrEqual(1);
+});
+
 test("errors come back as problem+json through the rewrite", async () => {
   const bad = await api("/api/user/preferences", { method: "PUT", data: { timezone: "+05:30" } });
   expect(bad.status).toBe(400);
