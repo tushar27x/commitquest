@@ -6,6 +6,7 @@ import { QueryClient, keepPreviousData, useMutation, useQuery, useQueryClient } 
 import { ApiError, api } from "./api";
 import type { ChangeClassRequest, Hero, HeroEvents, Archetype, Insights, Leaderboard, Preferences, Rank } from "./api/types";
 import { adoptBrowserZone, browserTimeZone } from "./preferences";
+import { isPrivateLockedError } from "./private";
 
 const STALE_TIME_MS = 10 * 60_000;
 const GC_TIME_MS = 30 * 60_000;
@@ -126,6 +127,10 @@ export function useSavePreferences() {
     mutationFn: (body) => api<Preferences>("/api/user/preferences", { method: "PUT", body }),
     scope: { id: "preferences" },
     onSuccess: (saved) => afterPreferencesSaved(queryClient, saved),
+    // The lock 429 means our `private_locked_until` is stale: re-read it (contract B11).
+    onError: (error) => {
+      if (isPrivateLockedError(error)) void queryClient.invalidateQueries({ queryKey: queryKeys.preferences, exact: true });
+    },
   });
 }
 
@@ -135,7 +140,14 @@ export function useSavePreferences() {
  * fetched before the save must not stay cached for its long staleTime.
  */
 export function afterPreferencesSaved(queryClient: QueryClient, saved: Preferences): void {
+  const before = queryClient.getQueryData<Preferences>(queryKeys.preferences);
   queryClient.setQueryData(queryKeys.preferences, saved);
+  // B11: an effective private-access flip resynced the insights inside the PUT, so everything derived
+  // from them (insights, hero, journal events) is new.
+  if (before && before.include_private !== saved.include_private && saved.private_access === "granted") {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.insights, exact: true });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.hero });
+  }
   void queryClient.invalidateQueries({ queryKey: queryKeys.hero, exact: true });
   void queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
   void queryClient.invalidateQueries({ queryKey: queryKeys.rank, exact: true });

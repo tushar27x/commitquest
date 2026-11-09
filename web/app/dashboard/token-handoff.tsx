@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { hasSession, setToken, tokenFromFragment } from "@/lib/auth";
+import { PRIVATE_RETURN_PATH, takePrivateReauth } from "@/lib/private";
 import { sendBrowserZone } from "@/lib/queries";
 
 /**
@@ -23,7 +24,9 @@ export function TokenHandoff() {
       setToken(token);
       void sendBrowserZone(queryClient);
     }
-    router.replace(hasSession() ? "/home" : "/");
+    // A private re-auth (Settings) comes back to Settings, which reads the outcome (contract B11).
+    const back = takePrivateReauth();
+    router.replace(hasSession() ? (back ? PRIVATE_RETURN_PATH : "/home") : "/");
   }, [router, queryClient]);
 
   return null;

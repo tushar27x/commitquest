@@ -3,7 +3,7 @@ import { ApiError } from "./api";
 import type { Preferences } from "./api/types";
 import { adoptBrowserZone, fieldErrors, privateState, restDayLocked, samePreferences, sameTimeZone, timeZoneOptions, toggleRestDay } from "./preferences";
 
-const prefs: Preferences = { timezone: "Asia/Kolkata", rest_days: ["SUNDAY"], alerts_enabled: true, public_profile: false, include_private: false, private_access: "none" };
+const prefs: Preferences = { timezone: "Asia/Kolkata", rest_days: ["SUNDAY"], alerts_enabled: true, public_profile: false, include_private: false, private_access: "none", private_locked_until: null };
 
 describe("rest-day picker", () => {
   it("adds up to 2 days, Monday first", () => {
