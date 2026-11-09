@@ -6,13 +6,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { RoadBlockedCard } from "@/components/game/StateCards";
 import { Switch } from "@/components/ui/Switch";
 import { WEEKDAYS, type Preferences, type Weekday } from "@/lib/api/types";
-import { clearToken } from "@/lib/auth";
+import { clearToken, privateLoginUrl } from "@/lib/auth";
 import { formatCountdown } from "@/lib/format";
 import {
   MAX_REST_DAYS,
   WEEKDAY_LETTERS,
   browserTimeZone,
   fieldErrors,
+  privateState,
   restDayLocked,
   samePreferences,
   sameTimeZone,
@@ -144,6 +145,14 @@ function SettingsForm({ saved }: { saved: Preferences }) {
           checked={value.public_profile}
           error={errors.public_profile}
           onChange={(public_profile) => change({ public_profile })}
+          divider
+        />
+        <PrivateRepos
+          prefs={value}
+          // The choice is still in the 500 ms queue or on its way: don't leave the page before it is saved.
+          unsaved={value.include_private !== saved.include_private}
+          error={errors.include_private}
+          onChange={(include_private) => change({ include_private })}
         />
       </section>
 
@@ -298,6 +307,61 @@ function ToggleRow({
         <Switch checked={checked} onChange={onChange} labelledBy={`${id}-title`} describedBy={`${id}-help`} />
       </div>
       <FieldMessage id={`${id}-error`}>{error}</FieldMessage>
+    </div>
+  );
+}
+
+/** B10: "share private repos" (contract, four states of include_private x private_access). */
+function PrivateRepos({
+  prefs,
+  unsaved,
+  error,
+  onChange,
+}: {
+  prefs: Preferences;
+  unsaved: boolean;
+  error?: string;
+  onChange: (checked: boolean) => void;
+}) {
+  const state = privateState(prefs);
+  const help = state === "active" ? "ON · ACTIVE" : state === "needs-permission" ? "ON · NEEDS GITHUB PERMISSION" : "Read your private repos too";
+  return (
+    <div className="flex flex-col gap-2 py-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span id="private-title" className="font-display text-[8px] leading-normal md:text-[9px]">
+            SHARE PRIVATE REPOS
+          </span>
+          <span
+            id="private-help"
+            className={`text-[18px] leading-none ${state === "active" ? "text-success" : state === "needs-permission" ? "text-gold" : "text-muted-2"}`}
+          >
+            {help}
+          </span>
+        </div>
+        <Switch checked={prefs.include_private} onChange={onChange} labelledBy="private-title" describedBy="private-help private-note" />
+      </div>
+      <p id="private-note" className="text-[18px] leading-[1.05] text-muted-2">
+        GitHub only offers all or nothing here. Turning this on asks for the repo scope: read AND write access to all your private repos. We only read. It builds your own
+        insights and nothing else, and no private repo name or code ever shows on the Arena or anywhere public. Turn it off any time and the next sync stops fetching
+        them. To take the access back, also revoke it at github.com/settings/applications.
+      </p>
+      {state === "needs-permission" && (
+        <div className="flex flex-col items-start gap-1">
+          {unsaved ? (
+            <span className="font-display text-[8px] text-muted-2">SAVING…</span>
+          ) : (
+            <a
+              href={privateLoginUrl()}
+              className="flex h-11 items-center bg-gold px-4 font-display text-[9px] text-outline shadow-[0_0_0_2px_var(--color-outline)] hover:bg-bone active:bg-bone"
+            >
+              AUTHORIZE ON GITHUB
+            </a>
+          )}
+          <span className="text-[18px] leading-[1.05] text-muted-2">Nothing private is read until GitHub says yes.</span>
+        </div>
+      )}
+      <FieldMessage id="private-error">{error}</FieldMessage>
     </div>
   );
 }

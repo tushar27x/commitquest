@@ -122,3 +122,13 @@ export function loginUrl(): string {
   const backend = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "").replace(/\/+$/, "");
   return `${backend}/api/auth/login`;
 }
+
+/**
+ * B10: Settings' AUTHORIZE ON GITHUB. A plain navigation (full page load, never fetch) to the
+ * backend's login with `private=true`, which asks GitHub for the `repo` scope. Mock mode has no
+ * backend, so it reloads Settings as if GitHub had granted it.
+ */
+export function privateLoginUrl(): string {
+  if (MOCK_MODE) return "/settings?mock=private_granted";
+  return `${loginUrl()}?private=true`;
+}

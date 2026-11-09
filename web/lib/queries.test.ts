@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Preferences } from "./api/types";
 import { makeQueryClient, queryKeys, sendBrowserZone } from "./queries";
 
-const stored: Preferences = { timezone: "UTC", rest_days: ["SUNDAY"], alerts_enabled: true, public_profile: false };
+const stored: Preferences = { timezone: "UTC", rest_days: ["SUNDAY"], alerts_enabled: true, public_profile: false, include_private: false, private_access: "none" };
 
 function stubBackend(prefs: Preferences, putStatus = 200) {
   const puts: unknown[] = [];

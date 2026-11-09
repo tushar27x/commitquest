@@ -119,6 +119,13 @@ async function mockHero(): Promise<Hero> {
 }
 
 let savedPreferences: Preferences | null = null;
+
+/** B10: `?mock=private_granted` (on, working) and `?mock=private_reauth` (on, GitHub hasn't shared yet). */
+export function applyPreferencesVariant(prefs: Preferences, variant: string | null): Preferences {
+  if (variant === "private_granted") return { ...prefs, include_private: true, private_access: "granted" };
+  if (variant === "private_reauth") return { ...prefs, include_private: true, private_access: "none" };
+  return prefs;
+}
 let chosenClass: { archetype: Archetype | null; canSwitchAt: string } | null = null;
 /** CLASS_CHANGED events from mock class changes, appended to hero-events.json. */
 const classEvents: HeroEvent[] = [];
@@ -153,7 +160,7 @@ function problem(
 /** The backend's checks for `PUT /preferences` (B5): every field required, an IANA zone, at most 2 distinct days. */
 export function validatePreferences(body: Partial<Preferences>): FieldError[] {
   const errors: FieldError[] = [];
-  const required = ["timezone", "rest_days", "alerts_enabled", "public_profile"] as const;
+  const required = ["timezone", "rest_days", "alerts_enabled", "public_profile", "include_private"] as const;
   for (const field of required) {
     if (body[field] === undefined || body[field] === null) errors.push({ field, message: "must not be null" });
   }
@@ -257,14 +264,15 @@ export async function mockFetch(path: string, init: RequestInit = {}): Promise<R
     }
 
     case "GET /api/user/preferences":
-      return json(savedPreferences ?? (await fixture<Preferences>("preferences")));
+      return json(savedPreferences ?? applyPreferencesVariant(await fixture<Preferences>("preferences"), searchParam("mock")));
 
     case "PUT /api/user/preferences": {
       const body = readBody<Partial<Preferences>>(init);
       if (!body) return problem(400, "body is not JSON", pathname);
       const errors = validatePreferences(body);
       if (errors.length > 0) return problem(400, "invalid preferences", pathname, { errors });
-      savedPreferences = body as Preferences;
+      // B10: the mock never has a repo-scoped token, whatever the body says.
+      savedPreferences = { ...(body as Preferences), private_access: "none" };
       return json(savedPreferences);
     }
 
