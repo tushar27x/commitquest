@@ -31,12 +31,15 @@ test.beforeAll(async ({ browser }) => {
   // GitHub's authorize page, approved at once. Playwright doesn't intercept redirect targets, so the
   // backend's /login is fetched here: keep its state cookie, and send the browser from GitHub's URL
   // (redirect_uri + state) straight back to the callback with a code.
-  await page.route(`${BACKEND_URL}/api/auth/login`, async (route) => {
+  // `?private=true` asks GitHub for `repo`: the stub then sends the code that makes GitHubStub grant it.
+  await page.route(/\/api\/auth\/login(\?.*)?$/, async (route) => {
+    if (!route.request().url().startsWith(BACKEND_URL)) return route.continue();
     const login = await route.fetch({ maxRedirects: 0 });
     const authorize = new URL(login.headers()["location"]);
     expect(authorize.origin + authorize.pathname).toBe("https://github.com/login/oauth/authorize");
     const callback = new URL(authorize.searchParams.get("redirect_uri")!);
-    callback.searchParams.set("code", "e2e-code");
+    const asksForRepo = authorize.searchParams.get("scope")!.split(" ").includes("repo");
+    callback.searchParams.set("code", asksForRepo ? "e2e-code-repo" : "e2e-code");
     callback.searchParams.set("state", authorize.searchParams.get("state")!);
     await route.fulfill({ status: 302, headers: { ...login.headers(), location: callback.toString() } });
   });
@@ -119,13 +122,49 @@ test("the Arena: a new hero is not on the board (public_profile starts off), the
 
 test("PUT include_private true is saved, and without a repo-scoped token private_access stays none", async () => {
   const before = (await api("/api/user/preferences")).body;
+  const insightsAt = (await api("/api/user/insights")).body.updated_at;
   const { private_access: _ignored, ...writable } = before;
   const res = await api("/api/user/preferences", { method: "PUT", data: { ...writable, include_private: true } });
   expect(res.status).toBe(200);
   expect(res.body.include_private).toBe(true);
   expect(res.body.private_access).toBe("none");
-  expect((await api("/api/user/preferences")).body).toMatchObject({ include_private: true, private_access: "none" });
+  // B11: waiting for GitHub is a stored wish only: no lock, no resync.
+  expect(res.body.private_locked_until).toBeNull();
+  expect((await api("/api/user/preferences")).body).toMatchObject({ include_private: true, private_access: "none", private_locked_until: null });
+  expect((await api("/api/user/insights")).body.updated_at).toBe(insightsAt);
   await api("/api/user/preferences", { method: "PUT", data: { ...writable, include_private: false } });
+});
+
+test("private login (repo granted): the intent turns private access on and locks it for 7 days; flipping it is a 429 with Retry-After", async () => {
+  // GitHub's authorize page is stubbed above: the URL asked for `repo`, the browser comes back with the repo code,
+  // and GitHubStub reports `repo` in the token response. The login's own sync is the resync of the effective change.
+  await page.goto(`${BACKEND_URL}/api/auth/login?private=true`);
+  await page.waitForURL(`${WEB_URL}/home`, { timeout: 120_000 });
+  token = (await page.evaluate(() => window.localStorage.getItem("ih.token")))!;
+  expect(page.url()).not.toContain("token");
+
+  const prefs = (await api("/api/user/preferences")).body;
+  expect(prefs).toMatchObject({ include_private: true, private_access: "granted" });
+  const remaining = Date.parse(prefs.private_locked_until) - Date.now();
+  expect(remaining).toBeGreaterThan(6.9 * 86_400_000);
+  expect(remaining).toBeLessThan(7.1 * 86_400_000);
+
+  // Settings shows it on and locked, with the date.
+  await page.goto("/settings");
+  const priv = page.getByRole("switch", { name: "SHARE PRIVATE REPOS" });
+  await expect(priv).toHaveAttribute("aria-checked", "true");
+  await expect(priv).toBeDisabled();
+  await expect(page.locator("#private-lock")).toContainText("it is locked for 7 days");
+
+  // The API enforces it for a stale tab: the lock 429, whole PUT refused.
+  const { private_access: _a, private_locked_until: _b, ...writable } = prefs;
+  const flip = await api("/api/user/preferences", { method: "PUT", data: { ...writable, include_private: false } });
+  expect(flip.status).toBe(429);
+  expect(flip.body.title).toBe("Private access locked");
+  expect(Number(flip.headers["retry-after"])).toBeGreaterThan(6 * 86_400);
+  expect((await api("/api/user/preferences")).body).toMatchObject({ include_private: true, private_access: "granted" });
+  // The same value while locked is a plain 200.
+  expect((await api("/api/user/preferences", { method: "PUT", data: { ...writable, include_private: true } })).status).toBe(200);
 });
 
 test("errors come back as problem+json through the rewrite", async () => {

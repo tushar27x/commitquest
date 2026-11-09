@@ -25,7 +25,8 @@ import java.util.UUID;
  * {@code RestClient}s send to {@code github.com} or {@code api.github.com} gets a canned answer, and
  * nothing leaves the machine. The browser's trip to GitHub's authorize page is stubbed by Playwright.
  * <ul>
- *   <li>{@code POST github.com/login/oauth/access_token}: a token generated at runtime (B31).</li>
+ *   <li>{@code POST github.com/login/oauth/access_token}: a token generated at runtime (B31); scope
+ *       {@code read:user,user:email}, plus {@code repo} when the code is {@link #REPO_CODE}.</li>
  *   <li>{@code GET /user}, {@code GET /user/emails}: the octocat of the GraphQL fixtures.</li>
  *   <li>{@code POST /graphql}: {@code github/branch-activity-response.json} for the branch scan (the
  *       request with a {@code userId} variable),
@@ -39,6 +40,9 @@ public class GitHubStub {
     /** The e2e user's GitHub id: an id block of its own (the e2e backend has its own database anyway). */
     public static final long USER_ID = 9_000_901L;
     public static final String LOGIN = "octocat";
+
+    /** The OAuth code that makes the stub grant {@code repo} (the Playwright route sends it for {@code ?private=true}). */
+    public static final String REPO_CODE = "e2e-code-repo";
 
     private static final Set<String> GITHUB_HOSTS = Set.of("github.com", "api.github.com");
 
@@ -60,7 +64,12 @@ public class GitHubStub {
             String path = request.getURI().getPath();
             HttpMethod method = request.getMethod();
             if (method == HttpMethod.POST && path.equals("/login/oauth/access_token")) {
-                return json("{\"access_token\":\"" + accessToken + "\",\"scope\":\"read:user,user:email\",\"token_type\":\"bearer\"}");
+                // The e2e browser sends code "e2e-code-repo" when the authorize URL it was given asked for `repo`
+                // (a private login); GitHub then reports the scope as granted. Any other code: no `repo`.
+                String scope = new String(body, StandardCharsets.UTF_8).contains("code=" + REPO_CODE)
+                        ? "read:user,user:email,repo"
+                        : "read:user,user:email";
+                return json("{\"access_token\":\"" + accessToken + "\",\"scope\":\"" + scope + "\",\"token_type\":\"bearer\"}");
             }
             if (method == HttpMethod.GET && path.equals("/user")) {
                 return json("{\"id\":" + USER_ID + ",\"login\":\"" + LOGIN + "\"}");

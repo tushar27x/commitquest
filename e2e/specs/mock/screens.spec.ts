@@ -55,9 +55,17 @@ test("Settings: SHARE PRIVATE REPOS on shows AUTHORIZE ON GITHUB, linked to the 
   const priv = page.getByRole("switch", { name: "SHARE PRIVATE REPOS" });
   await expect(priv).toHaveAttribute("aria-checked", "false");
   await priv.click();
+  // B11/U13: the switch asks first; nothing is sent before CONFIRM (the full flow: specs/mock/private.spec.ts).
+  const dialog = page.getByRole("dialog", { name: "SHARE PRIVATE REPOS?" });
+  await dialog.getByRole("checkbox", { name: "I understand" }).check();
+  await dialog.getByRole("button", { name: "CONFIRM" }).click();
   await expect(page.getByRole("status").filter({ hasText: "SAVED" })).toBeVisible();
   await expect(page.getByText("ON · NEEDS GITHUB PERMISSION")).toBeVisible();
-  await expect(page.getByRole("link", { name: "AUTHORIZE ON GITHUB" })).toHaveAttribute("href", "/settings?mock=private_granted");
+  await expect(page.getByRole("link", { name: "AUTHORIZE ON GITHUB" })).toHaveAttribute("href", "/settings?mock=private_granted&private=back");
+  // Mock mode's "GitHub" is a link back with ?private=back: the outcome is read from the preferences and the param is stripped.
+  await page.getByRole("link", { name: "AUTHORIZE ON GITHUB" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "GITHUB SAID YES · PRIVATE REPOS ARE ON" })).toBeVisible();
+  await expect(page).toHaveURL(/\/settings\?mock=private_granted$/);
 });
 
 test("?mock=private_granted shows ON · ACTIVE, ?mock=private_reauth shows NEEDS GITHUB PERMISSION", async ({ page }) => {

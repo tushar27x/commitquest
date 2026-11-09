@@ -107,6 +107,8 @@ test.describe("Settings: SHARE PRIVATE REPOS (B10)", () => {
     await login(page);
     await page.goto("/settings");
     await page.getByRole("switch", { name: "SHARE PRIVATE REPOS" }).click();
+    await page.getByRole("checkbox", { name: "I understand" }).check(); // B11 warning: nothing is sent before CONFIRM
+    await page.getByRole("button", { name: "CONFIRM" }).click();
     await expect(page.getByRole("status").filter({ hasText: "SAVED" })).toBeVisible();
     const put = log.of("PUT /api/user/preferences");
     expect(put).toHaveLength(1);
@@ -127,7 +129,9 @@ test.describe("Settings: SHARE PRIVATE REPOS (B10)", () => {
     await expect(page.getByText("ON · ACTIVE")).toBeVisible();
     await expect(page.getByRole("link", { name: "AUTHORIZE ON GITHUB" })).toHaveCount(0);
     await page.getByRole("switch", { name: "SHARE PRIVATE REPOS" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "SAVED" })).toBeVisible();
+    await page.getByRole("checkbox", { name: "I understand" }).check();
+    await page.getByRole("button", { name: "CONFIRM" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "PRIVATE REPOS ARE OFF" })).toBeVisible();
     expect(log.of("PUT /api/user/preferences")[0].postDataJSON()).toMatchObject({ include_private: false });
     await expect(page).toHaveURL(/\/settings$/);
   });
