@@ -39,6 +39,22 @@ test("the phone tab bar has all five tabs and moves between screens", async ({ p
   await expect(page.getByRole("region", { name: "Your character" })).toBeVisible();
 });
 
+for (const [label, viewport] of [
+  ["desktop", { width: 1280, height: 800 }],
+  ["phone", { width: 375, height: 812 }],
+] as const) {
+  test(`a link on every screen goes back to the landing page (${label})`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    for (const path of ["/home", "/journal", "/hero", "/arena", "/settings"]) {
+      await page.goto(path);
+      await expect(page.getByRole("link", { name: "Back to the landing page" })).toBeVisible();
+    }
+    await page.getByRole("link", { name: "Back to the landing page" }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("link", { name: "PRESS START" }).first()).toBeVisible();
+  });
+}
+
 test("Settings has the Arena switch, and it saves", async ({ page }) => {
   await page.goto("/settings");
   const arena = page.getByRole("switch", { name: "SHOW ME IN THE ARENA" });

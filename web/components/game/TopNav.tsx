@@ -7,7 +7,7 @@ import { TABS, isActiveTab } from "@/lib/nav";
 import { useHero, useInsights } from "@/lib/queries";
 import { SaveButton } from "./SaveButton";
 
-/** Desktop navigation (md and up): name, tabs, last sync time, SAVE. */
+/** Desktop navigation (md and up): link back to the landing page, name, tabs, last sync time, SAVE. */
 export function TopNav() {
   const pathname = usePathname();
   const insights = useInsights().data;
@@ -20,6 +20,13 @@ export function TopNav() {
         aria-label="Main"
         className="mx-auto flex max-w-[1180px] flex-wrap items-center gap-x-[26px] gap-y-3 px-6 py-3.5 font-display text-[10px]"
       >
+        <Link
+          href="/"
+          aria-label="Back to the landing page"
+          className="text-muted-2 hover:text-gold active:text-gold"
+        >
+          &lt; LANDING
+        </Link>
         <span className="text-gold">
           {insights?.user_name.toUpperCase() ?? "INSIGHT HUB"}
           {/* Home shows the level in its own panel. */}
