@@ -45,7 +45,7 @@ public class GitHubOAuthClient {
      * Trades the one-time {@code code} for a user access token. GitHub reports a bad code
      * with HTTP 200 and an {@code error} field, not with an error status.
      */
-    public String exchangeCode(String code, String redirectUri) {
+    public OAuthToken exchangeCode(String code, String redirectUri) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("client_id", properties.githubClientId());
         form.add("client_secret", properties.githubClientSecret());
@@ -66,7 +66,7 @@ public class GitHubOAuthClient {
             String error = response == null ? "empty response" : response.error();
             throw new OAuthCodeRejectedException(error == null ? "no access token" : error);
         }
-        return response.accessToken();
+        return new OAuthToken(response.accessToken(), response.scope());
     }
 
     /** {@code GET /user}: the stable numeric id plus the (changeable) login. */
@@ -121,6 +121,18 @@ public class GitHubOAuthClient {
 
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     record TokenResponse(String accessToken, String scope, String error) {
+    }
+
+    /**
+     * The token and the scopes GitHub actually granted (B10: the user may untick some on the consent page; the
+     * {@code scope} field is comma-separated and may be empty). The token is never printed: {@code toString} hides it.
+     */
+    public record OAuthToken(String accessToken, String scope) {
+
+        @Override
+        public String toString() {
+            return "OAuthToken[scope=" + scope + "]";
+        }
     }
 
     public record GitHubAccount(Long id, String login) {

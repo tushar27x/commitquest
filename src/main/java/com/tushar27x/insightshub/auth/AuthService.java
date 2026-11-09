@@ -1,6 +1,8 @@
 package com.tushar27x.insightshub.auth;
 
 import com.tushar27x.insightshub.auth.GitHubOAuthClient.GitHubAccount;
+import com.tushar27x.insightshub.auth.GitHubOAuthClient.OAuthToken;
+import com.tushar27x.insightshub.entity.GitHubScopes;
 import com.tushar27x.insightshub.entity.Users;
 import com.tushar27x.insightshub.repository.UsersRepository;
 import com.tushar27x.insightshub.security.JwtService;
@@ -42,10 +44,15 @@ public class AuthService {
     }
 
     public URI authorizeUri(String state, String redirectUri) {
+        return authorizeUri(state, redirectUri, false);
+    }
+
+    /** B10: {@code includePrivate} adds the {@code repo} scope (GitHub has no read-only private scope). */
+    public URI authorizeUri(String state, String redirectUri, boolean includePrivate) {
         return UriComponentsBuilder.fromUriString(GitHubOAuthClient.AUTHORIZE_URL)
                 .queryParam("client_id", properties.githubClientId())
                 .queryParam("redirect_uri", redirectUri)
-                .queryParam("scope", properties.scopes())
+                .queryParam("scope", includePrivate ? properties.scopes() + " " + GitHubScopes.REPO : properties.scopes())
                 .queryParam("state", state)
                 .encode()
                 .build()
@@ -58,22 +65,41 @@ public class AuthService {
      * The GitHub calls happen before the save, so no transaction is held open across them.
      */
     public LoginResult completeLogin(String code, String redirectUri) {
-        String githubToken = gitHub.exchangeCode(code, redirectUri);
+        return completeLogin(code, redirectUri, false);
+    }
+
+    /**
+     * B10: records the scopes GitHub granted (replacing the previous list, so a plain login narrows it). A login that
+     * asked for {@code private} and got {@code repo} turns {@code include_private} on; otherwise the choice is never
+     * touched. If {@code repo} was gained or lost, the login sync skips the 10-minute cooldown, so the insights match
+     * the new grant at once.
+     */
+    public LoginResult completeLogin(String code, String redirectUri, boolean privateIntent) {
+        OAuthToken grant = gitHub.exchangeCode(code, redirectUri);
+        String githubToken = grant.accessToken();
         GitHubAccount account = gitHub.fetchAccount(githubToken);
         String email = gitHub.fetchPrimaryEmail(githubToken);
 
         Users user = usersRepository.findById(account.id())
                 .orElseGet(() -> new Users(account.id(), account.login()));
         boolean isNew = user.getCreatedAt() == null;
+        boolean hadRepo = user.hasRepoScope();
+        String scopes = GitHubScopes.normalize(grant.scope());
+        boolean hasRepo = GitHubScopes.hasRepo(scopes);
+        user.setGithubScopes(scopes);
+        if (privateIntent && hasRepo) {
+            user.setIncludePrivate(true);
+        }
         user.setLogin(account.login()); // logins can be renamed; the id is what stays
         user.setEmail(email);
         user.replaceGithubToken(tokenCipher.encrypt(githubToken, account.id()), clock.instant()); // B43: its age
         user.setNeedsReauth(false); // a fresh token clears a revoked one (Phase 10)
         usersRepository.save(user);
-        log.info("Login for '{}' ({}): {} user, verified email {}",
-                account.login(), account.id(), isNew ? "new" : "existing", email == null ? "missing" : "stored");
+        log.info("Login for '{}' ({}): {} user, verified email {}, private repos {} (repo scope {})",
+                account.login(), account.id(), isNew ? "new" : "existing", email == null ? "missing" : "stored",
+                user.isIncludePrivate() ? "on" : "off", hasRepo ? "granted" : "not granted");
 
-        syncQuietly(account.id(), account.login());
+        syncQuietly(account.id(), account.login(), hadRepo != hasRepo);
         IssuedToken token = jwtService.issue(account.id(), account.login());
         return new LoginResult(account.login(), token);
     }
@@ -83,9 +109,13 @@ public class AuthService {
      * It runs before the response, like v1, so a new user's first {@code /api/user/insights} already
      * has data. Subject to the same 10-minute cooldown as {@code POST /api/user/sync}.
      */
-    private void syncQuietly(long githubId, String login) {
+    private void syncQuietly(long githubId, String login, boolean scopeChanged) {
         try {
-            syncService.syncIfDue(githubId);
+            if (scopeChanged) {
+                syncService.sync(githubId); // B10 Q5: the grant changed, so no cooldown
+            } else {
+                syncService.syncIfDue(githubId);
+            }
         } catch (RuntimeException e) {
             log.error("Sync at login failed for '{}'; login continues", login, e);
         }
