@@ -215,7 +215,7 @@ Not measured: real LLM responses, and the hourly jobs with many users (capped by
 - [ ] DNS `api.<domain>` → the Elastic IP; `deploy.sh` succeeded; `https://api.<domain>/actuator/health` is `UP` with a valid certificate
 - [ ] Vercel project, root `web`, the three variables, deployed from `main`
 - [ ] Log in from the Vercel URL: PRESS START → GitHub → `/home`, the hero is there
-- [ ] SAVE twice: the second one says RESTING (the cooldown); `/arena` is a 404
+- [ ] SAVE twice: the second one says RESTING (the cooldown); `/arena` opens (NOT IN THE ARENA until "Show me in the Arena" is on in Settings)
 - [ ] `https://api.<domain>/actuator/env` is a 404 and `/swagger-ui.html` isn't served (401: Swagger is off)
 - [ ] Next day: `docker compose --env-file deploy.env logs backend | grep -E "Scheduled activity refresh|Hero job done"` shows the half-hourly activity refresh and the hourly hero runs
 - [ ] A budget alert in AWS; Neon and Upstash usage checked after a week; page timings checked (see "Region")

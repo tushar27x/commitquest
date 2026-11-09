@@ -220,7 +220,7 @@ The digest email's unsubscribe link. It's opened in a browser from a mailbox, so
 
 `NEXT_PUBLIC_MOCK=1` serves:
 - `insights.json`, `hero.json`, `hero-events.json` and `preferences.json` for the matching GETs (mock `PUT /preferences` echoes the body and sets `private_access` to `none`; `?mock=private_granted` on the GET returns `include_private: true, private_access: "granted"`, `?mock=private_reauth` returns `true` / `none`);
-- `leaderboard.json` and `rank.json` for the Arena (once the UI serves them; `rank-not-in-arena.json` is the 404 body for a mock of the private state);
+- `leaderboard.json` and `rank.json` for the Arena (served since U11; `?mock_arena=hidden` answers `GET /user/rank` with `rank-not-in-arena.json` as a 404, `?mock_arena=empty` and any class other than MONK give an empty board);
 - `hero-variants.json` merged over `hero.json` with `?mock=<variant>` (`happy okay weak sleeping level_up fainted tier_campfire tier_keep tier_citadel class_cooldown`).
 
 Mock `POST /sync` waits 3 s, then returns `insights.json`. To exercise the error states, `?mock_error=401|404|409|429|502` forces that status on the next call.

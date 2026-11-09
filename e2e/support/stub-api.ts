@@ -24,6 +24,12 @@ const DEFAULTS: Overrides = {
   "GET /api/user/hero/events": { body: fixtures.heroEvents },
   "GET /api/user/preferences": { body: fixtures.preferences },
   "PUT /api/user/preferences": (request) => ({ body: request.postDataJSON() }),
+  "GET /api/user/rank": { body: fixtures.rank },
+  // The fixture is the MONK board; any other class is a board nobody joined.
+  "GET /api/leaderboard": (request) => {
+    const archetype = new URL(request.url()).searchParams.get("archetype") ?? fixtures.leaderboard.archetype;
+    return { body: archetype === fixtures.leaderboard.archetype ? fixtures.leaderboard : { ...fixtures.leaderboard, archetype, page: 0, total: 0, entries: [] } };
+  },
   "PUT /api/user/hero/class": { body: fixtures.hero },
 };
 

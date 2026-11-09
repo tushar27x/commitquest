@@ -15,6 +15,7 @@ test("PRESS START on the title goes home, where the hero from hero.json waits", 
 for (const tab of [
   { link: "JOURNAL", path: "/journal", landmark: { role: "heading" as const, name: "YEAR IN REVIEW" } },
   { link: "HERO", path: "/hero", landmark: { role: "region" as const, name: "Your character" } },
+  { link: "ARENA", path: "/arena", landmark: { role: "region" as const, name: "Choose a board" } },
   { link: "SETTINGS", path: "/settings", landmark: { role: "region" as const, name: "Notifications and privacy" } },
 ]) {
   test(`the ${tab.link} tab opens its screen`, async ({ page }) => {
@@ -26,26 +27,47 @@ for (const tab of [
   });
 }
 
-test("the phone tab bar has all four tabs and moves between screens", async ({ page }) => {
+test("the phone tab bar has all five tabs and moves between screens", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/home");
   const tabs = nav(page);
-  for (const name of ["HOME", "JOURNAL", "HERO", "SETTINGS"]) {
+  for (const name of ["HOME", "JOURNAL", "HERO", "ARENA", "SETTINGS"]) {
     await expect(tabs.getByRole("link", { name })).toBeVisible();
   }
-  await expect(tabs.getByRole("link", { name: "ARENA" })).toHaveCount(0);
   await tabs.getByRole("link", { name: "HERO" }).click();
   await expect(page).toHaveURL(/\/hero$/);
   await expect(page.getByRole("region", { name: "Your character" })).toBeVisible();
 });
 
-// The Arena is off for the first release: no tab, no route, no Settings switch (the backend keeps its endpoints).
-test("the Arena is gone: no route and no Settings switch", async ({ page }) => {
-  const res = await page.goto("/arena");
-  expect(res?.status()).toBe(404);
+test("Settings has the Arena switch, and it saves", async ({ page }) => {
   await page.goto("/settings");
-  await expect(page.getByRole("switch", { name: "EMAIL ALERTS" })).toBeVisible();
-  await expect(page.getByRole("switch", { name: /ARENA/ })).toHaveCount(0);
+  const arena = page.getByRole("switch", { name: "SHOW ME IN THE ARENA" });
+  await expect(arena).toBeVisible();
+  await expect(arena).toHaveAttribute("aria-checked", String(fixtures.preferences.public_profile));
+  // The mock answers in the page (no network request to watch); the PUT body is checked in specs/stubbed/arena.spec.ts.
+  await arena.click();
+  await expect(page.getByRole("status").filter({ hasText: "SAVED" })).toBeVisible();
+  await expect(arena).toHaveAttribute("aria-checked", String(!fixtures.preferences.public_profile));
+});
+
+test("the Arena shows the MONK board with the (you) row and your place", async ({ page }) => {
+  await page.goto("/arena");
+  await expect(page.getByRole("heading", { name: `${fixtures.leaderboard.archetype} BOARD` })).toBeVisible();
+  await expect(page.getByRole("listitem").filter({ hasText: "(you)" })).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "YOUR PLACE" })).toBeVisible();
+  await expect(page.getByText(`Top ${fixtures.rank.top_percent}% of ${fixtures.rank.total} heroes`)).toBeVisible();
+});
+
+test("?mock_arena=hidden: NOT IN THE ARENA, with a link to Settings", async ({ page }) => {
+  await page.goto("/arena?mock_arena=hidden");
+  await expect(page.getByRole("heading", { name: "NOT IN THE ARENA" })).toBeVisible();
+  await expect(page.getByText(fixtures.rankNotInArena.detail!)).toBeVisible();
+  await expect(page.getByRole("link", { name: /SHOW ME IN SETTINGS/ })).toHaveAttribute("href", "/settings");
+});
+
+test("?mock_arena=empty: an empty board", async ({ page }) => {
+  await page.goto("/arena?mock_arena=empty");
+  await expect(page.getByText(/board is empty\./)).toBeVisible();
 });
 
 test("Change class lists every class, highest score first", async ({ page }) => {
