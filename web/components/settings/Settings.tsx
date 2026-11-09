@@ -25,6 +25,7 @@ import {
   type WarningAction,
   type WarningState,
 } from "@/lib/private";
+import { InstallApp } from "./InstallApp";
 import { PrivateWarning } from "./PrivateWarning";
 import {
   MAX_REST_DAYS,
@@ -259,6 +260,7 @@ function SettingsForm({ saved }: { saved: Preferences }) {
         />
       </section>
       </fieldset>
+      <InstallApp />
       <PrivateWarning
         state={warning}
         access={saved.private_access}

@@ -2,7 +2,11 @@
 
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { startInstallListener } from "@/lib/install";
 import { makeQueryClient } from "@/lib/queries";
+
+// Chrome fires `beforeinstallprompt` early, so listen from the first load, not from Settings.
+startInstallListener();
 
 let browserQueryClient: QueryClient | undefined;
 
