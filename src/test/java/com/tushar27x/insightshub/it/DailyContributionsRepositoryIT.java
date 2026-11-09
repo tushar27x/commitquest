@@ -77,6 +77,34 @@ class DailyContributionsRepositoryIT {
     }
 
     @Test
+    void aResyncsBranchUpsertReplacesTheCountUpAndDownAndLeavesTheCalendarAlone() { // B11
+        repository.upsertCalendarCounts(USER, List.of(new ContributionDay(MON, 2)));
+        repository.upsertBranchCounts(USER, Map.of(MON, 5));
+
+        repository.replaceBranchCounts(USER, Map.of(MON, 1, TUE, 3)); // private branches are gone: 5 becomes 1
+
+        assertThat(branchCount(MON)).isEqualTo(1);
+        assertThat(branchCount(TUE)).isEqualTo(3);
+        assertThat(calendarCount(MON)).isEqualTo(2);
+    }
+
+    @Test
+    void clearingZeroesTheBranchCountsOfThatUserOnly() { // B11
+        repository.upsertBranchCounts(USER, Map.of(MON, 5, TUE, 2));
+        jdbc.update("DELETE FROM v2.users WHERE github_id = ?", USER + 1);
+        jdbc.update("INSERT INTO v2.users (github_id, login) VALUES (?, 'it-other')", USER + 1);
+        jdbc.update("INSERT INTO v2.daily_contributions (user_id, date, branch_commit_count) VALUES (?, ?, 7)",
+                USER + 1, MON);
+
+        assertThat(repository.clearBranchCounts(USER)).isEqualTo(2);
+
+        assertThat(branchCount(MON)).isZero();
+        assertThat(branchCount(TUE)).isZero();
+        assertThat(jdbc.queryForObject("SELECT branch_commit_count FROM v2.daily_contributions WHERE user_id = ?",
+                Integer.class, USER + 1)).isEqualTo(7);
+    }
+
+    @Test
     void latestDateIsEmptyBeforeTheFirstSync() {
         assertThat(repository.latestDate(USER)).isEmpty();
     }
