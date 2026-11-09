@@ -239,7 +239,17 @@ export interface Preferences {
   include_private: boolean;
   /** B10: read-only, from the stored token's scopes. A PUT may send it back; the server ignores it. */
   private_access: PrivateAccess;
+  /**
+   * B11: read-only ISO instant (UTC). While it is in the future, a PUT that changes `include_private` is refused
+   * (429, title `PRIVATE_LOCKED_TITLE`) and the switch is disabled. Null: never changed, or the lock has passed.
+   * A PUT may send it back; the server ignores it.
+   */
+  private_locked_until: string | null;
 }
+
+/** B11: `title` of the 429 a PUT /preferences gets while `private_locked_until` is in the future. The status alone can't
+ *  tell it from the rate limit of the `preferences` policy; this title does. Both carry `Retry-After`. */
+export const PRIVATE_LOCKED_TITLE = "Private access locked";
 
 /** `granted`: the stored token has the `repo` scope. `none`: it doesn't, or GitHub rejected it. */
 export const PRIVATE_ACCESS = ["none", "granted"] as const;

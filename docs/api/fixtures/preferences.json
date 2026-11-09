@@ -6,5 +6,6 @@
   "alerts_enabled": true,
   "public_profile": false,
   "include_private": false,
-  "private_access": "none"
+  "private_access": "none",
+  "private_locked_until": null
 }
