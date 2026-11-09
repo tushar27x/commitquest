@@ -171,6 +171,46 @@ describe("mockFetch: ?mock_error (B38)", () => {
   });
 });
 
+describe("mockFetch: the Arena", () => {
+  async function load(search: string) {
+    vi.resetModules();
+    vi.stubGlobal("window", { location: { search } });
+    const fixtures: Record<string, unknown> = {
+      leaderboard: (await import("../public/fixtures/leaderboard.json")).default,
+      rank: (await import("../public/fixtures/rank.json")).default,
+      "rank-not-in-arena": (await import("../public/fixtures/rank-not-in-arena.json")).default,
+    };
+    vi.stubGlobal("fetch", async (url: string) => {
+      const name = /\/fixtures\/(.+)\.json$/.exec(url)?.[1] ?? "";
+      return new Response(JSON.stringify(fixtures[name]), { status: fixtures[name] ? 200 : 404 });
+    });
+    return (await import("./mock")).mockFetch;
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("serves the MONK board and the caller's rank", async () => {
+    const mockFetch = await load("");
+    const board = await (await mockFetch("/api/leaderboard?archetype=MONK&page=0")).json();
+    expect(board).toMatchObject({ archetype: "MONK", total: 6 });
+    expect(board.entries.some((e: { is_you: boolean }) => e.is_you)).toBe(true);
+    expect(await (await mockFetch("/api/user/rank")).json()).toMatchObject({ rank: 4, top_percent: 67 });
+  });
+
+  it("shows other classes, and ?mock_arena=empty, as empty boards", async () => {
+    const other = await (await (await load(""))("/api/leaderboard?archetype=ROGUE&page=0")).json();
+    expect(other).toMatchObject({ archetype: "ROGUE", total: 0, entries: [] });
+    const empty = await (await (await load("?mock_arena=empty"))("/api/leaderboard?archetype=MONK&page=0")).json();
+    expect(empty.total).toBe(0);
+  });
+
+  it("?mock_arena=hidden answers the 'Not in the Arena' 404", async () => {
+    const res = await (await load("?mock_arena=hidden"))("/api/user/rank");
+    expect(res.status).toBe(404);
+    expect((await res.json()).title).toBe("Not in the Arena");
+  });
+});
+
 describe("isIanaZone (mock of the backend's @IanaTimeZone)", () => {
   it("accepts region ids, aliases and Etc zones", () => {
     for (const zone of ["Europe/Berlin", "Asia/Kolkata", "Asia/Calcutta", "Etc/GMT+5", "UTC"]) expect(isIanaZone(zone)).toBe(true);

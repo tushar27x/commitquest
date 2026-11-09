@@ -2,9 +2,9 @@
 // Defaults (plan §4): no retry on 4xx, a long staleTime, no refetch on window focus,
 // because `GET /insights` is limited to 20/min per user.
 
-import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, api } from "./api";
-import type { ChangeClassRequest, Hero, HeroEvents, Insights, Preferences } from "./api/types";
+import type { ChangeClassRequest, Hero, HeroEvents, Archetype, Insights, Leaderboard, Preferences, Rank } from "./api/types";
 import { adoptBrowserZone, browserTimeZone } from "./preferences";
 
 const STALE_TIME_MS = 10 * 60_000;
@@ -36,6 +36,8 @@ export const queryKeys = {
   hero: ["hero"] as const,
   heroEvents: (days: number) => ["hero", "events", days] as const,
   preferences: ["preferences"] as const,
+  leaderboard: (archetype: Archetype, page: number) => ["leaderboard", archetype, page] as const,
+  rank: ["rank"] as const,
 };
 
 export function useInsights() {
@@ -64,6 +66,23 @@ export function usePreferences() {
   return useQuery<Preferences, ApiError>({
     queryKey: queryKeys.preferences,
     queryFn: ({ signal }) => api<Preferences>("/api/user/preferences", { signal }),
+  });
+}
+
+/** One page of a class's board (20 rows). The previous page stays on screen while the next loads. */
+export function useLeaderboard(archetype: Archetype, page: number) {
+  return useQuery<Leaderboard, ApiError>({
+    queryKey: queryKeys.leaderboard(archetype, page),
+    queryFn: ({ signal }) => api<Leaderboard>(`/api/leaderboard?archetype=${archetype}&page=${page}`, { signal }),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** The caller's place on their current class's board. 404 "Not in the Arena" means they aren't ranked. */
+export function useRank() {
+  return useQuery<Rank, ApiError>({
+    queryKey: queryKeys.rank,
+    queryFn: ({ signal }) => api<Rank>("/api/user/rank", { signal }),
   });
 }
 

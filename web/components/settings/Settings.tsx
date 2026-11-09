@@ -135,8 +135,16 @@ function SettingsForm({ saved }: { saved: Preferences }) {
           checked={value.alerts_enabled}
           error={errors.alerts_enabled}
           onChange={(alerts_enabled) => change({ alerts_enabled })}
+          divider
         />
-        {/* "Show me in the Arena" is hidden while the Arena is off; public_profile still goes out unchanged in every PUT. */}
+        <ToggleRow
+          id="arena"
+          title="SHOW ME IN THE ARENA"
+          help="Public leaderboard, by class"
+          checked={value.public_profile}
+          error={errors.public_profile}
+          onChange={(public_profile) => change({ public_profile })}
+        />
       </section>
 
       {/* The save status (a live region) takes no room while it's empty, so the gaps stay even. */}
@@ -266,6 +274,7 @@ function ToggleRow({
   checked,
   error,
   onChange,
+  divider = false,
 }: {
   id: string;
   title: string;
@@ -273,9 +282,10 @@ function ToggleRow({
   checked: boolean;
   error?: string;
   onChange: (checked: boolean) => void;
+  divider?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-1 py-2.5">
+    <div className={`flex flex-col gap-1 py-2.5 ${divider ? "shadow-[0_2px_0_var(--color-stone-lit)]" : ""}`}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <span id={`${id}-title`} className="font-display text-[8px] leading-normal md:text-[9px]">
