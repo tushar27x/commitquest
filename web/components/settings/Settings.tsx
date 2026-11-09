@@ -160,7 +160,7 @@ function SettingsForm({ saved }: { saved: Preferences }) {
       <div className="flex flex-col">
         <SaveStatusLine status={status} onRetry={retry} />
         <p className="text-center text-[18px] leading-[1.05] text-balance text-muted-2">
-          Insight Hub reads public data. Private work counts only if your GitHub profile shows private contributions.
+          Public repos always count. Private ones count only when SHARE PRIVATE REPOS is on, or when your GitHub profile shows private contributions.
         </p>
       </div>
 

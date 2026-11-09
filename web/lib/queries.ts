@@ -125,11 +125,20 @@ export function useSavePreferences() {
   return useMutation<Preferences, ApiError, Preferences>({
     mutationFn: (body) => api<Preferences>("/api/user/preferences", { method: "PUT", body }),
     scope: { id: "preferences" },
-    onSuccess: (saved) => {
-      queryClient.setQueryData(queryKeys.preferences, saved);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.hero, exact: true });
-    },
+    onSuccess: (saved) => afterPreferencesSaved(queryClient, saved),
   });
+}
+
+/**
+ * What a saved `PUT /preferences` changes elsewhere: the hero (zone, rest days), and the Arena
+ * (`public_profile` decides whether the user is on a board and ranked), so a board or rank
+ * fetched before the save must not stay cached for its long staleTime.
+ */
+export function afterPreferencesSaved(queryClient: QueryClient, saved: Preferences): void {
+  queryClient.setQueryData(queryKeys.preferences, saved);
+  void queryClient.invalidateQueries({ queryKey: queryKeys.hero, exact: true });
+  void queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.rank, exact: true });
 }
 
 /**
