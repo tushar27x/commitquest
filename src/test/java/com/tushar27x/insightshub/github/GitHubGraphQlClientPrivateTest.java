@@ -131,6 +131,44 @@ class GitHubGraphQlClientPrivateTest {
     }
 
     @Test
+    void thePerRepoListsAndPullRequestPrivacyAreMapped() {
+        github.expect(requestTo(GRAPHQL_URL)).andRespond(withSuccess("""
+                {"data": {"user": {"id": "U_1", "login": "octocat",
+                  "pullRequests": {"nodes": [
+                    {"additions": 5, "deletions": 1, "title": "a", "repository": {"isPrivate": true}},
+                    {"additions": 7, "deletions": 2, "title": "b", "repository": {"isPrivate": false}},
+                    {"additions": 9, "deletions": 3, "title": "c"}]},
+                  "contributionsCollection": {"commitContributionsByRepository": [],
+                    "pullRequestContributionsByRepository": [
+                      {"repository": {"isPrivate": true}, "contributions": {"totalCount": 4}},
+                      {"repository": {"isPrivate": false}, "contributions": {"totalCount": 1}}],
+                    "issueContributionsByRepository": [
+                      {"repository": {"isPrivate": false}, "contributions": {"totalCount": 2}}],
+                    "totalCommitContributions": 0, "totalPullRequestContributions": 5,
+                    "totalIssueContributions": 2, "totalRepositoryContributions": 0}}}}
+                """, MediaType.APPLICATION_JSON));
+
+        var user = client.fetchUserInsights("test-token", "octocat", FROM, NOW, true).user();
+
+        assertThat(user.pullRequests().nodes()).extracting(pr -> pr.privateRepo()).containsExactly(true, false, false);
+        var contributions = user.contributionsCollection();
+        assertThat(contributions.pullRequestContributionsByRepository()).extracting(rc -> rc.repository().privateRepo())
+                .containsExactly(true, false);
+        assertThat(contributions.issueContributionsByRepository()).hasSize(1);
+    }
+
+    @Test
+    void theQueryAsksForUpTo100ReposPerListAndThePrivacyOfEachPullRequest() throws Exception {
+        String query = new ClassPathResource("graphql/user-insights.graphql").getContentAsString(
+                java.nio.charset.StandardCharsets.UTF_8);
+
+        assertThat(query).contains("commitContributionsByRepository(maxRepositories: 100)")
+                .contains("pullRequestContributionsByRepository(maxRepositories: 100)")
+                .contains("issueContributionsByRepository(maxRepositories: 100)");
+        assertThat(query).containsPattern("title\\s+repository\\s*\\{\\s*isPrivate");
+    }
+
+    @Test
     void aForbiddenErrorIsAScopeProblemNotAGenericFailure() {
         github.expect(requestTo(GRAPHQL_URL)).andRespond(withSuccess("""
                 {"data": null, "errors": [{"type": "FORBIDDEN", "message": "Resource not accessible"}]}

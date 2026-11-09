@@ -3,6 +3,9 @@
 # - commit oid / committedDate / author: needed to store commits and detect habits
 # - contributionsCollection(from, to): lets scheduled syncs fetch a narrower window (max 1 year)
 # - user id: the GraphQL node id, the branch scan's author filter
+# - B11: the per-repo lists (maxRepositories: 100, GitHub's most) carry isPrivate. totalCommitContributions and its
+#   siblings have no privacy filter, so when private access is off the totals are the sums of these lists with the
+#   private entries dropped; the pull request nodes carry the repository's isPrivate for the same reason.
 # - $privacy (B10): PUBLIC unless the user opted in to private repos AND the token has the repo scope. Left out,
 #   the repositories connection lists private repos too whenever the token can see them. isPrivate marks them so
 #   the engine can count them without ever naming them.
@@ -73,12 +76,31 @@ query UserInsights($login: String!, $from: DateTime!, $to: DateTime!, $privacy: 
         additions
         deletions
         title
+        repository {
+          isPrivate
+        }
       }
     }
     contributionsCollection(from: $from, to: $to) {
-      commitContributionsByRepository(maxRepositories: 5) {
+      commitContributionsByRepository(maxRepositories: 100) {
         repository {
           name
+          isPrivate
+        }
+        contributions {
+          totalCount
+        }
+      }
+      pullRequestContributionsByRepository(maxRepositories: 100) {
+        repository {
+          isPrivate
+        }
+        contributions {
+          totalCount
+        }
+      }
+      issueContributionsByRepository(maxRepositories: 100) {
+        repository {
           isPrivate
         }
         contributions {
