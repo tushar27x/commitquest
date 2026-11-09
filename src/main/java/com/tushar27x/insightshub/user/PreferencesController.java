@@ -38,7 +38,7 @@ public class PreferencesController {
     }
 
     @Operation(summary = "Save the user's settings",
-            description = "The full object: all four fields are required. timezone is an IANA region id "
+            description = "The full object: timezone, rest_days, alerts_enabled, public_profile and include_private are required; private_access is read-only and ignored. timezone is an IANA region id "
                     + "(+05:30 and GMT+5 are refused); rest_days has at most 2 days, none repeated, and a change "
                     + "applies from the next local day.")
     @ApiResponse(responseCode = "200", useReturnTypeSchema = true, description = "Saved")

@@ -106,6 +106,26 @@ public class Users {
     @Setter
     private Instant githubTokenObtainedAt;
 
+    /** V9 (B10): the scopes GitHub granted the stored token, comma-separated; null = never recorded. */
+    @Setter
+    @Column(columnDefinition = "text")
+    private String githubScopes;
+
+    /** V9 (B10): the user's choice to let insights read their private repos (needs the repo scope too). */
+    @Setter
+    @Column(nullable = false)
+    private boolean includePrivate;
+
+    /** Whether the recorded scopes include {@code repo}, the only scope that shows private repos. */
+    public boolean hasRepoScope() {
+        return GitHubScopes.hasRepo(githubScopes);
+    }
+
+    /** What a sync may fetch: the user's choice, and a token that can. */
+    public boolean readsPrivate() {
+        return includePrivate && hasRepoScope();
+    }
+
     /** A login's new token, and when it was obtained. */
     public void replaceGithubToken(String encryptedToken, Instant obtainedAt) {
         this.encryptedGithubToken = encryptedToken;

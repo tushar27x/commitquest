@@ -85,7 +85,7 @@ class HeroRepositoryIT {
 
     @Test
     void preferencesArePersistedAndRestDaysApplyFromTomorrow() {
-        preferencesService.update(USER, new Preferences("Asia/Kolkata", List.of(DayOfWeek.SUNDAY), true, true));
+        preferencesService.update(USER, new Preferences("Asia/Kolkata", List.of(DayOfWeek.SUNDAY), true, true, false, null));
 
         assertThat(jdbc.queryForMap("SELECT timezone, rest_days, rest_days_previous, alerts_enabled, public_profile "
                 + "FROM v2.users WHERE github_id = ?", USER))
@@ -97,5 +97,21 @@ class HeroRepositoryIT {
         assertThat(jdbc.queryForObject("SELECT rest_days_from FROM v2.users WHERE github_id = ?", LocalDate.class, USER))
                 .isEqualTo(LocalDate.now(ZoneId.of("Asia/Kolkata")).plusDays(1));
         assertThat(preferencesService.get(USER).orElseThrow().restDays()).containsExactly(DayOfWeek.SUNDAY);
+    }
+
+    @Test
+    void includePrivateDefaultsToOffIsPersistedAndNeedsTheRecordedScopeToBeGranted() {
+        assertThat(jdbc.queryForObject("SELECT include_private FROM v2.users WHERE github_id = ?", Boolean.class, USER))
+                .isFalse(); // V9's default
+        assertThat(preferencesService.get(USER).orElseThrow().privateAccess())
+                .isEqualTo(Preferences.PrivateAccess.NONE);
+
+        preferencesService.update(USER, new Preferences("UTC", List.of(), false, false, true, null));
+        assertThat(jdbc.queryForObject("SELECT include_private FROM v2.users WHERE github_id = ?", Boolean.class, USER))
+                .isTrue();
+        assertThat(preferencesService.get(USER).orElseThrow().privateAccess()).isEqualTo(Preferences.PrivateAccess.NONE);
+
+        jdbc.update("UPDATE v2.users SET github_scopes = 'read:user,user:email,repo' WHERE github_id = ?", USER);
+        assertThat(preferencesService.get(USER).orElseThrow().privateAccess()).isEqualTo(Preferences.PrivateAccess.GRANTED);
     }
 }

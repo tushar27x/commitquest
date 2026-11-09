@@ -45,6 +45,7 @@ import java.util.stream.LongStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -155,7 +156,7 @@ class ScheduledSyncTest {
 
         Real(int llmConcurrency, long... ids) {
             BranchScanner branchScanner = mock(BranchScanner.class);
-            when(branchScanner.scan(any(), any(), any(), any())).thenReturn(Map.of());
+            when(branchScanner.scan(any(), any(), any(), any(), anyBoolean())).thenReturn(Map.of());
             for (long id : ids) {
                 Users user = new Users(id, "user" + id);
                 user.setEncryptedGithubToken(cipher.encrypt("stored-token", id));
@@ -164,7 +165,7 @@ class ScheduledSyncTest {
                 GitHubUser gitHubUser = new GitHubUser("U_" + id, "user" + id, null, null, null, null, null, null,
                         null, null, new ContributionsCollection(List.of(),
                         new ContributionCalendar(2, List.of(new Week(List.of(oct18)))), 2, 0, 0, 0));
-                when(gitHub.fetchUserInsights("stored-token", "user" + id))
+                when(gitHub.fetchUserInsights(eq("stored-token"), eq("user" + id), any(), any(), eq(false)))
                         .thenReturn(new UserInsightsData(null, gitHubUser));
                 when(writer.storedTexts(id)).thenAnswer(call -> stored.getOrDefault(id, Regeneration.Stored.NONE));
             }
@@ -211,7 +212,7 @@ class ScheduledSyncTest {
                 AiInputs.of(AiTestData.insights()), false));
 
         assertThat(job(real.service, 1).run()).isEqualTo(new Summary(1, 0, 1, 0, 0, 0)); // nothing moved
-        verify(real.gitHub).fetchUserInsights("stored-token", "user583231"); // the full insights fetch
+        verify(real.gitHub).fetchUserInsights(eq("stored-token"), eq("user583231"), any(), any(), eq(false)); // the full insights fetch
         verify(real.writer).saveKeepingTexts(eq(583231L), any(), any(), eq(NOW));
         verifyNoInteractions(real.ai, real.rateLimiter);
         verify(usersRepository, never()).claimSync(anyLong(), any(), any());

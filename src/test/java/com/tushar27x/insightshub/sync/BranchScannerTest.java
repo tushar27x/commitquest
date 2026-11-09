@@ -16,6 +16,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -73,8 +74,8 @@ class BranchScannerTest {
     void countsEachEmptyDayInItsOwnWindow() {
         DayWindow yesterday = DayWindow.of(OCT_14, ZoneOffset.UTC);
         DayWindow today = DayWindow.of(OCT_15, ZoneOffset.UTC);
-        when(gitHub.countBranchCommits(TOKEN, NODE, yesterday.since(), yesterday.until())).thenReturn(4);
-        when(gitHub.countBranchCommits(TOKEN, NODE, today.since(), today.until())).thenReturn(0);
+        when(gitHub.countBranchCommits(TOKEN, NODE, yesterday.since(), yesterday.until(), false)).thenReturn(4);
+        when(gitHub.countBranchCommits(TOKEN, NODE, today.since(), today.until(), false)).thenReturn(0);
 
         Map<LocalDate, Integer> counts = scanner.scan(TOKEN, NODE, List.of(new ContributionDay(OCT_15, 0)), ZoneOffset.UTC);
 
@@ -85,7 +86,7 @@ class BranchScannerTest {
     void todayAndTheWindowsFollowTheUsersZone() {
         ZoneId kolkata = ZoneId.of("Asia/Kolkata"); // NOW is 17:30 on Oct 15 there
         DayWindow today = DayWindow.of(OCT_15, kolkata);
-        when(gitHub.countBranchCommits(TOKEN, NODE, today.since(), today.until())).thenReturn(1);
+        when(gitHub.countBranchCommits(TOKEN, NODE, today.since(), today.until(), false)).thenReturn(1);
 
         Map<LocalDate, Integer> counts = scanner.scan(TOKEN, NODE, List.of(new ContributionDay(OCT_14, 2)), kolkata);
 
@@ -110,9 +111,9 @@ class BranchScannerTest {
     void aFailedDayIsLeftOutAndTheOthersAreKept() {
         DayWindow yesterday = DayWindow.of(OCT_14, ZoneOffset.UTC);
         DayWindow today = DayWindow.of(OCT_15, ZoneOffset.UTC);
-        when(gitHub.countBranchCommits(TOKEN, NODE, yesterday.since(), yesterday.until()))
+        when(gitHub.countBranchCommits(TOKEN, NODE, yesterday.since(), yesterday.until(), false))
                 .thenThrow(new GitHubApiException("boom"));
-        when(gitHub.countBranchCommits(TOKEN, NODE, today.since(), today.until())).thenReturn(2);
+        when(gitHub.countBranchCommits(TOKEN, NODE, today.since(), today.until(), false)).thenReturn(2);
 
         assertThat(scanner.scan(TOKEN, NODE, List.of(), ZoneOffset.UTC)).containsExactly(Map.entry(OCT_15, 2));
     }
@@ -120,11 +121,11 @@ class BranchScannerTest {
     @Test
     void tomorrowInTheCalendarDoesntChangeWhatIsScanned() {
         // A commit stamped with a zone ahead of the user's can land on "tomorrow" in GitHub's calendar
-        when(gitHub.countBranchCommits(anyString(), anyString(), any(), any())).thenReturn(0);
+        when(gitHub.countBranchCommits(anyString(), anyString(), any(), any(), anyBoolean())).thenReturn(0);
 
         scanner.scan(TOKEN, NODE, List.of(new ContributionDay(OCT_16, 7)), ZoneOffset.UTC);
 
         DayWindow yesterday = DayWindow.of(OCT_14, ZoneOffset.UTC);
-        verify(gitHub).countBranchCommits(TOKEN, NODE, yesterday.since(), yesterday.until());
+        verify(gitHub).countBranchCommits(TOKEN, NODE, yesterday.since(), yesterday.until(), false);
     }
 }

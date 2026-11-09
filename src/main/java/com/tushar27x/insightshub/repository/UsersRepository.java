@@ -94,6 +94,15 @@ public interface UsersRepository extends JpaRepository<Users, Long> {
                          @Param("expected") Instant expected);
 
     /**
+     * B10: records the scopes GitHub reported for the stored token (a sync saw the token lost {@code repo}).
+     * One column, so it can't write back anything else a login changed meanwhile.
+     */
+    @Transactional
+    @Modifying
+    @Query("update Users u set u.githubScopes = :scopes where u.githubId = :id")
+    int updateGithubScopes(@Param("id") long id, @Param("scopes") String scopes);
+
+    /**
      * GitHub rejected {@code rejectedToken}: flags the user {@code needs_reauth}, but only if that is still the stored
      * token (B45). A login that stored a new token while the job's GitHub call was in flight wins: the new token is
      * untested, not rejected. The ciphertext is unique per login (AES-GCM with a random nonce), so comparing it

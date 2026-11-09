@@ -225,6 +225,28 @@ class ApiContractIT {
     }
 
     @Test
+    void includePrivateIsStoredAndPrivateAccessFollowsTheRecordedScopes() throws Exception {
+        long user = newUser(6, "it-contract-private");
+        String body = """
+                {"timezone": "UTC", "rest_days": [], "alerts_enabled": false, "public_profile": false,
+                 "include_private": true, "private_access": "granted"}""";
+
+        // Opting in without a repo-scoped token is accepted; the server's truth is "none" whatever the body said.
+        JsonNode saved = body(call(put("/api/user/preferences").contentType(MediaType.APPLICATION_JSON).content(body), user));
+        assertThat(saved.get("include_private").booleanValue()).isTrue();
+        assertThat(saved.get("private_access").stringValue()).isEqualTo("none");
+
+        jdbc.update("UPDATE v2.users SET github_scopes = 'read:user,user:email,repo' WHERE github_id = ?", user);
+        assertThat(body(call(get("/api/user/preferences"), user)).get("private_access").stringValue()).isEqualTo("granted");
+
+        // Turning it off keeps the recorded scopes: private_access stays "granted" (Off, scope still there).
+        JsonNode off = body(call(put("/api/user/preferences").contentType(MediaType.APPLICATION_JSON)
+                .content(body.replace("\"include_private\": true", "\"include_private\": false")), user));
+        assertThat(off.get("include_private").booleanValue()).isFalse();
+        assertThat(off.get("private_access").stringValue()).isEqualTo("granted");
+    }
+
+    @Test
     void invalidPreferencesAreAValidationProblemWithSnakeCaseFields() throws Exception {
         long user = newUser(5, "it-contract-prefs-400");
         String bad = """
@@ -234,7 +256,7 @@ class ApiContractIT {
         JsonNode problem = assertProblem(response, 400, "/api/user/preferences", true);
         assertThat(problem.get("detail").stringValue()).isEqualTo("The request is invalid; see 'errors'");
         assertThat(problem.get("errors").valueStream().map(e -> e.get("field").stringValue()).distinct())
-                .containsExactlyInAnyOrder("timezone", "rest_days", "alerts_enabled", "public_profile");
+                .containsExactlyInAnyOrder("timezone", "rest_days", "alerts_enabled", "public_profile", "include_private");
         assertThat(problem.get("errors")).allSatisfy(e -> {
             assertThat(e.propertyNames()).containsExactlyInAnyOrder("field", "message");
             assertThat(e.get("message").stringValue()).isNotBlank();

@@ -36,7 +36,18 @@ public record GitHubUser(
             Connection<Language> languages,
             Ref defaultBranchRef,
             Blob readme,
-            Tree tree) {
+            Tree tree,
+            Boolean isPrivate) {
+
+        /** B10: absent counts as public (only a repo GitHub says is private is hidden). */
+        public boolean privateRepo() {
+            return Boolean.TRUE.equals(isPrivate);
+        }
+
+        public Repository(String name, int stargazerCount, Connection<Language> languages, Ref defaultBranchRef,
+                          Blob readme, Tree tree) {
+            this(name, stargazerCount, languages, defaultBranchRef, readme, tree, false);
+        }
     }
 
     public record Language(String name) {
@@ -83,7 +94,15 @@ public record GitHubUser(
     public record RepositoryContributions(RepositoryName repository, TotalCount contributions) {
     }
 
-    public record RepositoryName(String name) {
+    public record RepositoryName(String name, Boolean isPrivate) {
+
+        public boolean privateRepo() {
+            return Boolean.TRUE.equals(isPrivate);
+        }
+
+        public RepositoryName(String name) {
+            this(name, false);
+        }
     }
 
     public record ContributionCalendar(int totalContributions, List<Week> weeks) {
