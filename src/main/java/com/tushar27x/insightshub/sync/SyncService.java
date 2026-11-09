@@ -6,7 +6,9 @@ import com.tushar27x.insightshub.ai.AiInsightsService;
 import com.tushar27x.insightshub.ai.AiProperties;
 import com.tushar27x.insightshub.ai.Regeneration;
 import com.tushar27x.insightshub.entity.Users;
+import com.tushar27x.insightshub.entity.GitHubScopes;
 import com.tushar27x.insightshub.github.GitHubAuthException;
+import com.tushar27x.insightshub.github.GitHubScopeException;
 import com.tushar27x.insightshub.github.GitHubGraphQlClient;
 import com.tushar27x.insightshub.github.model.GitHubUser;
 import com.tushar27x.insightshub.github.model.GitHubUser.ContributionDay;
@@ -162,16 +164,18 @@ public class SyncService {
         long start = System.nanoTime();
         String token = tokenCipher.decrypt(user.getEncryptedGithubToken(), userId);
 
-        UserInsightsData data;
+        Fetched fetched;
         try {
-            data = gitHub.fetchUserInsights(token, user.getLogin());
+            Instant to = clock.instant();
+            fetched = fetch(user, token, to.minus(MAX_REFRESH), to);
         } catch (GitHubAuthException e) {
             rejected("Sync", user, e);
             return SyncOutcome.NEEDS_REAUTH;
         }
+        UserInsightsData data = fetched.data();
 
         // First, so the hero's activity is saved even if a later step fails
-        Activity activity = writeActivity(user, token, data);
+        Activity activity = writeActivity(user, token, data, fetched.includePrivate());
 
         InsightsResult result = engine.calculate(data.user());
         Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP); // snake_case, v1's shape
@@ -208,14 +212,16 @@ public class SyncService {
         long start = System.nanoTime();
         String token = tokenCipher.decrypt(user.getEncryptedGithubToken(), userId);
 
-        UserInsightsData data;
+        Fetched fetched;
         try {
-            data = gitHub.fetchUserInsights(token, user.getLogin());
+            Instant to = clock.instant();
+            fetched = fetch(user, token, to.minus(MAX_REFRESH), to);
         } catch (GitHubAuthException e) {
             rejected("Daily insights refresh", user, e);
             return DailyOutcome.NEEDS_REAUTH;
         }
-        Activity activity = writeActivity(user, token, data);
+        UserInsightsData data = fetched.data();
+        Activity activity = writeActivity(user, token, data, fetched.includePrivate());
 
         InsightsResult result = engine.calculate(data.user());
         Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP);
@@ -273,17 +279,65 @@ public class SyncService {
             since = now.minus(Duration.ofDays(1));
         }
 
-        UserInsightsData data;
+        Fetched fetched;
         try {
-            data = gitHub.fetchUserInsights(token, user.getLogin(), since, now);
+            fetched = fetch(user, token, since, now);
         } catch (GitHubAuthException e) {
             rejected("Activity refresh", user, e);
             return SyncOutcome.NEEDS_REAUTH;
         }
-        Activity activity = writeActivity(user, token, data);
+        Activity activity = writeActivity(user, token, fetched.data(), fetched.includePrivate());
         log.info("Activity refresh for '{}': {} days written, branch scan {}, token obtained {}", user.getLogin(),
                 activity.days(), activity.branchCounts(), obtained(user)); // B43: which token worked
         return SyncOutcome.SYNCED;
+    }
+
+    /**
+     * B10: the one GitHub fetch of every sync path. Private repos are requested only when the user opted in
+     * ({@code include_private}) <b>and</b> the recorded scopes include {@code repo}; otherwise the query asks for PUBLIC
+     * repositories only, so nothing private is fetched. If GitHub refuses the private part (FORBIDDEN) or the response
+     * shows the token lost {@code repo}, the new scopes are recorded ({@code private_access} becomes {@code none}) and
+     * the sync goes on with public data: no error, no {@code needs_reauth}. A 401 still propagates.
+     */
+    private Fetched fetch(Users user, String token, Instant from, Instant to) {
+        boolean wantPrivate = user.readsPrivate();
+        UserInsightsData data;
+        try {
+            data = gitHub.fetchUserInsights(token, user.getLogin(), from, to, wantPrivate);
+        } catch (GitHubScopeException e) {
+            if (!wantPrivate) {
+                throw e;
+            }
+            log.warn("GitHub refused private access for '{}'; going on with public repos only", user.getLogin());
+            recordScopes(user, withoutRepo(user.getGithubScopes()));
+            return new Fetched(gitHub.fetchUserInsights(token, user.getLogin(), from, to, false), false);
+        }
+        boolean includePrivate = wantPrivate;
+        String reported = data.oauthScopes();
+        if (reported != null && !GitHubScopes.sameSet(reported, user.getGithubScopes())) {
+            recordScopes(user, GitHubScopes.normalize(reported));
+            if (wantPrivate && !GitHubScopes.hasRepo(reported)) {
+                log.warn("The token of '{}' no longer has the repo scope; private repos are not read", user.getLogin());
+                includePrivate = false; // GitHub returned public data only
+            }
+        }
+        return new Fetched(data, includePrivate);
+    }
+
+    private void recordScopes(Users user, String scopes) {
+        try {
+            usersRepository.updateGithubScopes(user.getGithubId(), scopes);
+        } catch (RuntimeException e) {
+            log.error("Could not record the GitHub scopes of '{}'", user.getLogin(), e);
+        }
+    }
+
+    private static String withoutRepo(String scopes) {
+        return GitHubScopes.parse(scopes).stream().filter(s -> !s.equals(GitHubScopes.REPO))
+                .collect(java.util.stream.Collectors.joining(","));
+    }
+
+    private record Fetched(UserInsightsData data, boolean includePrivate) {
     }
 
     /**
@@ -322,12 +376,12 @@ public class SyncService {
     }
 
     /** The calendar, then the branch scan for the recent days it shows as empty, in the user's zone. */
-    private Activity writeActivity(Users user, String token, UserInsightsData data) {
+    private Activity writeActivity(Users user, String token, UserInsightsData data, boolean includePrivate) {
         long userId = user.getGithubId();
         List<ContributionDay> calendar = InsightsEngine.sortedDays(contributions(data.user()));
         int days = activityWriter.writeCalendar(userId, calendar);
         ZoneId zone = HeroService.zoneOf(user.getTimezone());
-        Map<LocalDate, Integer> branchCounts = branchScanner.scan(token, nodeId(data.user()), calendar, zone);
+        Map<LocalDate, Integer> branchCounts = branchScanner.scan(token, nodeId(data.user()), calendar, zone, includePrivate);
         if (!branchCounts.isEmpty()) {
             activityWriter.writeBranchCounts(userId, branchCounts);
         }

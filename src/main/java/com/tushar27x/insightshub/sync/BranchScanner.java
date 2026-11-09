@@ -44,6 +44,12 @@ public class BranchScanner {
      * stored count stays as it was; the rest of the sync goes on.
      */
     public Map<LocalDate, Integer> scan(String token, String userNodeId, List<ContributionDay> calendar, ZoneId zone) {
+        return scan(token, userNodeId, calendar, zone, false);
+    }
+
+    /** B10: {@code includePrivate} counts commits on private repos' branches too (only the count is kept). */
+    public Map<LocalDate, Integer> scan(String token, String userNodeId, List<ContributionDay> calendar, ZoneId zone,
+                                        boolean includePrivate) {
         if (userNodeId == null) {
             return Map.of();
         }
@@ -53,7 +59,7 @@ public class BranchScanner {
         for (LocalDate date : datesToScan(calendarCounts, DayWindow.today(clock.instant(), zone), days)) {
             DayWindow window = DayWindow.of(date, zone);
             try {
-                counts.put(date, gitHub.countBranchCommits(token, userNodeId, window.since(), window.until()));
+                counts.put(date, gitHub.countBranchCommits(token, userNodeId, window.since(), window.until(), includePrivate));
             } catch (GitHubApiException e) {
                 log.warn("Branch scan for {} failed, its count is kept as it was: {}", date, e.getMessage());
             }

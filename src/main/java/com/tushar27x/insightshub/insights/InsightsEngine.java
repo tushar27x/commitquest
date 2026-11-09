@@ -28,6 +28,10 @@ import java.util.Optional;
  * Turns raw GitHub data into {@link UserStats} (a port of v1's {@code calculate_user_insights}),
  * a {@link HabitProfile} and archetype scores. Pure logic with no I/O, so it is unit-tested directly.
  * <p>
+ * B10: a private repo (when the user opted in) counts in the aggregates (stars, languages, habit signals, the
+ * totals GitHub reports) but is never named: it is left out of {@code ranked_repos}, {@code repo_details} and
+ * {@code recent_commits}, so no private name, README, file list or commit message reaches storage or a prompt.
+ * <p>
  * Deliberate differences from v1:
  * <ul>
  *   <li>Null objects from GitHub (e.g. an empty repo's {@code defaultBranchRef}) are handled;
@@ -69,8 +73,8 @@ public class InsightsEngine {
                 contributions == null ? 0 : contributions.totalPullRequestContributions(),
                 contributions == null ? 0 : contributions.totalIssueContributions(),
                 rankedRepos(contributions),
-                repos.stream().map(InsightsEngine::repoDetail).toList(),
-                recentCommits(repos),
+                repos.stream().filter(repo -> !repo.privateRepo()).map(InsightsEngine::repoDetail).toList(),
+                recentCommits(repos.stream().filter(repo -> !repo.privateRepo()).toList()),
                 codeChurn(nodes(user.pullRequests())),
                 topLanguages(repos),
                 repos.stream().mapToInt(Repository::stargazerCount).sum(),
@@ -103,6 +107,7 @@ public class InsightsEngine {
             return List.of();
         }
         return contributions.commitContributionsByRepository().stream()
+                .filter(rc -> !rc.repository().privateRepo()) // B10: private repos are counted, never listed
                 .map(rc -> new RankedRepo(rc.repository().name(), totalCount(rc.contributions())))
                 .sorted(Comparator.comparingInt(RankedRepo::count).reversed()) // stable, like v1
                 .toList();

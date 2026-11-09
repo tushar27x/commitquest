@@ -3,7 +3,10 @@
 # - commit oid / committedDate / author: needed to store commits and detect habits
 # - contributionsCollection(from, to): lets scheduled syncs fetch a narrower window (max 1 year)
 # - user id: the GraphQL node id, the branch scan's author filter
-query UserInsights($login: String!, $from: DateTime!, $to: DateTime!) {
+# - $privacy (B10): PUBLIC unless the user opted in to private repos AND the token has the repo scope. Left out,
+#   the repositories connection lists private repos too whenever the token can see them. isPrivate marks them so
+#   the engine can count them without ever naming them.
+query UserInsights($login: String!, $from: DateTime!, $to: DateTime!, $privacy: RepositoryPrivacy) {
   rateLimit {
     cost
     remaining
@@ -22,9 +25,10 @@ query UserInsights($login: String!, $from: DateTime!, $to: DateTime!) {
     following {
       totalCount
     }
-    repositories(first: 5, orderBy: {field: STARGAZERS, direction: DESC}) {
+    repositories(first: 5, privacy: $privacy, orderBy: {field: STARGAZERS, direction: DESC}) {
       nodes {
         name
+        isPrivate
         stargazerCount
         languages(first: 3) {
           nodes {
@@ -75,6 +79,7 @@ query UserInsights($login: String!, $from: DateTime!, $to: DateTime!) {
       commitContributionsByRepository(maxRepositories: 5) {
         repository {
           name
+          isPrivate
         }
         contributions {
           totalCount
