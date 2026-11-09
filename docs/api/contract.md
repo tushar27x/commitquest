@@ -48,7 +48,7 @@ Example payloads live in `docs/api/fixtures/` and follow one continuous 14-day u
 - the intent was `private` but `repo` was **not** granted (the user unticked it) → `include_private` is left as it was. Not an error; Settings shows the state from `GET /preferences`;
 - no `private` intent → a login never changes `include_private` (a user who turned it on keeps it on; a plain login narrows the grant, so `private_access` becomes `none` and the UI shows "needs re-authorization");
 - the redirect stays `${FRONTEND_URL}/dashboard#token=<jwt>`, with no extra fragment keys. The UI learns the outcome from `GET /preferences`;
-- if the user cancels on GitHub, GitHub redirects with `error=access_denied` and no `code`: today's behavior is unchanged and nothing is touched (see Q3).
+- if the user cancels on GitHub, GitHub redirects with `error=access_denied` and no `code`: with a valid `state` this is **always a 302 to `${FRONTEND_URL}/settings`** (no token, nothing touched). Other callback 302 cases: success (`/dashboard#token=<jwt>`). A bad or missing state is still a 400.
 
 ### `GET /api/auth/logout`
 302 to `FRONTEND_URL`. The web app just drops its token; it doesn't need to call this.
@@ -171,11 +171,13 @@ A `rest_days` change takes effect **from the next local day**: the hero job uses
 - **Not stored:** private repo names, READMEs, file lists and commit messages. Only what insights already store in aggregate: totals, language shares, heatmap and calendar counts, churn, archetype scores. A private repo never appears in `stats.ranked_repos`, `stats.repo_details`, `stats.recent_commits` or `repo_summaries`. Where a name would have been shown, use the label **"a private repo"** (see Q2).
 - **LLM:** prompts get aggregate signals and, where a name is unavoidable, the label "a private repo". Never a private name, README or commit message.
 - `GET /insights` keeps its shape; no new field.
+- **GitHub's `contributionsCollection` has no privacy filter.** For a token that has `repo`, the totals, calendar and habit signals can include private contributions **even when `include_private=false`**. What `include_private` filters, either way, is private repo lists, names, READMEs and commit messages. Also, `repositories(first:5)` is sorted by stars, so with the toggle on, private repos can take slots from public ones in `repo_details`.
+- The migration for B10 is **V9** (`V9__private_repos.sql`).
 
 **Open (B10, undecided; the user to answer before the backend starts):**
 - **Q1** Turning off: keep the insights already computed from private data until the next sync, or recompute at once? (Contract today: next sync.)
 - **Q2** Do private repos count in `ranked_repos` under one merged "a private repo" entry, or are they only in the totals and never listed? (Contract today: never listed by name; the backend may use the merged label.)
-- **Q3** Cancel on GitHub's consent page (`error=access_denied`, no `code`): keep today's 400, or redirect to `${FRONTEND_URL}/settings`?
+- **Q3** (answered) Cancel on GitHub's consent page: 302 to `${FRONTEND_URL}/settings`, see the callback.
 
 ### `GET /api/leaderboard?archetype=MONK&page=0&size=20` (Phase 13, JWT)
 Fixture: `leaderboard.json`. One page of a class's board, best first.

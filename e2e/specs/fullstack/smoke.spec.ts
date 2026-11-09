@@ -110,10 +110,6 @@ test("the Arena: a new hero is not on the board (public_profile starts off), the
 
   await nav.getByRole("link", { name: "ARENA" }).click();
   await expect(page.getByRole("heading", { name: "YOUR PLACE" })).toBeVisible();
-  // Reload: the client keeps the board it read while private for 10 minutes (staleTime), so the
-  // in-app visit still shows it empty. A UI follow-up (invalidate ["leaderboard"] after a
-  // public_profile save), reported to the UI lane; a fresh load reads the real board.
-  await page.reload();
   const you = page.getByRole("listitem").filter({ hasText: "(you)" });
   await expect(you).toHaveCount(1);
   await expect(you).toContainText("octocat");
@@ -121,12 +117,23 @@ test("the Arena: a new hero is not on the board (public_profile starts off), the
   expect(rank.total).toBeGreaterThanOrEqual(1);
 });
 
+test("PUT include_private true is saved, and without a repo-scoped token private_access stays none", async () => {
+  const before = (await api("/api/user/preferences")).body;
+  const { private_access: _ignored, ...writable } = before;
+  const res = await api("/api/user/preferences", { method: "PUT", data: { ...writable, include_private: true } });
+  expect(res.status).toBe(200);
+  expect(res.body.include_private).toBe(true);
+  expect(res.body.private_access).toBe("none");
+  expect((await api("/api/user/preferences")).body).toMatchObject({ include_private: true, private_access: "none" });
+  await api("/api/user/preferences", { method: "PUT", data: { ...writable, include_private: false } });
+});
+
 test("errors come back as problem+json through the rewrite", async () => {
   const bad = await api("/api/user/preferences", { method: "PUT", data: { timezone: "+05:30" } });
   expect(bad.status).toBe(400);
   expect(bad.headers["content-type"]).toContain("application/problem+json");
   expect(bad.body.errors.map((e: { field: string }) => e.field)).toEqual(
-    expect.arrayContaining(["timezone", "rest_days", "alerts_enabled", "public_profile"]),
+    expect.arrayContaining(["timezone", "rest_days", "alerts_enabled", "public_profile", "include_private"]),
   );
   const res = await page.request.get(`${WEB_URL}/api/user/hero`); // no token
   expect(res.status()).toBe(401);

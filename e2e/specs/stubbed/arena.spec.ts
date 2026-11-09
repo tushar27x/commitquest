@@ -98,3 +98,37 @@ test("Settings: the Arena switch sends public_profile in the PUT", async ({ page
     public_profile: !fixtures.preferences.public_profile,
   });
 });
+
+test.describe("Settings: SHARE PRIVATE REPOS (B10)", () => {
+  test("on: the PUT carries all five fields, private_access none shows the re-auth link to /api/auth/login?private=true", async ({ page }) => {
+    const log = await stubApi(page, {
+      "PUT /api/user/preferences": (request) => ({ body: { ...request.postDataJSON(), private_access: "none" } }),
+    });
+    await login(page);
+    await page.goto("/settings");
+    await page.getByRole("switch", { name: "SHARE PRIVATE REPOS" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "SAVED" })).toBeVisible();
+    const put = log.of("PUT /api/user/preferences");
+    expect(put).toHaveLength(1);
+    const body = put[0].postDataJSON();
+    // The web app sends the whole object it read, so the read-only private_access rides along (the server ignores it).
+    expect(Object.keys(body)).toEqual(expect.arrayContaining(["alerts_enabled", "include_private", "public_profile", "rest_days", "timezone"]));
+    expect(body.include_private).toBe(true);
+    await expect(page.getByText("ON · NEEDS GITHUB PERMISSION")).toBeVisible();
+    await expect(page.getByRole("link", { name: "AUTHORIZE ON GITHUB" })).toHaveAttribute("href", /\/api\/auth\/login\?private=true$/);
+  });
+
+  test("off: sends include_private false and does not navigate", async ({ page }) => {
+    const log = await stubApi(page, {
+      "GET /api/user/preferences": { body: { ...fixtures.preferences, include_private: true, private_access: "granted" } },
+    });
+    await login(page);
+    await page.goto("/settings");
+    await expect(page.getByText("ON · ACTIVE")).toBeVisible();
+    await expect(page.getByRole("link", { name: "AUTHORIZE ON GITHUB" })).toHaveCount(0);
+    await page.getByRole("switch", { name: "SHARE PRIVATE REPOS" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "SAVED" })).toBeVisible();
+    expect(log.of("PUT /api/user/preferences")[0].postDataJSON()).toMatchObject({ include_private: false });
+    await expect(page).toHaveURL(/\/settings$/);
+  });
+});

@@ -50,6 +50,27 @@ test("Settings has the Arena switch, and it saves", async ({ page }) => {
   await expect(arena).toHaveAttribute("aria-checked", String(!fixtures.preferences.public_profile));
 });
 
+test("Settings: SHARE PRIVATE REPOS on shows AUTHORIZE ON GITHUB, linked to the mock grant", async ({ page }) => {
+  await page.goto("/settings");
+  const priv = page.getByRole("switch", { name: "SHARE PRIVATE REPOS" });
+  await expect(priv).toHaveAttribute("aria-checked", "false");
+  await priv.click();
+  await expect(page.getByRole("status").filter({ hasText: "SAVED" })).toBeVisible();
+  await expect(page.getByText("ON · NEEDS GITHUB PERMISSION")).toBeVisible();
+  await expect(page.getByRole("link", { name: "AUTHORIZE ON GITHUB" })).toHaveAttribute("href", "/settings?mock=private_granted");
+});
+
+test("?mock=private_granted shows ON · ACTIVE, ?mock=private_reauth shows NEEDS GITHUB PERMISSION", async ({ page }) => {
+  await page.goto("/settings?mock=private_granted");
+  await expect(page.getByRole("switch", { name: "SHARE PRIVATE REPOS" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByText("ON · ACTIVE")).toBeVisible();
+  await expect(page.getByRole("link", { name: "AUTHORIZE ON GITHUB" })).toHaveCount(0);
+
+  await page.goto("/settings?mock=private_reauth");
+  await expect(page.getByText("ON · NEEDS GITHUB PERMISSION")).toBeVisible();
+  await expect(page.getByRole("link", { name: "AUTHORIZE ON GITHUB" })).toBeVisible();
+});
+
 test("the Arena shows the MONK board with the (you) row and your place", async ({ page }) => {
   await page.goto("/arena");
   await expect(page.getByRole("heading", { name: `${fixtures.leaderboard.archetype} BOARD` })).toBeVisible();
