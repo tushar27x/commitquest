@@ -235,7 +235,15 @@ export interface Preferences {
   rest_days: Weekday[];
   alerts_enabled: boolean;
   public_profile: boolean;
+  /** B10: the user's opt-in to read private repos for their own insights. Default false. Required on PUT. */
+  include_private: boolean;
+  /** B10: read-only, from the stored token's scopes. A PUT may send it back; the server ignores it. */
+  private_access: PrivateAccess;
 }
+
+/** `granted`: the stored token has the `repo` scope. `none`: it doesn't, or GitHub rejected it. */
+export const PRIVATE_ACCESS = ["none", "granted"] as const;
+export type PrivateAccess = (typeof PRIVATE_ACCESS)[number];
 
 // GET /api/leaderboard?archetype=&page=&size= and GET /api/user/rank (Phase 13, B8)
 

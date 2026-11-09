@@ -33,11 +33,22 @@ Example payloads live in `docs/api/fixtures/` and follow one continuous 14-day u
 
 ## Existing endpoints (built in Phases 6–8)
 
-### `GET /api/auth/login` (public)
+### `GET /api/auth/login?private=true` (public)
 302 to GitHub, and sets the `oauth_state` cookie (HttpOnly, `path=/api/auth`, 10 min). Rate limit: 5/min per IP.
+
+**Private repos (B10).** Without the parameter, the scopes are `read:user user:email`, as always. With **`private=true`** (exactly the string `true`; anything else, or a missing parameter, means false) the authorize URL asks for **`read:user user:email repo`**. GitHub OAuth Apps have no read-only private scope: `repo` is read **and write** access to private repos, so the Settings copy must say what the grant allows even though the backend only reads.
+- **Where the intent is carried:** in the `oauth_state` cookie, never in the callback URL and never in a second cookie. The cookie value is `<state>` (as today) or `<state>.private` (state is URL-safe base64, which has no `.`). The `state` sent to GitHub stays the bare random `<state>`, so GitHub never sees the intent. The callback splits the cookie at the first `.`, compares the bare state with the `state` query parameter in constant time as today, and reads the suffix as the intent. The cookie is cleared on the callback, as today. A forged or missing cookie fails the state check (400 as today), whatever the query says, so the intent can't be injected from outside.
+- **Auth required?** No: `login` is public, so the parameter works for a first login and for a logged-in user re-authorizing from Settings (the web app starts it with a full-page navigation to `${NEXT_PUBLIC_BACKEND_URL}/api/auth/login?private=true`, like the normal login link).
 
 ### `GET /api/auth/callback?code&state` (public)
 **Change in this plan (B5):** with `insightshub.auth.redirect-to-frontend: true` (the default in `application.yml` since B5), it 302s to **`${FRONTEND_URL}/dashboard#token=<jwt>`**, a fragment and not `?token=`. Login also runs `syncIfDue`; a failure there doesn't block login. If GitHub fails during the code exchange, it returns 502 (since B2; was 500). Rate limit: 5/min per IP.
+
+**Granted scopes (B10).** The callback records the scopes GitHub actually granted, from the token response's `scope` field (comma-separated; it is the source of truth, because the user can untick scopes on GitHub's consent page). A token is private-capable when the list contains `repo`. The stored list replaces the previous one on **every** login, so a plain login after a private one narrows it to `read:user,user:email`. Then:
+- the cookie's intent was `private` **and** `repo` was granted → `include_private` is set to `true`;
+- the intent was `private` but `repo` was **not** granted (the user unticked it) → `include_private` is left as it was. Not an error; Settings shows the state from `GET /preferences`;
+- no `private` intent → a login never changes `include_private` (a user who turned it on keeps it on; a plain login narrows the grant, so `private_access` becomes `none` and the UI shows "needs re-authorization");
+- the redirect stays `${FRONTEND_URL}/dashboard#token=<jwt>`, with no extra fragment keys. The UI learns the outcome from `GET /preferences`;
+- if the user cancels on GitHub, GitHub redirects with `error=access_denied` and no `code`: today's behavior is unchanged and nothing is touched (see Q3).
 
 ### `GET /api/auth/logout`
 302 to `FRONTEND_URL`. The web app just drops its token; it doesn't need to call this.
@@ -124,18 +135,47 @@ Body: `{ "archetype": "ROGUE" }`, or `{ "archetype": null }` to go back to follo
 - Two racing PUTs: one wins (compare-and-set on `archetype_changed_at`). The loser re-reads the user: a 200 no-op if the winner stored the same class, otherwise 429 with `Retry-After` from the winner's change.
 
 ### `GET /api/user/preferences` · `PUT /api/user/preferences` (JWT)
-Body and response: `fixtures/preferences.json`, `{timezone, rest_days[], alerts_enabled, public_profile}`.
+Body and response: `fixtures/preferences.json`, `{timezone, rest_days[], alerts_enabled, public_profile, include_private, private_access}`.
 
 | Result | Meaning |
 |---|---|
 | 200 | Saved |
 | 400 | A validation `ProblemDetail` with `errors[]` (below) |
 | 404 | The JWT's user no longer exists |
+| 429 | Rate limit, policy `preferences` (20/min per user, shared by GET and PUT) |
 
-- `PUT` takes the **full object**: all four fields are required, and each missing one has an `errors[]` entry.
+- `PUT` takes the **full object**: `timezone`, `rest_days`, `alerts_enabled`, `public_profile` and `include_private` are required, and each missing one has an `errors[]` entry (`include_private`: "must not be null", like the others). A wrong JSON kind (`"include_private": "yes"`) is Spring's own 400, no `errors[]`.
+- **`private_access` is read-only.** A `PUT` may include it (the web app sends back the whole object it read) and it is **ignored**: never validated, never stored. The response always shows the server's truth.
 - Messages: `timezone` "must be an IANA time zone, like Europe/Berlin" (region ids only: `+05:30` and `GMT+5` are refused), `rest_days` "at most 2 rest days" and "must not repeat a day". An unknown weekday string is a JSON error: Spring's own 400, no `errors[]`.
 
+**`include_private` (B10)**: boolean, **default `false`** (new users, and existing users after the migration). The user's choice to let insight generation read their private repos.
+**`private_access` (B10)**: enum `none | granted`, derived by the server from the scopes recorded at the last login (see the callback). `granted` means the stored token has `repo`; `none` means it doesn't, or the backend has learned that GitHub no longer accepts it (below). It is independent of `include_private`, so there are four states:
+
+| `include_private` | `private_access` | UI state |
+|---|---|---|
+| false | none | Off (the default). Turning it on sends a PUT, and as the response says `none`, the re-auth follows |
+| false | granted | Off; the scope is still granted from an earlier opt-in. Nothing private is read. Turning it on needs no re-auth |
+| true | none | **Needs re-authorization**: "ON, but GitHub hasn't shared private repos yet" + a button to `GET /api/auth/login?private=true`. Nothing private is read yet |
+| true | granted | On and working |
+
+- **PUT `include_private: true` without a repo-scoped token is accepted** (200, saved) and the response shows `private_access: "none"`. The web app then navigates to the re-auth. There is no 409/403 for this: the choice is stored first, so a user who abandons GitHub's consent page still sees the toggle on with "needs re-authorization".
+- **PUT `include_private: false`** is always accepted. From the moment it is saved the backend **must not fetch private repos** (not in `POST /sync`, the login sync, the hero job's refresh or the daily activity refresh). `private_access` is **not** changed by it: the stored token and recorded scopes stay until the next login; a login without `private=true` narrows the grant on GitHub's side and in the record.
+- **Turning it off does not erase** insights already computed from private data; the next sync recomputes them without it (the 10-minute cooldown applies). See Q1.
+- **When GitHub later rejects private access** (token revoked, `repo` removed on github.com, org access lost): a GitHub call that comes back **401** follows the existing `needs_reauth` path (409 on `POST /sync`, hero job skips the user), because the whole token is dead. If the token is alive but the response shows it lacks `repo` (`X-OAuth-Scopes` no longer lists it, or the private part of the query is refused with 403/`FORBIDDEN`), that is **not** an error for the user: the backend records the scopes it saw, `private_access` becomes `none`, `include_private` stays as the user set it (the UI shows "needs re-authorization"), the sync **continues with public data only** and returns its normal 200. No crash, no `needs_reauth`, no hero event.
+- Rate limit and `X-RateLimit-*` headers: unchanged (policy `preferences`).
+
 A `rest_days` change takes effect **from the next local day**: the hero job uses the value that applied on the day it evaluates. **Browser zone on login (I4):** after the `#token` hand-off, the web app reads `GET /preferences`. If the stored `timezone` is still the default `UTC` and the browser's zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`) resolves to a different zone, it sends one `PUT /preferences` with the full object and only `timezone` changed. A zone the user picked in Settings (anything but `UTC`) is never overwritten, and a failed PUT is ignored (Settings can fix it). Compare zones by what `Intl` resolves them to: Chrome reports `Asia/Calcutta` for `Asia/Kolkata`.
+
+#### Private repo data rules (B10; for the backend, the UI never sees the data)
+- Private repo data feeds **only the owner's own insights** (`/insights`, hero activity, the digest). It never reaches `/leaderboard`, `/user/rank` or any public surface; the Arena is computed from hero rows only, as before. `public_profile` is unrelated to `include_private`.
+- **Not stored:** private repo names, READMEs, file lists and commit messages. Only what insights already store in aggregate: totals, language shares, heatmap and calendar counts, churn, archetype scores. A private repo never appears in `stats.ranked_repos`, `stats.repo_details`, `stats.recent_commits` or `repo_summaries`. Where a name would have been shown, use the label **"a private repo"** (see Q2).
+- **LLM:** prompts get aggregate signals and, where a name is unavoidable, the label "a private repo". Never a private name, README or commit message.
+- `GET /insights` keeps its shape; no new field.
+
+**Open (B10, undecided; the user to answer before the backend starts):**
+- **Q1** Turning off: keep the insights already computed from private data until the next sync, or recompute at once? (Contract today: next sync.)
+- **Q2** Do private repos count in `ranked_repos` under one merged "a private repo" entry, or are they only in the totals and never listed? (Contract today: never listed by name; the backend may use the merged label.)
+- **Q3** Cancel on GitHub's consent page (`error=access_denied`, no `code`): keep today's 400, or redirect to `${FRONTEND_URL}/settings`?
 
 ### `GET /api/leaderboard?archetype=MONK&page=0&size=20` (Phase 13, JWT)
 Fixture: `leaderboard.json`. One page of a class's board, best first.
@@ -179,7 +219,7 @@ The digest email's unsubscribe link. It's opened in a browser from a mailbox, so
 ## Mock mode (web)
 
 `NEXT_PUBLIC_MOCK=1` serves:
-- `insights.json`, `hero.json`, `hero-events.json` and `preferences.json` for the matching GETs;
+- `insights.json`, `hero.json`, `hero-events.json` and `preferences.json` for the matching GETs (mock `PUT /preferences` echoes the body and sets `private_access` to `none`; `?mock=private_granted` on the GET returns `include_private: true, private_access: "granted"`, `?mock=private_reauth` returns `true` / `none`);
 - `leaderboard.json` and `rank.json` for the Arena (once the UI serves them; `rank-not-in-arena.json` is the 404 body for a mock of the private state);
 - `hero-variants.json` merged over `hero.json` with `?mock=<variant>` (`happy okay weak sleeping level_up fainted tier_campfire tier_keep tier_citadel class_cooldown`).
 
