@@ -116,6 +116,15 @@ public class Users {
     @Column(nullable = false)
     private boolean includePrivate;
 
+    /** V10 (B11): when the user last made an effective change to private access; starts the lock. Null = never. */
+    @Setter
+    private Instant privateChangedAt;
+
+    /** V10 (B11): a full resync is owed (the one that should have followed an effective change did not happen). */
+    @Setter
+    @Column(nullable = false)
+    private boolean privateResyncDue;
+
     /** Whether the recorded scopes include {@code repo}, the only scope that shows private repos. */
     public boolean hasRepoScope() {
         return GitHubScopes.hasRepo(githubScopes);

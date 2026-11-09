@@ -3,10 +3,13 @@ package com.tushar27x.insightshub.user;
 import com.tushar27x.insightshub.entity.Users;
 import com.tushar27x.insightshub.hero.RestDays;
 import com.tushar27x.insightshub.repository.UsersRepository;
+import com.tushar27x.insightshub.sync.ResyncWriter;
+import com.tushar27x.insightshub.sync.SyncService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -30,7 +33,13 @@ class PreferencesServiceTest {
     private static final Instant NOW = Instant.parse("2026-10-16T20:00:00Z");
 
     private final UsersRepository usersRepository = mock(UsersRepository.class);
-    private final PreferencesService service = new PreferencesService(usersRepository, Clock.fixed(NOW, ZoneOffset.UTC));
+    private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+    private final PrivateProperties privateProperties = new PrivateProperties(Duration.ofDays(7));
+    private final SyncService syncService = mock(SyncService.class);
+    private final ResyncWriter resyncWriter = mock(ResyncWriter.class);
+    private final PreferencesService service = new PreferencesService(usersRepository,
+            new PreferencesWriter(usersRepository, resyncWriter, clock, privateProperties), syncService,
+            privateProperties, clock);
     private Users user;
 
     @BeforeEach
@@ -127,14 +136,14 @@ class PreferencesServiceTest {
     }
 
     @Test
-    void turningItOffKeepsTheRecordedScopes() {
-        user.setGithubScopes("read:user,user:email,repo");
+    void turningItOffWhileWaitingKeepsTheRecordedScopes() {
+        user.setGithubScopes("read:user,user:email");
         user.setIncludePrivate(true);
 
         Preferences saved = service.update(ID, new Preferences("UTC", List.of(), false, false, false, null)).orElseThrow();
 
         assertThat(saved.includePrivate()).isFalse();
-        assertThat(saved.privateAccess()).isEqualTo(Preferences.PrivateAccess.GRANTED);
-        assertThat(user.getGithubScopes()).isEqualTo("read:user,user:email,repo");
+        assertThat(saved.privateAccess()).isEqualTo(Preferences.PrivateAccess.NONE);
+        assertThat(user.getGithubScopes()).isEqualTo("read:user,user:email");
     }
 }

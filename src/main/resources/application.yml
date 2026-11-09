@@ -95,6 +95,8 @@ insightshub:
     concurrency: 4  # heroes refreshed (GitHub, the user's own token) and settled at once
     qualify-score: 40  # a class scoring at least this can be chosen; the top class always can
     class-cooldown: 7d  # between class changes
+  private:  # B11: the private-repos switch
+    change-cooldown: 7d  # after an effective change (either direction) the switch is locked this long
   digest:  # Phase 12: one email a day per user with notable hero events
     enabled: ${DIGEST_ENABLED:false}  # needs MAIL_HOST and DIGEST_FROM; off, the app runs without SMTP
     cron: "0 35 * * * *"  # hourly, 35 past, in UTC: 30 min after the hero job ("-" = off)
