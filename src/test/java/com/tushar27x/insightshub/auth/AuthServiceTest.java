@@ -11,6 +11,7 @@ import com.tushar27x.insightshub.security.JwtService;
 import com.tushar27x.insightshub.security.SecurityTestData;
 import com.tushar27x.insightshub.security.TokenCipher;
 import com.tushar27x.insightshub.sync.SyncService;
+import com.tushar27x.insightshub.user.PrivateProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -46,7 +47,7 @@ class AuthServiceTest {
         JwtService jwtService = new JwtService(JwtConfig.encoder(SecurityTestData.JWT_SECRET),
                 Clock.systemUTC(), SecurityTestData.authProperties());
         service = new AuthService(gitHub, usersRepository, cipher, jwtService, syncService,
-                SecurityTestData.authProperties(), Clock.fixed(LOGIN_AT, java.time.ZoneOffset.UTC));
+                SecurityTestData.authProperties(), new PrivateProperties(java.time.Duration.ofDays(7)), Clock.fixed(LOGIN_AT, java.time.ZoneOffset.UTC));
 
         when(gitHub.exchangeCode("code", REDIRECT_URI)).thenReturn(grant("read:user,user:email"));
         when(gitHub.fetchAccount("gho_secret")).thenReturn(new GitHubAccount(GITHUB_ID, "octocat"));
@@ -134,6 +135,156 @@ class AuthServiceTest {
 
         verify(syncService).syncIfDue(GITHUB_ID);
         verify(syncService, never()).sync(anyLong());
+    }
+
+    // --- B11: the callback decides what a private login may change ---
+
+    private static final java.time.Instant LOCKED_SINCE = LOGIN_AT.minus(java.time.Duration.ofDays(2));
+
+    @Test
+    void grantingRepoWithThePrivateIntentTurnsItOnStartsTheLockAndOwesAFullResync() {
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
+        when(gitHub.exchangeCode("code", REDIRECT_URI)).thenReturn(grant("read:user,user:email,repo"));
+
+        service.completeLogin("code", REDIRECT_URI, true);
+
+        Users saved = savedUser();
+        assertThat(saved.isIncludePrivate()).isTrue();
+        assertThat(saved.getPrivateChangedAt()).isEqualTo(LOGIN_AT);
+        assertThat(saved.isPrivateResyncDue()).isTrue(); // saved before the sync, so a failed sync is repeated
+        verify(syncService).sync(GITHUB_ID);
+    }
+
+    @Test
+    void whileLockedThePrivateIntentIsIgnoredButTheScopesAreStillRecordedTruthfully() {
+        Users existing = new Users(GITHUB_ID, "octocat");
+        existing.setGithubScopes("read:user,user:email");
+        existing.setPrivateChangedAt(LOCKED_SINCE);
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.of(existing));
+        when(gitHub.exchangeCode("code", REDIRECT_URI)).thenReturn(grant("read:user,user:email,repo"));
+
+        service.completeLogin("code", REDIRECT_URI, true);
+
+        assertThat(existing.isIncludePrivate()).isFalse(); // not effective: granted but off
+        assertThat(existing.getGithubScopes()).isEqualTo("read:user,user:email,repo");
+        assertThat(existing.getPrivateChangedAt()).isEqualTo(LOCKED_SINCE); // lock untouched
+        assertThat(existing.isPrivateResyncDue()).isFalse();
+        verify(syncService).syncIfDue(GITHUB_ID);
+        verify(syncService, never()).sync(anyLong());
+    }
+
+    @Test
+    void anExpiredLockDoesNotIgnoreTheIntent() {
+        Users existing = new Users(GITHUB_ID, "octocat");
+        existing.setPrivateChangedAt(LOGIN_AT.minus(java.time.Duration.ofDays(8)));
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.of(existing));
+        when(gitHub.exchangeCode("code", REDIRECT_URI)).thenReturn(grant("read:user,user:email,repo"));
+
+        service.completeLogin("code", REDIRECT_URI, true);
+
+        assertThat(existing.isIncludePrivate()).isTrue();
+        assertThat(existing.getPrivateChangedAt()).isEqualTo(LOGIN_AT);
+    }
+
+    @Test
+    void regainingTheScopeWhileLockedResyncsButDoesNotRestartTheLock() {
+        Users existing = new Users(GITHUB_ID, "octocat");
+        existing.setIncludePrivate(true); // waiting: the scope was lost earlier
+        existing.setGithubScopes("read:user,user:email");
+        existing.setPrivateChangedAt(LOCKED_SINCE);
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.of(existing));
+        when(gitHub.exchangeCode("code", REDIRECT_URI)).thenReturn(grant("read:user,user:email,repo"));
+
+        service.completeLogin("code", REDIRECT_URI, true);
+
+        assertThat(existing.readsPrivate()).isTrue();
+        assertThat(existing.getPrivateChangedAt()).isEqualTo(LOCKED_SINCE);
+        assertThat(existing.isPrivateResyncDue()).isTrue();
+        verify(syncService).sync(GITHUB_ID);
+    }
+
+    @Test
+    void regainingTheScopeWhenNotLockedLocksAndResyncs() {
+        Users existing = new Users(GITHUB_ID, "octocat");
+        existing.setIncludePrivate(true);
+        existing.setGithubScopes("read:user,user:email");
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.of(existing));
+        when(gitHub.exchangeCode("code", REDIRECT_URI)).thenReturn(grant("read:user,user:email,repo"));
+
+        service.completeLogin("code", REDIRECT_URI); // even a plain login: the token has repo again
+
+        assertThat(existing.getPrivateChangedAt()).isEqualTo(LOGIN_AT);
+        verify(syncService).sync(GITHUB_ID);
+    }
+
+    @Test
+    void losingTheScopeNeverLocksAndLeavesAnExistingLockAlone() {
+        Users existing = new Users(GITHUB_ID, "octocat");
+        existing.setIncludePrivate(true);
+        existing.setGithubScopes("read:user,user:email,repo");
+        existing.setPrivateChangedAt(LOCKED_SINCE);
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.of(existing));
+
+        service.completeLogin("code", REDIRECT_URI); // the default grant has no repo
+
+        assertThat(existing.isIncludePrivate()).isTrue(); // waiting for GitHub
+        assertThat(existing.readsPrivate()).isFalse();
+        assertThat(existing.getPrivateChangedAt()).isEqualTo(LOCKED_SINCE);
+        assertThat(existing.isPrivateResyncDue()).isTrue();
+        verify(syncService).sync(GITHUB_ID); // public-only resync
+    }
+
+    @Test
+    void losingTheScopeWithNoLockYetStillStartsNone() {
+        Users existing = new Users(GITHUB_ID, "octocat");
+        existing.setIncludePrivate(true);
+        existing.setGithubScopes("read:user,user:email,repo");
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.of(existing));
+
+        service.completeLogin("code", REDIRECT_URI);
+
+        assertThat(existing.getPrivateChangedAt()).isNull();
+    }
+
+    @Test
+    void cancelledConsentOrAnUntickedRepoNeverLock() {
+        Users existing = new Users(GITHUB_ID, "octocat");
+        existing.setGithubScopes("read:user,user:email");
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.of(existing));
+
+        service.completeLogin("code", REDIRECT_URI, true); // the user unticked repo on GitHub's page
+
+        assertThat(existing.getPrivateChangedAt()).isNull();
+        assertThat(existing.isPrivateResyncDue()).isFalse();
+        verify(syncService).syncIfDue(GITHUB_ID);
+    }
+
+    @Test
+    void aPrivateIntentWhenPrivateIsAlreadyEffectiveChangesNothing() {
+        Users existing = new Users(GITHUB_ID, "octocat");
+        existing.setIncludePrivate(true);
+        existing.setGithubScopes("read:user,user:email,repo");
+        existing.setPrivateChangedAt(LOGIN_AT.minus(java.time.Duration.ofDays(30)));
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.of(existing));
+        when(gitHub.exchangeCode("code", REDIRECT_URI)).thenReturn(grant("read:user,user:email,repo"));
+
+        service.completeLogin("code", REDIRECT_URI, true);
+
+        assertThat(existing.getPrivateChangedAt()).isEqualTo(LOGIN_AT.minus(java.time.Duration.ofDays(30)));
+        assertThat(existing.isPrivateResyncDue()).isFalse();
+        verify(syncService).syncIfDue(GITHUB_ID);
+    }
+
+    @Test
+    void aFailedResyncAtLoginStillLogsInAndLeavesTheResyncOwed() {
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
+        when(gitHub.exchangeCode("code", REDIRECT_URI)).thenReturn(grant("read:user,user:email,repo"));
+        when(syncService.sync(GITHUB_ID)).thenThrow(new IllegalStateException("GitHub down"));
+
+        LoginResult result = service.completeLogin("code", REDIRECT_URI, true);
+
+        assertThat(result.token().value()).isNotBlank();
+        assertThat(savedUser().isPrivateResyncDue()).isTrue(); // the next hero or daily run does the full sync
     }
 
     @Test

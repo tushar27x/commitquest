@@ -79,7 +79,7 @@ class SyncServicePrivateTest {
         user.setEncryptedGithubToken(cipher.encrypt(TOKEN, ID));
         when(usersRepository.findById(ID)).thenReturn(Optional.of(user));
         var result = AiTestData.insights();
-        when(engine.calculate(any())).thenReturn(result);
+        when(engine.calculate(any(), org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(result);
         when(ai.generate(any(), any())).thenReturn(new AiInsights("y", "w", "c", Map.of(), new CharacterSheet("n", "d")));
         when(branchScanner.scan(any(), any(), any(), any(), anyBoolean())).thenReturn(Map.of());
         when(writer.storedTexts(ID)).thenReturn(Regeneration.Stored.NONE);

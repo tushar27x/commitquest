@@ -108,7 +108,7 @@ class SyncServiceTest {
                 new ContributionsCollection(List.of(), calendar, 4, 0, 0, 0));
         UserInsightsData data = new UserInsightsData(null, gitHubUser);
         when(gitHub.fetchUserInsights(eq("gho_stored"), eq("octocat"), any(), any(), eq(false))).thenReturn(data);
-        when(engine.calculate(any())).thenReturn(result);
+        when(engine.calculate(any(), org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(result);
         when(ai.generate("octocat", result)).thenReturn(texts);
         when(branchScanner.scan(any(), any(), any(), any(), eq(false))).thenReturn(Map.of());
         when(writer.storedTexts(ID)).thenReturn(Regeneration.Stored.NONE); // a new user: no texts yet

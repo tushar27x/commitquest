@@ -36,6 +36,31 @@ class ActivityWriterTest {
     }
 
     @Test
+    void aFullResyncWritesTheWholeCalendarEvenAfterTheFirstSync() { // B11
+        assertThat(writer.writeCalendarInFull(ID, year)).isEqualTo(366);
+
+        verify(repository).upsertCalendarCounts(ID, year);
+        verify(repository, org.mockito.Mockito.never()).latestDate(ID);
+    }
+
+    @Test
+    void replacingBranchCountsClearsTheOtherDaysFirstWhenPrivateIsOff() {
+        writer.replaceBranchCounts(ID, Map.of(TODAY, 2), true);
+
+        var order = org.mockito.Mockito.inOrder(repository);
+        order.verify(repository).clearBranchCounts(ID);
+        order.verify(repository).replaceBranchCounts(ID, Map.of(TODAY, 2));
+    }
+
+    @Test
+    void replacingBranchCountsKeepsTheOtherDaysWhenPrivateIsOn() {
+        writer.replaceBranchCounts(ID, Map.of(TODAY, 2), false);
+
+        verify(repository, org.mockito.Mockito.never()).clearBranchCounts(ID);
+        verify(repository).replaceBranchCounts(ID, Map.of(TODAY, 2));
+    }
+
+    @Test
     void firstSyncBackfillsTheWholeCalendar() {
         when(repository.latestDate(ID)).thenReturn(Optional.empty());
 

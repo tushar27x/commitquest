@@ -222,6 +222,13 @@ class OpenApiDocsTest {
         JsonNode privateAccess = schema("Preferences").at("/properties/private_access");
         assertThat(privateAccess.get("readOnly").asBoolean()).isTrue();
         assertThat(texts(privateAccess.get("enum"))).containsExactlyInAnyOrder("none", "granted");
+        // B11: the lock end is read-only too, never required, and the PUT documents the lock 429 by its title
+        JsonNode lock = schema("Preferences").at("/properties/private_locked_until");
+        assertThat(lock.get("readOnly").asBoolean()).isTrue();
+        assertThat(schema("Preferences").get("required").toString()).doesNotContain("private_locked_until");
+        JsonNode put = operations().get("PUT /api/user/preferences").get("responses");
+        assertThat(put.at("/429/description").asString()).contains("Private access locked");
+        assertThat(put.at("/429/headers").has("Retry-After")).isTrue();
     }
 
     @Test
@@ -264,7 +271,7 @@ class OpenApiDocsTest {
                 "POST /api/user/sync", List.of("200", "404", "409", "429", "502"),
                 "PUT /api/user/hero/class", List.of("200", "400", "404", "409", "429"),
                 "GET /api/user/hero/events", List.of("200", "400", "404"),
-                "PUT /api/user/preferences", List.of("200", "400", "404"),
+                "PUT /api/user/preferences", List.of("200", "400", "404", "409", "429", "502"),
                 "GET /api/leaderboard", List.of("200", "400", "404"),
                 "GET /api/user/rank", List.of("200", "404"));
         expected.forEach((name, statuses) -> assertThat(keys(operations.get(name).get("responses")))

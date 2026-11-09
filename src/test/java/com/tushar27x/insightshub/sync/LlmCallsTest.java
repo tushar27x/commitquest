@@ -71,7 +71,7 @@ class LlmCallsTest {
         when(gitHub.fetchUserInsights(any(), any(), any(), any(), anyBoolean())).thenReturn(new UserInsightsData(null, null));
         when(gitHub.fetchUserInsights(any(), any(), any(), any(), anyBoolean())).thenReturn(new UserInsightsData(null, null));
         InsightsEngine engine = mock(InsightsEngine.class);
-        when(engine.calculate(any())).thenReturn(AiTestData.insights());
+        when(engine.calculate(any(), org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(AiTestData.insights());
         BranchScanner branchScanner = mock(BranchScanner.class);
         when(branchScanner.scan(any(), any(), any(), any(), anyBoolean())).thenReturn(Map.of());
         RateLimiter rateLimiter = mock(RateLimiter.class);

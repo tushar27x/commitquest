@@ -437,7 +437,8 @@ class AuthApiTest {
 
     /** The main class's {@code @ConfigurationPropertiesScan} doesn't apply in a slice test. */
     @TestConfiguration
-    @EnableConfigurationProperties({InsightsHubProperties.class, AuthProperties.class, RateLimitProperties.class})
+    @EnableConfigurationProperties({InsightsHubProperties.class, AuthProperties.class, RateLimitProperties.class,
+            com.tushar27x.insightshub.user.PrivateProperties.class})
     static class Properties {
         @Bean
         InMemoryRateLimiter rateLimiter() {

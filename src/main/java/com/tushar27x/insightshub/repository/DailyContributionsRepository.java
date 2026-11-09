@@ -41,6 +41,17 @@ public class DailyContributionsRepository {
             SET branch_commit_count = GREATEST(d.branch_commit_count, EXCLUDED.branch_commit_count)
             """;
 
+    /** B11, a full resync: the fresh scan replaces the stored count, so a private count doesn't survive turning off. */
+    private static final String REPLACE_BRANCH_COUNT = """
+            INSERT INTO %s.daily_contributions (user_id, date, branch_commit_count)
+            VALUES (?, ?, ?)
+            ON CONFLICT (user_id, date) DO UPDATE SET branch_commit_count = EXCLUDED.branch_commit_count
+            """;
+
+    private static final String CLEAR_BRANCH_COUNTS = """
+            UPDATE %s.daily_contributions SET branch_commit_count = 0 WHERE user_id = ? AND branch_commit_count > 0
+            """;
+
     private static final String LATEST_DATE = "SELECT max(date) FROM %s.daily_contributions WHERE user_id = ?";
 
     private static final String FIND_COUNTS = """
@@ -51,6 +62,8 @@ public class DailyContributionsRepository {
     private final JdbcTemplate jdbc;
     final String upsertSql;
     final String upsertBranchSql;
+    final String replaceBranchSql;
+    final String clearBranchSql;
     final String latestDateSql;
     final String findCountsSql;
 
@@ -62,6 +75,8 @@ public class DailyContributionsRepository {
         this.jdbc = jdbc;
         this.upsertSql = UPSERT_CALENDAR_COUNT.formatted(schema);
         this.upsertBranchSql = UPSERT_BRANCH_COUNT.formatted(schema);
+        this.replaceBranchSql = REPLACE_BRANCH_COUNT.formatted(schema);
+        this.clearBranchSql = CLEAR_BRANCH_COUNTS.formatted(schema);
         this.latestDateSql = LATEST_DATE.formatted(schema);
         this.findCountsSql = FIND_COUNTS.formatted(schema);
     }
@@ -80,6 +95,19 @@ public class DailyContributionsRepository {
             return;
         }
         jdbc.batchUpdate(upsertBranchSql, branchRows(userId, counts));
+    }
+
+    /** Sets {@code branch_commit_count} to each day's count, up or down (B11: a full resync). */
+    public void replaceBranchCounts(long userId, Map<LocalDate, Integer> counts) {
+        if (counts.isEmpty()) {
+            return;
+        }
+        jdbc.batchUpdate(replaceBranchSql, branchRows(userId, counts));
+    }
+
+    /** Zeroes every stored {@code branch_commit_count} of the user (B11: turning private access off). */
+    public int clearBranchCounts(long userId) {
+        return jdbc.update(clearBranchSql, userId);
     }
 
     /** The most recent stored day, or empty before the user's first sync. */

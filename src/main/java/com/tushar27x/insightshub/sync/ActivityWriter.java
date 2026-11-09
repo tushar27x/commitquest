@@ -45,10 +45,30 @@ public class ActivityWriter {
         return window.size();
     }
 
+    /** B11, a full resync: every day GitHub returned is written again, not only the overlap window. */
+    @Transactional
+    public int writeCalendarInFull(long userId, List<ContributionDay> days) {
+        repository.upsertCalendarCounts(userId, days);
+        return days.size();
+    }
+
     /** Raises {@code branch_commit_count} for the days the branch scan checked. */
     @Transactional
     public void writeBranchCounts(long userId, Map<LocalDate, Integer> counts) {
         repository.upsertBranchCounts(userId, counts);
+    }
+
+    /**
+     * B11, a full resync: the scan replaces the stored counts instead of only raising them. With
+     * {@code clearOthers} (private access is off now) every other stored count goes to 0 first, so no count that
+     * private branches added survives. The calendar already holds what the days' commits add up to.
+     */
+    @Transactional
+    public void replaceBranchCounts(long userId, Map<LocalDate, Integer> counts, boolean clearOthers) {
+        if (clearOthers) {
+            repository.clearBranchCounts(userId);
+        }
+        repository.replaceBranchCounts(userId, counts);
     }
 
     static List<ContributionDay> recentWindow(List<ContributionDay> days, Optional<LocalDate> latestStored) {

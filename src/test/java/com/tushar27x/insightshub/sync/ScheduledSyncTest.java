@@ -170,7 +170,7 @@ class ScheduledSyncTest {
                 when(writer.storedTexts(id)).thenAnswer(call -> stored.getOrDefault(id, Regeneration.Stored.NONE));
             }
             when(usersRepository.findIdsForScheduledSync()).thenReturn(LongStream.of(ids).boxed().toList());
-            when(engine.calculate(any())).thenReturn(AiTestData.insights());
+            when(engine.calculate(any(), org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(AiTestData.insights());
             when(ai.generate(any(), any())).thenReturn(new AiInsights("y", "w", "c", Map.of("app", "An app."),
                     new CharacterSheet("t the Monk", "l")));
             doAnswer(call -> {
