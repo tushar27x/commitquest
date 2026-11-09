@@ -44,6 +44,7 @@ export function samePreferences(a: Preferences, b: Preferences): boolean {
     a.timezone === b.timezone &&
     a.alerts_enabled === b.alerts_enabled &&
     a.public_profile === b.public_profile &&
+    a.include_private === b.include_private &&
     normalise(a.rest_days).join() === normalise(b.rest_days).join()
   );
 }
@@ -55,7 +56,7 @@ export interface FieldErrors {
   other: string[];
 }
 
-const FIELDS: readonly string[] = ["timezone", "rest_days", "alerts_enabled", "public_profile"];
+const FIELDS: readonly string[] = ["timezone", "rest_days", "alerts_enabled", "public_profile", "include_private"];
 
 /** Splits a validation 400 into per-field messages. Null for any other error. */
 export function fieldErrors(error: unknown): FieldErrors | null {
@@ -136,4 +137,12 @@ export function timeZoneOptions(...include: (string | null | undefined)[]): stri
   }
   const all = new Set([...zones, "UTC", ...include.filter((z): z is string => !!z)]);
   return [...all].sort();
+}
+
+/** The three looks of "share private repos" (contract, B10): `include_private` x `private_access`. */
+export type PrivateState = "off" | "needs-permission" | "active";
+
+export function privateState(p: Pick<Preferences, "include_private" | "private_access">): PrivateState {
+  if (!p.include_private) return "off";
+  return p.private_access === "granted" ? "active" : "needs-permission";
 }

@@ -11,7 +11,7 @@ export function TabBar() {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 bg-stone pb-[env(safe-area-inset-bottom)] shadow-bar-up md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 bg-stone pb-[env(safe-area-inset-bottom)] shadow-bar-up md:hidden"
     >
       {TABS.map((tab) => {
         const active = isActiveTab(pathname, tab.href);

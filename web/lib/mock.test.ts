@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import heroFixture from "../public/fixtures/hero.json";
 import variantsFixture from "../public/fixtures/hero-variants.json";
-import type { Hero } from "./api/types";
-import { applyVariant, isIanaZone, servedByMock } from "./mock";
+import type { Hero, Preferences } from "./api/types";
+import { applyPreferencesVariant, applyVariant, isIanaZone, servedByMock } from "./mock";
 
 const hero = heroFixture as Hero;
 const variants = variantsFixture as Record<string, unknown>;
@@ -117,15 +117,19 @@ describe("mockFetch: class change and preferences (B5/B6 rules)", () => {
     expect(errors).toEqual(
       expect.arrayContaining([
         { field: "public_profile", message: "must not be null" },
+        { field: "include_private", message: "must not be null" },
         { field: "timezone", message: "must be an IANA time zone, like Europe/Berlin" },
         { field: "rest_days", message: "at most 2 rest days" },
         { field: "rest_days", message: "must not repeat a day" },
       ]),
     );
 
-    const good = { timezone: "Europe/Berlin", rest_days: ["SATURDAY"], alerts_enabled: false, public_profile: true };
+    const good = { timezone: "Europe/Berlin", rest_days: ["SATURDAY"], alerts_enabled: false, public_profile: true, include_private: true };
     expect((await mockFetch("/api/user/preferences", put(good))).status).toBe(200);
-    expect(await (await mockFetch("/api/user/preferences")).json()).toEqual(good);
+    // B10: private_access is forced to none, even if the body says granted.
+    const granted = { ...good, private_access: "granted" };
+    expect(await (await mockFetch("/api/user/preferences", put(granted))).json()).toEqual({ ...good, private_access: "none" });
+    expect(await (await mockFetch("/api/user/preferences")).json()).toEqual({ ...good, private_access: "none" });
   });
 });
 
@@ -171,6 +175,46 @@ describe("mockFetch: ?mock_error (B38)", () => {
   });
 });
 
+describe("mockFetch: the Arena", () => {
+  async function load(search: string) {
+    vi.resetModules();
+    vi.stubGlobal("window", { location: { search } });
+    const fixtures: Record<string, unknown> = {
+      leaderboard: (await import("../public/fixtures/leaderboard.json")).default,
+      rank: (await import("../public/fixtures/rank.json")).default,
+      "rank-not-in-arena": (await import("../public/fixtures/rank-not-in-arena.json")).default,
+    };
+    vi.stubGlobal("fetch", async (url: string) => {
+      const name = /\/fixtures\/(.+)\.json$/.exec(url)?.[1] ?? "";
+      return new Response(JSON.stringify(fixtures[name]), { status: fixtures[name] ? 200 : 404 });
+    });
+    return (await import("./mock")).mockFetch;
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("serves the MONK board and the caller's rank", async () => {
+    const mockFetch = await load("");
+    const board = await (await mockFetch("/api/leaderboard?archetype=MONK&page=0")).json();
+    expect(board).toMatchObject({ archetype: "MONK", total: 6 });
+    expect(board.entries.some((e: { is_you: boolean }) => e.is_you)).toBe(true);
+    expect(await (await mockFetch("/api/user/rank")).json()).toMatchObject({ rank: 4, top_percent: 67 });
+  });
+
+  it("shows other classes, and ?mock_arena=empty, as empty boards", async () => {
+    const other = await (await (await load(""))("/api/leaderboard?archetype=ROGUE&page=0")).json();
+    expect(other).toMatchObject({ archetype: "ROGUE", total: 0, entries: [] });
+    const empty = await (await (await load("?mock_arena=empty"))("/api/leaderboard?archetype=MONK&page=0")).json();
+    expect(empty.total).toBe(0);
+  });
+
+  it("?mock_arena=hidden answers the 'Not in the Arena' 404", async () => {
+    const res = await (await load("?mock_arena=hidden"))("/api/user/rank");
+    expect(res.status).toBe(404);
+    expect((await res.json()).title).toBe("Not in the Arena");
+  });
+});
+
 describe("isIanaZone (mock of the backend's @IanaTimeZone)", () => {
   it("accepts region ids, aliases and Etc zones", () => {
     for (const zone of ["Europe/Berlin", "Asia/Kolkata", "Asia/Calcutta", "Etc/GMT+5", "UTC"]) expect(isIanaZone(zone)).toBe(true);
@@ -178,5 +222,17 @@ describe("isIanaZone (mock of the backend's @IanaTimeZone)", () => {
 
   it("refuses offsets and unknown ids", () => {
     for (const zone of ["+05:30", "-03:00", "GMT+5", "UTC-3", "Mars/Olympus", ""]) expect(isIanaZone(zone)).toBe(false);
+  });
+});
+
+describe("applyPreferencesVariant (B10)", () => {
+  const base: Preferences = { timezone: "UTC", rest_days: [], alerts_enabled: true, public_profile: false, include_private: false, private_access: "none" };
+  it("private_granted is on and working, private_reauth is on without access", () => {
+    expect(applyPreferencesVariant(base, "private_granted")).toMatchObject({ include_private: true, private_access: "granted" });
+    expect(applyPreferencesVariant(base, "private_reauth")).toMatchObject({ include_private: true, private_access: "none" });
+  });
+  it("leaves other variants alone", () => {
+    expect(applyPreferencesVariant(base, null)).toBe(base);
+    expect(applyPreferencesVariant(base, "happy")).toBe(base);
   });
 });

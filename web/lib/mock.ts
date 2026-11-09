@@ -2,10 +2,11 @@
 //
 // - NEXT_PUBLIC_MOCK=1 serves every endpoint from fixtures.
 // - `?mock=<variant>` merges that entry of hero-variants.json over hero.json.
+// - `?mock_arena=hidden|empty` shows the Arena as "Not in the Arena" or with an empty board.
 // - `?mock_error=<status>` forces that status on the next call (once per page load; an aborted call
 //   doesn't use it up, B38).
 
-import type { Archetype, FieldError, Hero, HeroEvent, HeroEvents, Preferences, ProblemDetail, ValidationProblem } from "./api/types";
+import type { Archetype, FieldError, Hero, HeroEvent, HeroEvents, Leaderboard, Preferences, ProblemDetail, ValidationProblem } from "./api/types";
 
 export const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK === "1";
 
@@ -49,7 +50,7 @@ export function servedByMock(path: string, method = "GET"): boolean {
   return PENDING_ENDPOINTS.includes(`${method.toUpperCase()} ${pathname}`);
 }
 
-type FixtureName = "insights" | "hero" | "hero-variants" | "hero-events" | "preferences";
+type FixtureName = "insights" | "hero" | "hero-variants" | "hero-events" | "preferences" | "leaderboard" | "rank" | "rank-not-in-arena";
 
 const fixtureCache = new Map<FixtureName, Promise<unknown>>();
 
@@ -118,6 +119,13 @@ async function mockHero(): Promise<Hero> {
 }
 
 let savedPreferences: Preferences | null = null;
+
+/** B10: `?mock=private_granted` (on, working) and `?mock=private_reauth` (on, GitHub hasn't shared yet). */
+export function applyPreferencesVariant(prefs: Preferences, variant: string | null): Preferences {
+  if (variant === "private_granted") return { ...prefs, include_private: true, private_access: "granted" };
+  if (variant === "private_reauth") return { ...prefs, include_private: true, private_access: "none" };
+  return prefs;
+}
 let chosenClass: { archetype: Archetype | null; canSwitchAt: string } | null = null;
 /** CLASS_CHANGED events from mock class changes, appended to hero-events.json. */
 const classEvents: HeroEvent[] = [];
@@ -152,7 +160,7 @@ function problem(
 /** The backend's checks for `PUT /preferences` (B5): every field required, an IANA zone, at most 2 distinct days. */
 export function validatePreferences(body: Partial<Preferences>): FieldError[] {
   const errors: FieldError[] = [];
-  const required = ["timezone", "rest_days", "alerts_enabled", "public_profile"] as const;
+  const required = ["timezone", "rest_days", "alerts_enabled", "public_profile", "include_private"] as const;
   for (const field of required) {
     if (body[field] === undefined || body[field] === null) errors.push({ field, message: "must not be null" });
   }
@@ -256,15 +264,37 @@ export async function mockFetch(path: string, init: RequestInit = {}): Promise<R
     }
 
     case "GET /api/user/preferences":
-      return json(savedPreferences ?? (await fixture<Preferences>("preferences")));
+      return json(savedPreferences ?? applyPreferencesVariant(await fixture<Preferences>("preferences"), searchParam("mock")));
 
     case "PUT /api/user/preferences": {
       const body = readBody<Partial<Preferences>>(init);
       if (!body) return problem(400, "body is not JSON", pathname);
       const errors = validatePreferences(body);
       if (errors.length > 0) return problem(400, "invalid preferences", pathname, { errors });
-      savedPreferences = body as Preferences;
+      // B10: the mock never has a repo-scoped token, whatever the body says.
+      savedPreferences = { ...(body as Preferences), private_access: "none" };
       return json(savedPreferences);
+    }
+
+    case "GET /api/leaderboard": {
+      const board = await fixture<Leaderboard>("leaderboard");
+      const archetype = (new URL(path, "http://mock").searchParams.get("archetype") as Archetype | null) ?? board.archetype;
+      // The fixture is the MONK board. `?mock_arena=empty`, or any other class, is a board nobody joined.
+      if (searchParam("mock_arena") === "empty" || archetype !== board.archetype) {
+        return json({ ...board, archetype, page: 0, total: 0, entries: [] });
+      }
+      return json(board);
+    }
+
+    case "GET /api/user/rank": {
+      // `?mock_arena=hidden`: a private profile, the "Not in the Arena" 404 (a problem+json body).
+      if (searchParam("mock_arena") === "hidden") {
+        return new Response(JSON.stringify(await fixture("rank-not-in-arena")), {
+          status: 404,
+          headers: { "Content-Type": "application/problem+json" },
+        });
+      }
+      return json(await fixture("rank"));
     }
 
     default:

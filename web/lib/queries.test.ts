@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Preferences } from "./api/types";
-import { makeQueryClient, queryKeys, sendBrowserZone } from "./queries";
+import { afterPreferencesSaved, makeQueryClient, queryKeys, sendBrowserZone } from "./queries";
 
-const stored: Preferences = { timezone: "UTC", rest_days: ["SUNDAY"], alerts_enabled: true, public_profile: false };
+const stored: Preferences = { timezone: "UTC", rest_days: ["SUNDAY"], alerts_enabled: true, public_profile: false, include_private: false, private_access: "none" };
 
 function stubBackend(prefs: Preferences, putStatus = 200) {
   const puts: unknown[] = [];
@@ -25,6 +25,25 @@ function inZone(zone: string) {
     timeZone: zone,
   });
 }
+
+describe("afterPreferencesSaved", () => {
+  it("reloads the hero, every leaderboard page and the rank, and stores the saved preferences", () => {
+    const client = makeQueryClient();
+    client.setQueryData(queryKeys.leaderboard("MONK", 0), { entries: [] });
+    client.setQueryData(queryKeys.leaderboard("ROGUE", 2), { entries: [] });
+    client.setQueryData(queryKeys.rank, { rank: 1 });
+    client.setQueryData(queryKeys.insights, { user_name: "x" });
+    const saved = { ...stored, public_profile: true };
+
+    afterPreferencesSaved(client, saved);
+
+    expect(client.getQueryData(queryKeys.preferences)).toEqual(saved);
+    expect(client.getQueryState(queryKeys.leaderboard("MONK", 0))?.isInvalidated).toBe(true);
+    expect(client.getQueryState(queryKeys.leaderboard("ROGUE", 2))?.isInvalidated).toBe(true);
+    expect(client.getQueryState(queryKeys.rank)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(queryKeys.insights)?.isInvalidated).toBe(false);
+  });
+});
 
 describe("sendBrowserZone", () => {
   afterEach(() => {
