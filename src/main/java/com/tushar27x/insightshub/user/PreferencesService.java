@@ -49,15 +49,17 @@ public class PreferencesService {
             user.setTimezone(preferences.timezone());
             user.setAlertsEnabled(preferences.alertsEnabled());
             user.setPublicProfile(preferences.publicProfile());
-            log.info("Preferences for '{}' saved: zone {}, rest days {}, alerts {}, public {}", user.getLogin(),
-                    preferences.timezone(), preferences.restDays(), preferences.alertsEnabled(),
-                    preferences.publicProfile());
+            user.setIncludePrivate(preferences.includePrivate()); // private_access is read-only: never taken from the body
+            log.info("Preferences for '{}' saved: zone {}, rest days {}, alerts {}, public {}, private repos {}",
+                    user.getLogin(), preferences.timezone(), preferences.restDays(), preferences.alertsEnabled(),
+                    preferences.publicProfile(), preferences.includePrivate());
             return of(user); // managed entity: flushed on commit
         });
     }
 
     static Preferences of(Users user) {
         return new Preferences(user.getTimezone(), RestDays.toDays(user.getRestDays()), user.isAlertsEnabled(),
-                user.isPublicProfile());
+                user.isPublicProfile(), user.isIncludePrivate(),
+                user.hasRepoScope() ? Preferences.PrivateAccess.GRANTED : Preferences.PrivateAccess.NONE);
     }
 }

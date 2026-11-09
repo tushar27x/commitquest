@@ -217,7 +217,11 @@ class OpenApiDocsTest {
         assertThat(classBody.at("/schema/$ref").asString()).isEqualTo("#/components/schemas/ClassRequest");
         assertThat(classBody.get("examples").has("follow the top score")).isTrue();
         assertThat(texts(schema("Preferences").get("required")))
-                .containsExactlyInAnyOrder("timezone", "rest_days", "alerts_enabled", "public_profile");
+                .containsExactlyInAnyOrder("timezone", "rest_days", "alerts_enabled", "public_profile", "include_private");
+        // private_access is read-only: in responses, not in what a PUT must send
+        JsonNode privateAccess = schema("Preferences").at("/properties/private_access");
+        assertThat(privateAccess.get("readOnly").asBoolean()).isTrue();
+        assertThat(texts(privateAccess.get("enum"))).containsExactlyInAnyOrder("none", "granted");
     }
 
     @Test
