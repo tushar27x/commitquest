@@ -156,7 +156,7 @@ Its client id and secret go in `backend.env` (step 2).
 
 ## 5. Vercel (once)
 
-New project from `tushar27x/insightsHubV2`:
+New project from `tushar27x/commitquest`:
 - **Root directory:** `web`. Framework: Next.js (detected).
 - **Environment variables** (Production):
 
