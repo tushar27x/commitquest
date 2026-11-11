@@ -1,4 +1,4 @@
-# Running CommitQuest v2 locally
+# Running CommitQuest locally
 
 Two ways to run it: the web app alone on fixtures (no backend, no risk), or the full stack against your real services.
 
