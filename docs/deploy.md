@@ -81,7 +81,7 @@ sudo install -d -o ec2-user -g ec2-user -m 0750 /opt/insightshub
 # From your laptop:
 #   scp docs/deploy/{compose.yaml,Caddyfile,deploy.sh,deploy.env.example} ec2-user@<host>:/opt/insightshub/
 cd /opt/insightshub && chmod +x deploy.sh && mv deploy.env.example deploy.env
-vi deploy.env        # IMAGE=docker.io/tushar2703/insight-hub (already set), API_DOMAIN=api.<domain>
+vi deploy.env        # IMAGE=docker.io/tushar2703/commitquest (already set), API_DOMAIN=api.<domain>
 ```
 
 On **Ubuntu** instead: Docker from Docker's apt repository (<https://docs.docker.com/engine/install/ubuntu/>,
@@ -113,7 +113,7 @@ chmod 600 /opt/insightshub/backend.env
 
 ## 3. Publishing and deploying
 
-**Docker Hub (once):** the repository is `tushar2703/insight-hub` (public), and an
+**Docker Hub (once):** the repository is `tushar2703/commitquest` (public), and an
 access token with **Read & Write** for CI (Account settings → Personal access tokens).
 
 **GitHub (once):** Settings → Secrets and variables → Actions:
@@ -122,7 +122,7 @@ access token with **Read & Write** for CI (Account settings → Personal access 
 |---|---|---|
 | `DOCKERHUB_USERNAME` | secret | `<dockerhub-user>` |
 | `DOCKERHUB_TOKEN` | secret | The Read & Write token |
-| `DOCKERHUB_IMAGE` | variable (or secret) | `tushar2703/insight-hub` (set 2026-11-04), no `docker.io/` and no tag. As a secret it works too, but shows as `***` in the logs |
+| `DOCKERHUB_IMAGE` | variable (or secret) | `tushar2703/commitquest` (set 2026-11-04), no `docker.io/` and no tag. As a secret it works too, but shows as `***` in the logs |
 
 **Every merge to `main`:** CI runs `backend`, `web` and `e2e`; when all three are green,
 `image-publish` packages the jar, builds the image (`linux/amd64`) and pushes `:latest` and `:sha-<7>`.
@@ -144,7 +144,7 @@ open). On startup the backend runs Flyway against `v2` (a no-op on an up-to-date
 **Check it:** `curl https://api.<domain>/actuator/health` → `{"status":"UP",…}`. Logs:
 `docker compose --env-file deploy.env logs -f backend` (rotated at 3 × 10 MB per container).
 
-**Building an image by hand** (without CI): `./mvnw -B -DskipTests package && docker build -t insightshub-backend .`
+**Building an image by hand** (without CI): `./mvnw -B -DskipTests package && docker build -t commitquest-backend .`
 
 ## 4. Production GitHub OAuth app (once)
 
