@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { TokenHandoff } from "./token-handoff";
 
-export const metadata: Metadata = { title: "Entering · Insight Hub", robots: { index: false } };
+export const metadata: Metadata = { title: "Entering · CommitQuest", robots: { index: false } };
 
 /** The backend's login redirect lands here with `#token=<jwt>`. */
 export default function DashboardPage() {

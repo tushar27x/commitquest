@@ -13,7 +13,7 @@ import java.time.LocalTime;
  *                    and {@code from}
  * @param sendHour    a user is due from this hour of their local day (0–23)
  * @param concurrency users processed at once (one LLM call and one email each)
- * @param from        the sender address, e.g. {@code Insight Hub <digest@example.com>}
+ * @param from        the sender address, e.g. {@code CommitQuest <digest@example.com>}
  */
 @ConfigurationProperties(prefix = "insightshub.digest")
 public record DigestProperties(@DefaultValue("false") boolean enabled,

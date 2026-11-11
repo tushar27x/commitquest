@@ -28,7 +28,7 @@ export function TopNav() {
           &lt; LANDING
         </Link>
         <span className="text-gold">
-          {insights?.user_name.toUpperCase() ?? "INSIGHT HUB"}
+          {insights?.user_name.toUpperCase() ?? "COMMITQUEST"}
           {/* Home shows the level in its own panel. */}
           {!onHome && hero ? ` · LV ${hero.level}` : ""}
         </span>

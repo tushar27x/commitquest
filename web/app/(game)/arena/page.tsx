@@ -7,7 +7,7 @@ import { ArenaView } from "@/components/arena/ArenaView";
 // so this page only ever renders in the browser and has no server UI to validate as instant.
 export const instant = false;
 
-export const metadata: Metadata = { title: "Arena · Insight Hub" };
+export const metadata: Metadata = { title: "Arena · CommitQuest" };
 
 export default function Page() {
   return (

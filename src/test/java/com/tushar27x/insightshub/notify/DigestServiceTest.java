@@ -55,7 +55,7 @@ class DigestServiceTest {
     private final UnsubscribeTokens tokens = new UnsubscribeTokens(SecurityTestData.appProperties(), clock);
 
     private final DigestService service = new DigestService(digests, writer, heroes, intro, channel, tokens, clock,
-            new DigestProperties(true, 8, 2, "Insight Hub <digest@example.test>"), SecurityTestData.appProperties());
+            new DigestProperties(true, 8, 2, "CommitQuest <digest@example.test>"), SecurityTestData.appProperties());
 
     private static Candidate user(boolean alerts, Instant lastSentAt) {
         return new Candidate(ID, "octocat", "octocat@example.test", "Asia/Kolkata", alerts, false, lastSentAt);

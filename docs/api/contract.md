@@ -1,4 +1,4 @@
-# Insight Hub v2: API contract (backend ⇄ web)
+# CommitQuest: API contract (backend ⇄ web)
 
 The backend and web app both implement against this file; changes to the shapes here are made alongside the fixtures and the shared types, in one PR.
 
