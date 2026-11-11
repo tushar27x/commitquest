@@ -21,7 +21,6 @@ repos and AI-written reviews sits alongside it.
 ![AWS EC2](https://img.shields.io/badge/AWS-EC2-FF9900?logo=amazonec2&logoColor=white)
 
 <p align="center">
-  <img src="docs/screenshots/landing.jpg" width="200" alt="Landing screen">
   <img src="docs/screenshots/home.jpg" width="200" alt="Home: hearts, streak, today's quest">
   <img src="docs/screenshots/hero.jpg" width="200" alt="Hero sheet: class and class scores">
   <img src="docs/screenshots/settings.jpg" width="200" alt="Settings: rest days, timezone, alerts">
