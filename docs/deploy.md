@@ -2,7 +2,7 @@
 
 Decided by the developer on 2026-11-04 (PR #51): everything on free tiers, the backend as a Docker image.
 
-**Live since 2026-11-04:** web <https://insights-hub-v2-one.vercel.app>, backend <https://insighthubv2.duckdns.org> (DuckDNS → the Elastic IP; the instance runs Ubuntu, user `ubuntu`). Deploy a new image: `cd /opt/insightshub && ./deploy.sh`, and let it finish (it prints `deploy: … is up`).
+**Live since 2026-11-04:** web <https://insights-hub-v2-one.vercel.app>, backend <https://insighthubv2.duckdns.org> (DuckDNS → the Elastic IP; the instance runs Ubuntu, user `ubuntu`). Deploy a new image: `cd /opt/commitquest && ./deploy.sh`, and let it finish (it prints `deploy: … is up`).
 
 | Piece | Where | Notes |
 |---|---|---|
@@ -15,7 +15,7 @@ Decided by the developer on 2026-11-04 (PR #51): everything on free tiers, the b
 
 ```
 merge to main ──▶ CI: backend · web · e2e green ──▶ image job ──push──▶ Docker Hub
-EC2: /opt/insightshub/deploy.sh ──pull──▶ Docker Hub, restart, health check, roll back if DOWN
+EC2: /opt/commitquest/deploy.sh ──pull──▶ Docker Hub, restart, health check, roll back if DOWN
 
 browser ──▶ https://<app>.vercel.app ──/api/* rewrite (120 s)──▶ https://api.<domain> ──▶ caddy :443 ──▶ backend :8080
 browser ──PRESS START──▶ https://api.<domain>/api/auth/login ──▶ GitHub ──▶ /api/auth/callback ──302──▶ <app>.vercel.app/dashboard#token
@@ -77,10 +77,10 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 echo 'vm.swappiness=10' | sudo tee /etc/sysctl.d/90-swappiness.conf && sudo sysctl --system
 
 # The deploy directory, owned by ec2-user
-sudo install -d -o ec2-user -g ec2-user -m 0750 /opt/insightshub
+sudo install -d -o ec2-user -g ec2-user -m 0750 /opt/commitquest
 # From your laptop:
-#   scp docs/deploy/{compose.yaml,Caddyfile,deploy.sh,deploy.env.example} ec2-user@<host>:/opt/insightshub/
-cd /opt/insightshub && chmod +x deploy.sh && mv deploy.env.example deploy.env
+#   scp docs/deploy/{compose.yaml,Caddyfile,deploy.sh,deploy.env.example} ec2-user@<host>:/opt/commitquest/
+cd /opt/commitquest && chmod +x deploy.sh && mv deploy.env.example deploy.env
 vi deploy.env        # IMAGE=docker.io/tushar2703/commitquest (already set), API_DOMAIN=api.<domain>
 ```
 
@@ -89,7 +89,7 @@ On **Ubuntu** instead: Docker from Docker's apt repository (<https://docs.docker
 
 ## 2. The backend's secrets: `backend.env` (once)
 
-`/opt/insightshub/backend.env`, mode `0600`, `KEY=value` per line, no quotes. Compose passes it to the
+`/opt/commitquest/backend.env`, mode `0600`, `KEY=value` per line, no quotes. Compose passes it to the
 container as environment variables. It is deliberately **not** called `.env`: Compose would read a
 `.env` for its own `${…}` substitution. Avoid `$` in values (or write `$$`).
 
@@ -108,7 +108,7 @@ Leave `API_DOCS_ENABLED` unset: Swagger stays off in production. The image sets
 `SPRING_PROFILES_ACTIVE=prod` and the JVM flags; either can be overridden here.
 
 ```bash
-chmod 600 /opt/insightshub/backend.env
+chmod 600 /opt/commitquest/backend.env
 ```
 
 ## 3. Publishing and deploying
@@ -132,8 +132,8 @@ before the merge), without logging in to Docker Hub or touching its secrets. The
 **Then on the instance:**
 
 ```bash
-/opt/insightshub/deploy.sh                # pulls :latest
-/opt/insightshub/deploy.sh sha-1a2b3c4    # a specific commit (pin, or roll back by hand)
+/opt/commitquest/deploy.sh                # pulls :latest
+/opt/commitquest/deploy.sh sha-1a2b3c4    # a specific commit (pin, or roll back by hand)
 ```
 
 `deploy.sh` tags the running image as `:previous`, pulls, restarts with `docker compose up -d`, waits
@@ -209,7 +209,7 @@ Not measured: real LLM responses, and the hourly jobs with many users (capped by
 ## 8. Release checklist
 
 - [ ] Instance in `ap-south-1`, credits on **standard**, Elastic IP, security group (22 from you only; 80, 443)
-- [ ] Docker + compose plugin, swap, `/opt/insightshub` with `compose.yaml`, `Caddyfile`, `deploy.sh`, `deploy.env`, `backend.env` (0600)
+- [ ] Docker + compose plugin, swap, `/opt/commitquest` with `compose.yaml`, `Caddyfile`, `deploy.sh`, `deploy.env`, `backend.env` (0600)
 - [ ] `backend.env` with **new** `JWT_SECRET` and `ENCRYPTION_KEY`; the production OAuth app's id and secret
 - [ ] Docker Hub repo + token; `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `DOCKERHUB_IMAGE` in GitHub; `image-publish` pushed on `main`
 - [ ] DNS `api.<domain>` → the Elastic IP; `deploy.sh` succeeded; `https://api.<domain>/actuator/health` is `UP` with a valid certificate
