@@ -14,7 +14,7 @@ Decided by the developer on 2026-11-04 (PR #51): everything on free tiers, the b
 | LLM | Groq (Gemini fallback dormant) | Already in use |
 
 ```
-merge to main ──▶ CI: backend · web green ──▶ image job ──push──▶ Docker Hub
+merge to main ──▶ CI: backend tests green ──▶ image job ──push──▶ Docker Hub
 EC2: /opt/commitquest/deploy.sh ──pull──▶ Docker Hub, restart, health check, roll back if DOWN
 
 browser ──▶ https://<app>.vercel.app ──/api/* rewrite (120 s)──▶ https://api.<domain> ──▶ caddy :443 ──▶ backend :8080
@@ -124,7 +124,7 @@ access token with **Read & Write** for CI (Account settings → Personal access 
 | `DOCKERHUB_TOKEN` | secret | The Read & Write token |
 | `DOCKERHUB_IMAGE` | variable (or secret) | `tushar2703/commitquest` (set 2026-11-04), no `docker.io/` and no tag. As a secret it works too, but shows as `***` in the logs |
 
-**Every merge to `main`:** CI runs `backend` and `web`; when both are green,
+**Every merge to `main`:** CI runs `backend` and `web`; when `backend` is green,
 `image-publish` packages the jar, builds the image (`linux/amd64`) and pushes `:latest` and `:sha-<7>`.
 **Pull requests never push:** `image-check` only builds the image (so a broken Dockerfile shows up
 before the merge), without logging in to Docker Hub or touching its secrets. The web app deploys on Vercel by itself.
