@@ -168,4 +168,4 @@ jobs:
             ${{ env.IMAGE }}:${{ steps.tag.outputs.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - run: echo "Pushed $IMAGE:latest and $IMAGE:${{ steps.tag.outputs.sha }}; on EC2 run /opt/insightshub/deploy.sh" >> "$GITHUB_STEP_SUMMARY"
+      - run: echo "Pushed $IMAGE:latest and $IMAGE:${{ steps.tag.outputs.sha }}; on EC2 run /opt/commitquest/deploy.sh" >> "$GITHUB_STEP_SUMMARY"
