@@ -83,7 +83,16 @@ jobs:
       - run: npm ci
         working-directory: web
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # apt mirrors on the runner sometimes stall or fail (exit 100): bound each try, then retry.
+      - name: Install Chromium
+        timeout-minutes: 12
+        run: |
+          for attempt in 1 2 3; do
+            if timeout 240 npx playwright install --with-deps chromium; then exit 0; fi
+            echo "playwright install failed (attempt $attempt), retrying in 15 s" >&2
+            sleep 15
+          done
+          exit 1
       - run: npm run typecheck
       # Mock mode on its own production build: every screen, mood, tier and the GET errors.
       - run: npm run test:mock
