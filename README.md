@@ -1,12 +1,13 @@
 # Insight Hub
 
-A GitHub habit tracker and activity dashboard. Sign in with GitHub and get a Tamagotchi-style
-hero avatar that turns your commit habit into something you'd feel bad about neglecting: it loses
-a heart for every day you go quiet, gains XP and levels up the days you don't, and its D&D class
-is read off your real coding habits — alongside a journal of your commits, PRs, top repos and
-AI-written reviews.
+**Your commit streak, as a pixel-art hero you don't want to lose.**
 
-**Live app:** https://insights-hub-v2-one.vercel.app/
+Sign in with GitHub and get a D&D character whose class is read off your real coding habits. It
+gains XP and levels up the days you contribute, and loses a heart for every day you go quiet, so
+your streak becomes something you'd feel bad about neglecting. A journal of your commits, PRs, top
+repos and AI-written reviews sits alongside it.
+
+**Try it:** https://insights-hub-v2-one.vercel.app/ · **Release:** [v1.0.0](https://github.com/tushar27x/insightsHubV2/releases/tag/v1.0.0)
 
 ![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4-6DB33F?logo=springboot&logoColor=white)
@@ -41,8 +42,14 @@ AI-written reviews.
 - **Journal** — commits, PRs, issues, stars and a 28-day activity calendar; your top repos with an
   AI-written blurb for each; an AI year-in-review and a weekly review, each with a concrete
   suggestion, falling back to a static summary if the LLM call fails.
+- **The Arena** — a live leaderboard per class, ranked by level then XP. Opt in with "Show me in
+  the Arena" in Settings; profiles are private by default.
 - **Settings** — rest days, timezone (defaults to your browser's), and email alerts for low hearts
   or a level change.
+- **Private repos, opt-in** — share private-repo activity with a confirm dialog and a 7-day lock
+  on flipping it back; off by default, and private names, READMEs and commit messages are never
+  shown either way.
+- **Installable** — add it to your phone's home screen from Settings.
 - **Email digest** — an optional daily summary email with an AI-written intro (off by default).
 
 ## How it's built
