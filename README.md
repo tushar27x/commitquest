@@ -61,7 +61,7 @@ repos and AI-written reviews sits alongside it.
 | **Auth** | GitHub OAuth2 + JWT; GitHub contribution data pulled via its GraphQL API |
 | **Frontend** | Next.js 16 · React 19 · TypeScript · Tailwind 4 · TanStack Query |
 | **Testing** | JUnit + Testcontainers (backend), Vitest (web), Playwright against mock/stubbed/full-stack backends (e2e) |
-| **CI/CD** | GitHub Actions — backend, web and e2e on every PR; a Docker image built and pushed to Docker Hub on every merge to `main` |
+| **CI/CD** | GitHub Actions — backend and web on every PR; a Docker image built and pushed to Docker Hub on every merge to `main` |
 | **Hosting** | Web on Vercel; backend as a Docker image on an AWS EC2 instance behind Caddy (HTTPS) |
 
 ```
