@@ -2,7 +2,7 @@
 # (e2e/) are not run here; run them locally (AGENTS.md). The tests use no secrets: the backend runs against
 # Testcontainers (Postgres + Redis in Docker, never Neon), and the web tests use fixtures. On a pull request,
 # `image-check` builds the backend's Docker image and pushes nothing. Only on a push to main (a merged
-# PR), `image-publish` pushes it to Docker Hub once every other job is green: the only job with
+# PR), `image-publish` pushes it to Docker Hub once the backend tests pass: the only job with
 # secrets (docs/deploy.md). The web app deploys on Vercel.
 name: CI
 
@@ -84,12 +84,12 @@ jobs:
           tags: commitquest-backend:pr-check
           cache-from: type=gha
 
-  # A merge to main (a push to main): publish :latest and :sha-<7> once every other job is green.
+  # A merge to main (a push to main): publish :latest and :sha-<7> once the backend tests pass (the web app deploys on Vercel and does not gate it).
   # The only job with secrets (docs/deploy.md). The EC2 instance then pulls it with deploy.sh.
   image-publish:
     name: Publish image (main)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [backend, web]
+    needs: [backend]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
