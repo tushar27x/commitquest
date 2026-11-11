@@ -53,7 +53,7 @@ class EmailChannelTest {
     }
 
     private static EmailChannel channel(JavaMailSender sender) {
-        return new EmailChannel(provider(sender), templates(), new DigestProperties(true, 8, 2, "Insight Hub <digest@example.test>"));
+        return new EmailChannel(provider(sender), templates(), new DigestProperties(true, 8, 2, "CommitQuest <digest@example.test>"));
     }
 
     private static Digest digest(String login) {

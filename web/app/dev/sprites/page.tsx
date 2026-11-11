@@ -10,7 +10,7 @@ import { CLASS_INFO } from "@/lib/classes";
 import { TABS } from "@/lib/nav";
 
 export const metadata: Metadata = {
-  title: "Art kit · Insight Hub",
+  title: "Art kit · CommitQuest",
   robots: { index: false },
 };
 

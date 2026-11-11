@@ -1,4 +1,4 @@
-# Insight Hub web
+# CommitQuest web
 
 Next.js 16 (App Router) + React 19 + TypeScript + Tailwind 4 + TanStack Query, in the Pixel Realm style.
 API shapes: `../docs/api/contract.md`.

@@ -18,7 +18,7 @@ const vt323 = VT323({
 });
 
 export const metadata: Metadata = {
-  title: "Insight Hub",
+  title: "CommitQuest",
   description: "Keep your hero alive with your commits.",
   // Browser tabs and iOS "Add to Home Screen" (the manifest covers Android and desktop Chrome);
   // app/favicon.ico is added by Next itself.
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
-  appleWebApp: { capable: true, title: "Insight Hub", statusBarStyle: "black" },
+  appleWebApp: { capable: true, title: "CommitQuest", statusBarStyle: "black" },
 };
 
 export const viewport: Viewport = {

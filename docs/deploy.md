@@ -1,4 +1,4 @@
-# Deploying Insight Hub v2
+# Deploying CommitQuest v2
 
 Decided by the developer on 2026-11-04 (PR #51): everything on free tiers, the backend as a Docker image.
 

@@ -48,7 +48,7 @@ function Top() {
 
       <nav aria-label="Primary" className="relative z-[3] mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-x-7 gap-y-4 px-5 py-4 md:px-8 md:py-6">
         <a href="#top" className="py-3.5 font-display text-[12px] text-gold no-underline [text-shadow:3px_3px_0_var(--color-outline)] md:text-[14px]">
-          INSIGHT HUB
+          COMMITQUEST
         </a>
         <div className="flex flex-wrap items-center gap-x-[22px] gap-y-1">
           {NAV_LINKS.map((l) => (
@@ -102,9 +102,9 @@ function What() {
     <section id="what" className={SECTION}>
       <div className={INNER}>
         <div className="flex max-w-[820px] flex-col gap-3.5 md:gap-4">
-          <h2 className={H2}>WHAT IS INSIGHT HUB?</h2>
+          <h2 className={H2}>WHAT IS COMMITQUEST?</h2>
           <p className="m-0 text-[27px] leading-[1.1] md:text-[30px]">
-            Insight Hub reads your GitHub activity and turns it into a pet-style companion: a pixel hero whose health depends on whether you showed up to code today.
+            CommitQuest reads your GitHub activity and turns it into a pet-style companion: a pixel hero whose health depends on whether you showed up to code today.
           </p>
           <p className="m-0 text-[24px] leading-[1.1] text-muted md:text-[26px]">
             It is a habit tracker with a heartbeat. Instead of a streak counter you forget about, you get a character you do not want to let down, plus a yearly Journal that explains what your coding really looks like.
@@ -262,7 +262,7 @@ function Classes() {
         <div className="flex max-w-[800px] flex-col gap-3 md:gap-3.5">
           <h2 className={H2}>EIGHT CLASSES, ONE HABIT EACH</h2>
           <p className="m-0 text-[24px] leading-[1.1] text-muted md:text-[26px]">
-            Insight Hub scores all eight from your GitHub habits. Your highest score is your class, and you can switch to any class you qualify for (7-day cooldown). Level and hearts belong to the hero, so they come with you.
+            CommitQuest scores all eight from your GitHub habits. Your highest score is your class, and you can switch to any class you qualify for (7-day cooldown). Level and hearts belong to the hero, so they come with you.
           </p>
           <p className="m-0 font-display text-[10px] leading-[1.6] text-class-cleric md:hidden">SWIPE TO MEET THEM ALL →</p>
         </div>
@@ -373,7 +373,7 @@ export function Landing() {
       <Trust />
       <FinalCta />
       <footer className="flex flex-col flex-wrap justify-between gap-2 bg-outline px-5 py-6 text-[20px] text-muted-2 md:flex-row md:gap-x-6 md:gap-y-3 md:px-8 md:py-7">
-        <span className="font-display text-[11px] text-gold">INSIGHT HUB</span>
+        <span className="font-display text-[11px] text-gold">COMMITQUEST</span>
         <span>Keep your hero alive with your commits.</span>
       </footer>
     </main>

@@ -5,8 +5,8 @@ import type { MetadataRoute } from "next";
 // user to the landing page. Colours match `viewport.themeColor` in the root layout.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Insight Hub",
-    short_name: "Insight Hub",
+    name: "CommitQuest",
+    short_name: "CommitQuest",
     description: "Keep your hero alive with your commits.",
     start_url: "/home",
     scope: "/",
