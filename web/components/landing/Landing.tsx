@@ -64,9 +64,9 @@ function Top() {
         <div className="flex flex-col gap-[22px] bg-[rgba(10,8,26,0.84)] px-[18px] pt-6 pb-[26px] shadow-[0_0_0_4px_var(--color-outline),6px_6px_0_4px_var(--color-outline)] md:mb-28 md:min-w-0 md:flex-[1_1_460px] md:gap-[26px] md:px-8 md:pt-8 md:pb-[34px] md:shadow-[0_0_0_4px_var(--color-outline),8px_8px_0_4px_var(--color-outline)]">
           <p className="m-0 font-display text-[10px] leading-[1.6] tracking-[1px] text-class-cleric md:text-[11px]">A COMMIT-POWERED HABIT GAME</p>
           <h1 className="m-0 font-display text-[36px] leading-[1.25] text-gold [text-shadow:5px_5px_0_var(--color-outline)] md:text-[clamp(34px,5.6vw,64px)] md:[text-shadow:6px_6px_0_var(--color-outline)]">
-            INSIGHT
+            COMMIT
             <br />
-            HUB
+            QUEST
           </h1>
           <p className="m-0 max-w-[560px] text-[32px] leading-[1.05] md:text-[34px]">Keep your hero alive with your commits.</p>
           <p className="m-0 max-w-[560px] text-[24px] leading-[1.1] text-muted md:text-[26px]">
