@@ -1,6 +1,6 @@
 # AGENTS.md
 
-CommitQuest v2: a Spring Boot + Spring AI rewrite of the CommitQuest backend, plus a Next.js web UI in `web/`.
+CommitQuest: a Spring Boot + Spring AI backend plus a Next.js web UI in `web/`. It replaces the earlier Python/FastAPI prototype (v1, named Insight Hub).
 Renamed from "Insight Hub" to "CommitQuest" on 2026-11-11 (display name only: the Java package `insightshub`, config prefix `insightshub.*`, JWT issuer, repo, image and domains are unchanged).
 v1 reference (Python/FastAPI): `~/dev/insight_hub/server`.
 
