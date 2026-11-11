@@ -123,7 +123,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: false
-          tags: insightshub-backend:pr-check
+          tags: commitquest-backend:pr-check
           cache-from: type=gha
 
   # A merge to main (a push to main): publish :latest and :sha-<7> once every other job is green.
@@ -135,7 +135,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # <user>/insightshub-backend: a repository variable, or a secret (then it shows as *** in the logs).
+      # <user>/commitquest-backend: a repository variable, or a secret (then it shows as *** in the logs).
       IMAGE: ${{ vars.DOCKERHUB_IMAGE || secrets.DOCKERHUB_IMAGE }}
     steps:
       - if: env.IMAGE == ''

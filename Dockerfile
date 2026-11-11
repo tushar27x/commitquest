@@ -1,5 +1,5 @@
 # The backend image (docs/deploy.md). Built from the jar Maven already made, so CI doesn't compile
-# twice:  ./mvnw -B -DskipTests package && docker build -t insightshub-backend .
+# twice:  ./mvnw -B -DskipTests package && docker build -t commitquest-backend .
 # Pushed to Docker Hub by CI on every push to main; the EC2 instance only pulls and restarts it.
 
 # Split the Boot jar into layers: dependencies change rarely, the app's own classes every build.
