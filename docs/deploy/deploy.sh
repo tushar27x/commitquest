@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# /opt/insightshub/deploy.sh [tag]: pull the backend image (default: latest), restart it, and roll
+# /opt/commitquest/deploy.sh [tag]: pull the backend image (default: latest), restart it, and roll
 # back to the image that was running if it isn't healthy within 3 minutes. CI pushes `latest` and
 # `sha-<7>` on every push to main; pass a sha tag to pin or roll back by hand.
 set -euo pipefail
-cd /opt/insightshub
+cd "$(dirname "$(readlink -f "$0")")"
 set -a; source ./deploy.env; set +a
 export TAG=${1:-latest}
 dc() { docker compose --env-file deploy.env "$@"; }
