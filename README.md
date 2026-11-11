@@ -7,7 +7,7 @@ gains XP and levels up the days you contribute, and loses a heart for every day 
 your streak becomes something you'd feel bad about neglecting. A journal of your commits, PRs, top
 repos and AI-written reviews sits alongside it.
 
-**Try it:** https://insights-hub-v2-one.vercel.app/ · **Release:** [v1.0.0](https://github.com/tushar27x/commitquest/releases/tag/v1.0.0)
+**Try it:** https://commitquest-alpha.vercel.app/ · **Release:** [v1.0.0](https://github.com/tushar27x/commitquest/releases/tag/v1.0.0)
 
 ![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4-6DB33F?logo=springboot&logoColor=white)
