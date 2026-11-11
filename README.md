@@ -1,4 +1,4 @@
-# Insight Hub
+# CommitQuest
 
 **Your commit streak, as a pixel-art hero you don't want to lose.**
 

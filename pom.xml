@@ -12,7 +12,7 @@
 	<artifactId>insightshub</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>insightshub</name>
-	<description>Insight Hub backend v2 - Spring Boot + Spring AI</description>
+	<description>CommitQuest backend - Spring Boot + Spring AI</description>
 
 	<properties>
 		<java.version>21</java.version>
