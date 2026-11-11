@@ -33,7 +33,7 @@ export const PILLARS = [
 ] as const;
 
 export const STEPS = [
-  { title: "PRESS START", body: "Sign in with GitHub. Insight Hub reads your public activity only, never your private repos." },
+  { title: "PRESS START", body: "Sign in with GitHub. CommitQuest reads your public activity only, never your private repos." },
   { title: "MEET YOUR HERO", body: "Your habits are scored across all 8 classes. The highest becomes your hero, and your past activity seeds your starting XP." },
   { title: "FEED IT DAILY", body: "Any contribution before midnight, your time, counts: commits, pull requests, issues, reviews. Hit SAVE on Home to refresh." },
   { title: "READ THE JOURNAL", body: "Open the Journal for your yearly stats, top repos and AI reviews. Switch class when your habits change." },
@@ -90,7 +90,7 @@ export const TRUST = [
   {
     accent: "var(--color-class-cleric)",
     title: "PUBLIC ACTIVITY ONLY",
-    body: "Sign in with GitHub and Insight Hub reads your public activity. Your private repos stay private, so private-only work will not show up in your days.",
+    body: "Sign in with GitHub and CommitQuest reads your public activity. Your private repos stay private, so private-only work will not show up in your days.",
   },
   {
     accent: "var(--color-class-bard)",

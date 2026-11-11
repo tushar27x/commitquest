@@ -88,7 +88,7 @@ class DigestIT {
     @Autowired
     WebApplicationContext context;
 
-    final DigestProperties properties = new DigestProperties(true, 8, 2, "Insight Hub <digest@example.test>");
+    final DigestProperties properties = new DigestProperties(true, 8, 2, "CommitQuest <digest@example.test>");
 
     @BeforeEach
     void freshUsers() {

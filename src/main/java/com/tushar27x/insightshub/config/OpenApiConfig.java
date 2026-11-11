@@ -69,9 +69,9 @@ public class OpenApiConfig {
                 .forEach(components::addSchemas);
         return new OpenAPI()
                 .info(new Info()
-                        .title("Insight Hub API")
+                        .title("CommitQuest API")
                         .version("v2")
-                        .description("The backend of the Insight Hub hero tracker. JSON keys are snake_case, "
+                        .description("The backend of the CommitQuest hero tracker. JSON keys are snake_case, "
                                 + "timestamps ISO-8601 UTC, calendar dates YYYY-MM-DD in the user's zone, enums "
                                 + "UPPER_CASE. Every error is application/problem+json. The contract the web app "
                                 + "builds on is docs/api/contract.md."))

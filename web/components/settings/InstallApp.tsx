@@ -23,7 +23,7 @@ export function InstallApp() {
       </h2>
       {mode === "prompt" ? (
         <>
-          <p className="text-[18px] leading-none text-muted-2">Add Insight Hub to your home screen and open it like an app.</p>
+          <p className="text-[18px] leading-none text-muted-2">Add CommitQuest to your home screen and open it like an app.</p>
           <button
             type="button"
             onClick={() => void promptInstall().then((outcome) => setDismissed(outcome === "dismissed"))}
@@ -35,7 +35,7 @@ export function InstallApp() {
         </>
       ) : (
         <>
-          <p className="text-[18px] leading-none text-muted-2">Add Insight Hub to your home screen and open it like an app:</p>
+          <p className="text-[18px] leading-none text-muted-2">Add CommitQuest to your home screen and open it like an app:</p>
           <ol className="m-0 flex list-decimal flex-col gap-1.5 pl-6 text-[20px] leading-none text-bone">
             <li>Tap the Share button in Safari.</li>
             <li>Choose &ldquo;Add to Home Screen&rdquo;.</li>

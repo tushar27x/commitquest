@@ -7,7 +7,7 @@ import { HomeView } from "@/components/home/HomeView";
 // so this page only ever renders in the browser and has no server UI to validate as instant.
 export const instant = false;
 
-export const metadata: Metadata = { title: "Home · Insight Hub" };
+export const metadata: Metadata = { title: "Home · CommitQuest" };
 
 export default function Page() {
   return (

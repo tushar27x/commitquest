@@ -9,7 +9,7 @@ import { Arrow } from "@/components/ui/Arrow";
 // so this page only ever renders in the browser and has no server UI to validate as instant.
 export const instant = false;
 
-export const metadata: Metadata = { title: "Change class · Insight Hub" };
+export const metadata: Metadata = { title: "Change class · CommitQuest" };
 
 const back = (
   <Link href="/hero" className="flex items-center gap-1.5 py-3 font-display text-[9px] text-gold">
