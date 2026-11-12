@@ -20,6 +20,7 @@ import com.tushar27x.insightshub.github.model.GitHubUser.Week;
 import com.tushar27x.insightshub.github.model.UserInsightsData;
 import com.tushar27x.insightshub.hero.HeroService;
 import com.tushar27x.insightshub.insights.InsightsEngine;
+import com.tushar27x.insightshub.entity.Archetype;
 import com.tushar27x.insightshub.insights.InsightsResult;
 import com.tushar27x.insightshub.repository.UsersRepository;
 import com.tushar27x.insightshub.security.SecurityTestData;
@@ -123,6 +124,32 @@ class SyncServiceTest {
         verify(writer).save(eq(ID), stats.capture(), eq(result), eq(texts), eq(NOW));
         assertThat(stats.getValue()).containsEntry("total_commits", 42) // v1's snake_case keys
                 .containsKeys("top_languages", "last_week_heatmap", "code_churn");
+    }
+
+    @Test
+    void aChangedClassRewritesTheTextsForTheClassPlayed() { // #74
+        when(writer.storedTexts(ID)).thenReturn(new Regeneration.Stored(true, NOW.minus(Duration.ofHours(1)),
+                AiInputs.of(result), false)); // written for the scored class
+        user.setChosenArchetype(Archetype.ROGUE);
+        InsightsResult rogue = result.playing(Archetype.ROGUE);
+        when(ai.generate("octocat", rogue)).thenReturn(texts);
+
+        service.sync(ID);
+
+        verify(ai).generate("octocat", rogue);
+        verify(writer).save(eq(ID), any(), eq(rogue), eq(texts), eq(NOW));
+    }
+
+    @Test
+    void textsWrittenForTheClassPlayedAreKept() {
+        user.setChosenArchetype(Archetype.ROGUE);
+        InsightsResult rogue = result.playing(Archetype.ROGUE);
+        when(writer.storedTexts(ID)).thenReturn(new Regeneration.Stored(true, NOW.minus(Duration.ofHours(1)),
+                AiInputs.of(rogue), false));
+
+        service.sync(ID);
+
+        verify(ai, never()).generate(any(), any());
     }
 
     @Test

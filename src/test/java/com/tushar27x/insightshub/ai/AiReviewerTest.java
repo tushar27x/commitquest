@@ -55,6 +55,17 @@ class AiReviewerTest {
     }
 
     @Test
+    void theSheetNamesTheClassPlayedNotTheScoredOne() { // #74: scored Monk, plays Rogue
+        FakeChatModel model = FakeChatModel.answering(ANSWER); // its title says Monk
+
+        AiInsights texts = new AiReviewer(chain(model)).review("tushar27x", insights().playing(Archetype.ROGUE));
+
+        assertThat(model.lastUserText()).doesNotContain("CLASS: Monk").contains("CLASS: Rogue");
+        assertThat(texts.characterSheet()).isEqualTo(AiReviewer.fallbackSheet("tushar27x", Archetype.ROGUE));
+        assertThat(AiInputs.of(insights().playing(Archetype.ROGUE)).archetype()).isEqualTo(Archetype.ROGUE);
+    }
+
+    @Test
     void thePromptCarriesOneUsersDataForEveryField() {
         FakeChatModel model = FakeChatModel.answering(ANSWER);
 

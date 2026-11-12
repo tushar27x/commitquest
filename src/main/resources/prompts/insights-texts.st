@@ -2,7 +2,7 @@ TASK: Five short texts about one developer's GitHub activity, written together i
 Everything below is about {login} and nobody else.
 
 DEVELOPER: {login}
-CLASS: {className}, who {habit}. It was decided by scoring their GitHub habits and is final.
+CLASS: {className}, who {habit}. It is the class they play as and is final.
 ACTIVITY (last year): {commits} commits, active on {activeDays} days; {stars} stars, {prs} PRs.
 LANGUAGES: {languages}
 LAST 7 DAYS: {weekTotal} contributions on {weekActiveDays} days. By day: {distribution}

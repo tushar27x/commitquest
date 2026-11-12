@@ -13,6 +13,7 @@ import com.tushar27x.insightshub.hero.InMemoryHeroRepository;
 import com.tushar27x.insightshub.repository.DailyContributionsRepository;
 import com.tushar27x.insightshub.repository.InsightsRepository;
 import com.tushar27x.insightshub.repository.UsersRepository;
+import com.tushar27x.insightshub.sync.SyncService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -39,6 +40,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -58,11 +61,12 @@ class HeroClassServiceTest {
     private final DailyContributionsRepository activity = mock(DailyContributionsRepository.class);
     private final InMemoryHeroRepository heroes = new InMemoryHeroRepository();
     private final HeroProperties properties = new HeroProperties(4, 40, Duration.ofDays(7));
+    private final SyncService syncService = mock(SyncService.class);
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final HeroClassService service = new HeroClassService(usersRepository, insightsRepository, heroes,
             new HeroWriter(heroes, usersRepository),
             new HeroQueryService(usersRepository, insightsRepository, heroes, activity, properties, clock),
-            properties, clock);
+            syncService, properties, clock);
     private Users user;
     /** Set to make the next compare-and-set lose to another request that stored this. */
     private Runnable racingWinner;
@@ -106,6 +110,30 @@ class HeroClassServiceTest {
     }
 
     @Test
+    void aChangeRewritesTheTextsForTheNewClass() {
+        service.change(ID, ROGUE);
+
+        verify(syncService).sync(ID);
+    }
+
+    @Test
+    void aFailedRewriteDoesNotFailTheChange() {
+        when(syncService.sync(ID)).thenThrow(new IllegalStateException("GitHub is down"));
+
+        HeroResponse hero = service.change(ID, ROGUE).orElseThrow();
+
+        assertThat(hero).isNotNull();
+        assertThat(user.getChosenArchetype()).isEqualTo(ROGUE);
+    }
+
+    @Test
+    void noChangeRewritesNothing() {
+        assertThatThrownBy(() -> service.change(ID, WIZARD)).isInstanceOf(ResponseStatusException.class);
+
+        verify(syncService, never()).sync(anyLong());
+    }
+
+    @Test
     void levelXpLivesAndStreakDoNotChange() {
         HeroResponse hero = service.change(ID, ROGUE).orElseThrow();
 
@@ -123,7 +151,7 @@ class HeroClassServiceTest {
         HeroClassService lateService = new HeroClassService(usersRepository, insightsRepository, heroes,
                 new HeroWriter(heroes, usersRepository),
                 new HeroQueryService(usersRepository, insightsRepository, heroes, activity, properties, late),
-                properties, late);
+                syncService, properties, late);
 
         lateService.change(ID, ROGUE);
 

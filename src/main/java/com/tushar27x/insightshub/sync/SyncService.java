@@ -178,11 +178,14 @@ public class SyncService {
         boolean full = user.isPrivateResyncDue() || fetched.scopeLost(); // B11: a full resync owed, or private just lost
         Activity activity = writeActivity(user, token, data, fetched.includePrivate(), full, full);
 
-        InsightsResult result = engine.calculate(data.user(), fetched.includePrivate());
+        InsightsResult result = engine.calculate(data.user(), fetched.includePrivate())
+                .playing(user.getChosenArchetype()); // the texts name the class played, not the scored one
         Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP); // snake_case, v1's shape
 
-        // B11: the LLM only for a user with no texts yet; everyone else keeps theirs until the daily job
-        boolean firstTexts = !writer.storedTexts(userId).hasTexts();
+        // B11: the LLM only for a user with no texts yet, or whose texts name another class (a class change);
+        // everyone else keeps theirs until the daily job
+        Regeneration.Stored storedTexts = writer.storedTexts(userId);
+        boolean firstTexts = !storedTexts.hasTexts() || classChanged(storedTexts, result);
         if (firstTexts) {
             AiInsights texts = ai.generate(user.getLogin(), result);
             writer.save(userId, stats, result, texts, clock.instant());
@@ -193,8 +196,13 @@ public class SyncService {
         seedHeroQuietly(user);
         log.info("Sync for '{}' done in {} ms: {}, {} activity days written, branch scan {}, AI texts {}",
                 user.getLogin(), (System.nanoTime() - start) / 1_000_000, result.archetype(), activity.days(),
-                activity.branchCounts(), firstTexts ? "written (first sync)" : "kept");
+                activity.branchCounts(), firstTexts ? "written (first sync or class change)" : "kept");
         return SyncOutcome.SYNCED;
+    }
+
+    /** The stored texts were written for another class than the one played now (#74). */
+    private static boolean classChanged(Regeneration.Stored stored, InsightsResult result) {
+        return stored.inputs() != null && stored.inputs().archetype() != result.playedClass();
     }
 
     /**
@@ -226,7 +234,8 @@ public class SyncService {
         boolean full = user.isPrivateResyncDue() || fetched.scopeLost();
         Activity activity = writeActivity(user, token, data, fetched.includePrivate(), full, full);
 
-        InsightsResult result = engine.calculate(data.user(), fetched.includePrivate());
+        InsightsResult result = engine.calculate(data.user(), fetched.includePrivate())
+                .playing(user.getChosenArchetype());
         Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP);
         Optional<Regeneration.Reason> reason = Regeneration.decide(writer.storedTexts(userId), AiInputs.of(result),
                 clock.instant(), regenerate);
@@ -480,7 +489,8 @@ public class SyncService {
         List<ContributionDay> calendar = InsightsEngine.sortedDays(contributions(data.user()));
         Map<LocalDate, Integer> branchCounts = branchScanner.scan(token, nodeId(data.user()), calendar,
                 HeroService.zoneOf(user.getTimezone()), fetched.includePrivate());
-        InsightsResult result = engine.calculate(data.user(), fetched.includePrivate());
+        InsightsResult result = engine.calculate(data.user(), fetched.includePrivate())
+                .playing(user.getChosenArchetype());
         Map<String, Object> stats = jsonMapper.convertValue(result.stats(), MAP);
         AiInsights texts = writer.storedTexts(userId).hasTexts() ? null : ai.generate(user.getLogin(), result);
         return Optional.of(new PreparedResync(userId, fetched.includePrivate(), fetched.scopeLost(), calendar,

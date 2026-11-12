@@ -64,7 +64,7 @@ public class AiReviewer {
     /** The one combined call. Never throws for a bad answer: every field missing from it gets its fallback. */
     public AiInsights review(String login, InsightsResult insights) {
         UserStats stats = insights.stats();
-        Archetype archetype = insights.archetype();
+        Archetype archetype = insights.playedClass();
         String className = className(archetype);
         List<RepoDetail> repos = stats.repoDetails().stream().limit(SUMMARIZED_REPOS).toList();
         List<Integer> heatmap = stats.lastWeekHeatmap();
@@ -97,7 +97,7 @@ public class AiReviewer {
     /** Every field's fallback: the call failed or timed out. */
     public static AiInsights fallbacks(String login, InsightsResult insights) {
         List<RepoDetail> repos = insights.stats().repoDetails().stream().limit(SUMMARIZED_REPOS).toList();
-        return assemble(login, insights.archetype(), repos, Parsed.NOTHING);
+        return assemble(login, insights.playedClass(), repos, Parsed.NOTHING);
     }
 
     static AiInsights assemble(String login, Archetype archetype, List<RepoDetail> repos, Parsed parsed) {

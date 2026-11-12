@@ -15,6 +15,7 @@ import com.tushar27x.insightshub.hero.HeroWriter;
 import com.tushar27x.insightshub.repository.HeroRepository;
 import com.tushar27x.insightshub.repository.InsightsRepository;
 import com.tushar27x.insightshub.repository.UsersRepository;
+import com.tushar27x.insightshub.sync.SyncService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -38,17 +39,19 @@ public class HeroClassService {
     private final HeroRepository heroes;
     private final HeroWriter writer;
     private final HeroQueryService heroQueryService;
+    private final SyncService syncService;
     private final HeroProperties properties;
     private final Clock clock;
 
     public HeroClassService(UsersRepository usersRepository, InsightsRepository insightsRepository,
                             HeroRepository heroes, HeroWriter writer, HeroQueryService heroQueryService,
-                            HeroProperties properties, Clock clock) {
+                            SyncService syncService, HeroProperties properties, Clock clock) {
         this.usersRepository = usersRepository;
         this.insightsRepository = insightsRepository;
         this.heroes = heroes;
         this.writer = writer;
         this.heroQueryService = heroQueryService;
+        this.syncService = syncService;
         this.properties = properties;
         this.clock = clock;
     }
@@ -82,12 +85,25 @@ public class HeroClassService {
             case Change change -> {
                 if (writer.changeClass(userId, user.getArchetypeChangedAt(), change, now)) {
                     log.info("Class for '{}' changed: {}", user.getLogin(), change.event().details());
+                    rewriteSheet(userId);
                 } else {
                     lostTheRace(userId, requested, now);
                 }
             }
         }
         return heroQueryService.hero(userId);
+    }
+
+    /**
+     * The character title and lore name the class, so a sync writes them again for the new one (#74). It must not
+     * fail the change: the class is stored, and the next sync finds the stale texts and rewrites them.
+     */
+    private void rewriteSheet(long userId) {
+        try {
+            syncService.sync(userId);
+        } catch (RuntimeException e) {
+            log.warn("Texts for user {} not rewritten after the class change; the next sync does it", userId, e);
+        }
     }
 
     /**
