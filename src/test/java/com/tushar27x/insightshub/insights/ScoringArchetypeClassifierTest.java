@@ -53,7 +53,7 @@ class ScoringArchetypeClassifierTest {
                 h.avgPrSize = 4000;
                 h.burstiness = 12;
             });
-            case WIZARD -> Habits.with(h -> h.languageCount = 9);
+            case WIZARD -> Habits.with(h -> h.languageCount = 10);
             case ARTIFICER -> Habits.with(h -> h.infraRepoShare = 0.6);
             case CLERIC -> Habits.with(h -> {
                 h.issueShare = 0.4;
@@ -106,11 +106,11 @@ class ScoringArchetypeClassifierTest {
     void tieGoesToTheClassDeclaredFirst() {
         ArchetypeScores result = classifier.classify(Habits.with(h -> {
             h.activeDayRatio = 0.6;  // Paladin: 60 * (0.5 / 0.6) = 50
-            h.languageCount = 5;     // Wizard: 100 * (3 / 6) = 50
+            h.languageCount = 5;     // Wizard: 100 * (2 / 7) = 29
         }));
 
         assertThat(result.scores().get(Archetype.PALADIN)).isEqualTo(50);
-        assertThat(result.scores().get(Archetype.WIZARD)).isEqualTo(50);
+        assertThat(result.scores().get(Archetype.WIZARD)).isEqualTo(29);
         assertThat(result.primary()).isEqualTo(Archetype.PALADIN);
     }
 

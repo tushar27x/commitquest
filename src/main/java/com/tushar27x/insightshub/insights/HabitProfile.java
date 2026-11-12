@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
  * @param longestStreak          most consecutive days with a contribution
  * @param weekendShare           Saturday + Sunday contributions / all contributions
  * @param burstiness             busiest day / average active day (1 = perfectly even)
- * @param languageCount          distinct languages across the top repos
+ * @param languageCount          distinct languages across the top repos, minor ones (HTML, CSS, shell, build files) left out
  * @param infraRepoShare         top repos with infrastructure files at the root
  * @param issueShare             issues / (commits + PRs + issues)
  * @param prShare                PRs / (commits + PRs)
@@ -57,6 +57,14 @@ public record HabitProfile(
         double descriptiveCommitShare) {
 
     static final int DOCUMENTED_README_CHARS = 500;
+
+    /**
+     * Languages (lowercased) that come with almost any repo and say little about breadth: markup, styling,
+     * shell and build files. They don't count towards {@code languageCount}.
+     */
+    static final Set<String> MINOR_LANGUAGES = Set.of(
+            "html", "css", "scss", "sass", "less", "shell", "batchfile", "powershell", "makefile", "cmake",
+            "dockerfile", "nix", "tex", "roff", "jupyter notebook");
 
     /** Root entries (lowercased) that mean infrastructure work. Exact names, unlike v1's substrings. */
     static final Set<String> INFRA_ENTRIES = Set.of(
@@ -161,6 +169,7 @@ public record HabitProfile(
                 .flatMap(repo -> InsightsEngine.nodes(repo.languages()).stream())
                 .map(GitHubUser.Language::name)
                 .filter(Objects::nonNull)
+                .filter(name -> !MINOR_LANGUAGES.contains(name.toLowerCase(Locale.ROOT)))
                 .distinct()
                 .count();
     }

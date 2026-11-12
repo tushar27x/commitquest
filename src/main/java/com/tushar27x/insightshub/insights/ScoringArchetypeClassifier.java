@@ -20,7 +20,7 @@ import java.util.Map;
 @Component
 public class ScoringArchetypeClassifier implements ArchetypeClassifier {
 
-    static final int ALGO_VERSION = 1;
+    static final int ALGO_VERSION = 2;
 
     @Override
     public ArchetypeScores classify(HabitProfile h) {
@@ -32,7 +32,7 @@ public class ScoringArchetypeClassifier implements ArchetypeClassifier {
                 50 * scale(h.avgPrSize(), 300, 3000),
                 50 * scale(h.burstiness(), 3, 10)));
         scores.put(Archetype.WIZARD, score(
-                100 * scale(h.languageCount(), 2, 8)));
+                100 * scale(h.languageCount(), 3, 10)));
         scores.put(Archetype.ARTIFICER, score(
                 100 * scale(h.infraRepoShare(), 0, 0.6)));
         scores.put(Archetype.CLERIC, score(
