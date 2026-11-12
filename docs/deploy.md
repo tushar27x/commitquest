@@ -2,7 +2,7 @@
 
 Decided by the developer on 2026-11-04 (PR #51): everything on free tiers, the backend as a Docker image.
 
-**Live since 2026-11-04:** web <https://insights-hub-v2-one.vercel.app>, backend <https://insighthubv2.duckdns.org> (DuckDNS → the Elastic IP; the instance runs Ubuntu, user `ubuntu`). Deploy a new image: `cd /opt/commitquest && ./deploy.sh`, and let it finish (it prints `deploy: … is up`).
+**Live since 2026-11-04:** web <https://commitquest-alpha.vercel.app>, backend <https://commitquest.duckdns.org> (DuckDNS → the Elastic IP; the instance runs Ubuntu, user `ubuntu`). Deploy a new image: `cd /opt/commitquest && ./deploy.sh`, and let it finish (it prints `deploy: … is up`).
 
 | Piece | Where | Notes |
 |---|---|---|
