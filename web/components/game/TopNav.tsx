@@ -7,7 +7,7 @@ import { TABS, isActiveTab } from "@/lib/nav";
 import { useHero, useInsights } from "@/lib/queries";
 import { SaveButton } from "./SaveButton";
 
-/** Desktop navigation (md and up): link back to the landing page, name, tabs, last sync time, SAVE. */
+/** Desktop navigation (md and up): a "<" link back to the landing page, name, tabs, last sync time, SAVE. */
 export function TopNav() {
   const pathname = usePathname();
   const insights = useInsights().data;
@@ -25,7 +25,7 @@ export function TopNav() {
           aria-label="Back to the landing page"
           className="text-muted-2 hover:text-gold active:text-gold"
         >
-          &lt; LANDING
+          &lt;
         </Link>
         <span className="text-gold">
           {insights?.user_name.toUpperCase() ?? "COMMITQUEST"}
