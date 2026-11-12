@@ -122,6 +122,17 @@ class HabitProfileTest {
     }
 
     @Test
+    void minorLanguagesDoNotCountTowardsBreadth() {
+        GitHubUser user = user(List.of(
+                        repoWithLanguages("web", "TypeScript", "HTML", "CSS"),
+                        repoWithLanguages("tools", "Go", "Shell", "Makefile"),
+                        repoWithLanguages("box", "Dockerfile", "TypeScript")),
+                List.of(), null);
+
+        assertThat(profile(user).languageCount()).isEqualTo(2);  // TypeScript, Go
+    }
+
+    @Test
     void repoSharesLanguagesAndAudience() {
         GitHubUser user = user(List.of(
                         repo("infra", "short", List.of("Dockerfile"), List.of()),
