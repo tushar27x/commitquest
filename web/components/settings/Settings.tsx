@@ -497,7 +497,7 @@ function PrivateRepos({
       {lockDate && (
         <p id="private-lock" className="text-[18px] leading-[1.05] text-gold">
           {waiting
-            ? `Locked until ${lockDate}: GitHub access can't be turned on before then. You can still turn this off.`
+            ? `Locked until ${lockDate}, but GitHub access was lost, so you can authorize again now. You can also turn this off.`
             : `After you change this, it is locked for 7 days (until ${lockDate}).`}
         </p>
       )}
@@ -527,14 +527,6 @@ function PrivateRepos({
         <div className="flex flex-col items-start gap-1">
           {status.kind === "saving" ? (
             <span className="font-display text-[8px] text-muted-2">SAVING…</span>
-          ) : lockDate ? (
-            <button
-              type="button"
-              disabled
-              className="flex h-11 items-center bg-stone-lit px-4 font-display text-[9px] text-faint shadow-[0_0_0_2px_var(--color-outline)] disabled:cursor-not-allowed"
-            >
-              AUTHORIZE ON GITHUB
-            </button>
           ) : (
             <a
               href={privateLoginUrl()}
