@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -66,6 +67,26 @@ class AuthServiceTest {
 
         assertThat(uri.getQuery()).contains("scope=read:user user:email repo");
         assertThat(params.getFirst("state")).isEqualTo("st4te");
+    }
+
+    @Test
+    void aReplayedCallbackGetsTheFirstLoginInsteadOfGitHubsBadVerificationCode() {
+        when(usersRepository.findById(GITHUB_ID)).thenReturn(Optional.empty());
+
+        LoginResult first = service.completeLogin("code", REDIRECT_URI, false);
+        LoginResult replay = service.completeLogin("code", REDIRECT_URI, false);
+
+        assertThat(replay).isSameAs(first);
+        verify(gitHub, times(1)).exchangeCode("code", REDIRECT_URI); // #71: the one-time code is spent once
+    }
+
+    @Test
+    void aRejectedCodeIsNotRemembered() {
+        when(gitHub.exchangeCode("bad", REDIRECT_URI)).thenThrow(new OAuthCodeRejectedException("bad_verification_code"));
+
+        assertThatThrownBy(() -> service.completeLogin("bad", REDIRECT_URI)).isInstanceOf(OAuthCodeRejectedException.class);
+        assertThatThrownBy(() -> service.completeLogin("bad", REDIRECT_URI)).isInstanceOf(OAuthCodeRejectedException.class);
+        verify(gitHub, times(2)).exchangeCode("bad", REDIRECT_URI);
     }
 
     @Test

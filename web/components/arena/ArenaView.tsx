@@ -41,7 +41,7 @@ function Arena({ hero }: { hero: Hero }) {
 
   return (
     <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:gap-8">
-      <ArenaScene hero={hero} className="md:flex-[1_1_360px]" />
+      <ArenaScene hero={hero} archetype={archetype} className="md:flex-[1_1_360px]" />
       <div className="flex min-w-0 flex-col gap-3.5 px-3 md:flex-[1.6_1_480px] md:gap-6 md:px-0">
         <RankCard hero={hero} onShow={(rank) => (setPicked(null), setPage(Math.floor((rank.rank - 1) / 20)))} />
         <ClassPicker selected={archetype} current={current} onChoose={choose} />
