@@ -17,8 +17,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The login round trip: build GitHub's authorize URL, then turn the returned code into
@@ -36,6 +40,8 @@ public class AuthService {
     private final AuthProperties properties;
     private final PrivateProperties privateProperties;
     private final Clock clock;
+    /** #71: logins by one-time code, so a replayed callback gets the first one's result. */
+    private final ConcurrentHashMap<String, Replayable> recentLogins = new ConcurrentHashMap<>();
 
     public AuthService(GitHubOAuthClient gitHub, UsersRepository usersRepository, TokenCipher tokenCipher,
                        JwtService jwtService, SyncService syncService, AuthProperties properties,
@@ -86,6 +92,56 @@ public class AuthService {
      * the scope is not a user change and never locks.
      */
     public LoginResult completeLogin(String code, String redirectUri, boolean privateIntent) {
+        Instant now = clock.instant();
+        recentLogins.values().removeIf(r -> r.done && r.expiresAt.isBefore(now));
+        String key = code + '\n' + redirectUri + '\n' + privateIntent;
+        CompletableFuture<LoginResult> mine = new CompletableFuture<>();
+        Replayable first = recentLogins.putIfAbsent(key, new Replayable(mine, now.plus(REPLAY_WINDOW)));
+        if (first != null) {
+            log.info("Callback replayed for a code that is already being (or was just) used; sharing the first login's result");
+            try {
+                return first.result.join();
+            } catch (CompletionException e) {
+                throw e.getCause() instanceof RuntimeException re ? re : e;
+            }
+        }
+        try {
+            LoginResult result = doCompleteLogin(code, redirectUri, privateIntent);
+            mine.complete(result);
+            return result;
+        } catch (RuntimeException e) {
+            recentLogins.remove(key); // a failed code is not remembered: the next attempt gets GitHub's real answer
+            mine.completeExceptionally(e);
+            throw e;
+        } finally {
+            recentLogins.computeIfPresent(key, (k, r) -> r.markDone());
+        }
+    }
+
+    /**
+     * #71: GitHub's code is single-use. The callback can take a minute (the first sync runs before it answers) and
+     * a browser may replay it meanwhile, or when the response never arrived; the replay used to get
+     * {@code bad_verification_code}. A replay is only reachable with the same state cookie, so it is the same user.
+     */
+    private static final Duration REPLAY_WINDOW = Duration.ofMinutes(2);
+
+    private static final class Replayable {
+        final CompletableFuture<LoginResult> result;
+        final Instant expiresAt;
+        volatile boolean done;
+
+        Replayable(CompletableFuture<LoginResult> result, Instant expiresAt) {
+            this.result = result;
+            this.expiresAt = expiresAt;
+        }
+
+        Replayable markDone() {
+            done = true;
+            return this;
+        }
+    }
+
+    private LoginResult doCompleteLogin(String code, String redirectUri, boolean privateIntent) {
         OAuthToken grant = gitHub.exchangeCode(code, redirectUri);
         String githubToken = grant.accessToken();
         GitHubAccount account = gitHub.fetchAccount(githubToken);
