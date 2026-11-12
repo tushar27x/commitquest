@@ -132,14 +132,14 @@ test.describe("the lock variants", () => {
     });
   }
 
-  test("?mock=private_lock_lost_scope: waiting while locked; AUTHORIZE is disabled but turning off is allowed", async ({ page }) => {
+  test("?mock=private_lock_lost_scope: waiting while locked; AUTHORIZE stays enabled (access was lost) and turning off is allowed", async ({ page }) => {
     await page.goto("/settings?mock=private_lock_lost_scope");
     await expect(priv(page)).toHaveAttribute("aria-checked", "true");
     await expect(priv(page)).toBeEnabled();
     await expect(page.locator("#private-lock")).toContainText("Locked until 23 Oct 2026");
-    await expect(page.locator("#private-lock")).toContainText("You can still turn this off");
-    await expect(page.getByRole("button", { name: "AUTHORIZE ON GITHUB" })).toBeDisabled();
-    await expect(page.getByRole("link", { name: "AUTHORIZE ON GITHUB" })).toHaveCount(0);
+    await expect(page.locator("#private-lock")).toContainText("you can authorize again now");
+    await expect(page.getByRole("link", { name: "AUTHORIZE ON GITHUB" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "AUTHORIZE ON GITHUB" })).toHaveCount(0);
     await priv(page).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(priv(page)).toHaveAttribute("aria-checked", "false");
