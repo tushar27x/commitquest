@@ -21,7 +21,7 @@ import java.util.Map;
  */
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record AiInputs(
-        Archetype archetype,
+        Archetype archetype, // the class played, chosen ?? scored: the texts name it
         Map<String, Integer> scores,
         int totalCommits,
         int totalPrs,
@@ -39,7 +39,7 @@ public record AiInputs(
         UserStats stats = result.stats();
         Map<String, Integer> scores = new LinkedHashMap<>();
         result.archetypeScores().scores().forEach((archetype, score) -> scores.put(archetype.name(), score));
-        return new AiInputs(result.archetype(), scores, stats.totalCommits(), stats.totalPrs(), stats.totalStars(),
+        return new AiInputs(result.playedClass(), scores, stats.totalCommits(), stats.totalPrs(), stats.totalStars(),
                 stats.repoDetails().stream().limit(AiReviewer.SUMMARIZED_REPOS).map(UserStats.RepoDetail::name).toList(),
                 stats.topLanguages());
     }
