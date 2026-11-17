@@ -94,6 +94,15 @@ class HeroQueryServiceTest {
     }
 
     @Test
+    void aRevokedTokenIsFlaggedSoTheUiCanSayTheHeroIsFrozen() {
+        assertThat(serviceAt(FRIDAY_EVENING).hero(ID).orElseThrow().needsReauth()).isFalse();
+
+        user.setNeedsReauth(true);
+
+        assertThat(serviceAt(FRIDAY_EVENING).hero(ID).orElseThrow().needsReauth()).isTrue();
+    }
+
+    @Test
     void beforeSixTheSameHeroIsOkayNotHungry() {
         HeroResponse hero = serviceAt(Instant.parse("2026-10-16T12:29:00Z")).hero(ID).orElseThrow(); // 17:59 local
 

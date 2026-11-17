@@ -30,6 +30,14 @@ test.describe("SAVE (POST /sync)", () => {
     await expect(page.getByText(heroSummary(fixtures.hero))).toBeAttached();
   });
 
+  test("GET /hero with needs_reauth: the banner shows on load, before any SAVE (#77)", async ({ page }) => {
+    await stubApi(page, { "GET /api/user/hero": { body: { ...fixtures.hero, needs_reauth: true } } });
+    await login(page);
+    const banner = page.getByRole("alert").filter({ hasText: "YOUR GITHUB SEAL BROKE" });
+    await expect(banner).toBeVisible();
+    await expect(banner.getByRole("link", { name: "RECONNECT GITHUB" })).toHaveAttribute("href", `${BACKEND_URL}/api/auth/login`);
+  });
+
   test("502: THE ROAD IS BLOCKED, and RETRY saves again", async ({ page }) => {
     const log = await stubApi(page, { [`POST ${SYNC}`]: sequence(problem(502, SYNC), { body: fixtures.insights }) });
     await login(page);

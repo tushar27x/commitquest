@@ -130,7 +130,7 @@ class HeroApiTest {
                 new HeroResponse.HeroClass(com.tushar27x.insightshub.entity.Archetype.ROGUE,
                         com.tushar27x.insightshub.entity.Archetype.ROGUE, com.tushar27x.insightshub.entity.Archetype.MONK,
                         hero.heroClass().qualified(), java.time.Instant.parse("2026-10-21T09:00:00Z")),
-                hero.lastEvaluatedOn());
+                hero.lastEvaluatedOn(), hero.needsReauth());
         when(heroQueryService.hero(ID)).thenReturn(Optional.of(cooldown));
 
         mvc.perform(as(get("/api/user/hero")))
