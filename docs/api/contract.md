@@ -97,6 +97,7 @@ Returns 200 with `fixtures/hero.json`. Before the first sync, 404 (the hero is c
 | `rest_days` | array | Weekday enums, at most 2 |
 | `class` | object | `{chosen: CLASS\|null, current: CLASS, scored: CLASS, qualified: CLASS[], can_switch_at: Instant\|null}`. `current = chosen ?? scored`. `can_switch_at` is null when switching is allowed now |
 | `last_evaluated_on` | date | The last day the hero job settled |
+| `needs_reauth` | bool | GitHub rejected the stored token (a 401 on a sync or the hero job), so the hero job skips this hero: nothing is settled, no heart is lost, until the user logs in again. The UI shows the "Reconnect GitHub" banner whenever it is true, on load, without waiting for a SAVE to return 409 |
 
 ### `GET /api/user/hero/events?days=30` (JWT)
 Returns 200 with `fixtures/hero-events.json`: `{ events: [{type, on_date, details}], xp_days: [{on_date, xp, streak}] }`, newest last.

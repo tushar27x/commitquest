@@ -62,5 +62,6 @@
     ],
     "can_switch_at": null
   },
-  "last_evaluated_on": "2026-10-15"
+  "last_evaluated_on": "2026-10-15",
+  "needs_reauth": false
 }

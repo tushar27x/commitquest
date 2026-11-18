@@ -118,5 +118,8 @@
       ],
       "can_switch_at": "2026-10-21T09:00:00Z"
     }
+  },
+  "needs_reauth": {
+    "needs_reauth": true
   }
 }

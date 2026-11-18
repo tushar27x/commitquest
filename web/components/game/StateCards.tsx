@@ -32,7 +32,7 @@ export function NewGameCard() {
   );
 }
 
-/** 409 on sync: the GitHub token was revoked. The JWT is still fine, so the data stays. */
+/** 409 on sync, or `needs_reauth` on GET /hero: the GitHub token was revoked. The JWT is still fine, so the data stays. */
 export function ReconnectBanner() {
   return (
     <StateCard
@@ -47,7 +47,7 @@ export function ReconnectBanner() {
         </a>
       }
     >
-      GitHub no longer accepts the stored token. Your session is fine: reconnect GitHub to keep saving.
+      GitHub no longer accepts the stored token. Your session is fine, but your hero is paused until you reconnect GitHub: no days are settled, and no hearts are lost, meanwhile.
     </StateCard>
   );
 }

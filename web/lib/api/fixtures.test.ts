@@ -68,6 +68,7 @@ const hero = obj<Hero>({
     qualified: array(archetype), can_switch_at: nullable(instant),
   }),
   last_evaluated_on: date,
+  needs_reauth: bool,
 });
 
 // One `details` shape per event type: a type missing here, or in HeroEventDetails, fails to compile.

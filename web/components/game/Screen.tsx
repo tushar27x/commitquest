@@ -57,7 +57,7 @@ export function Screen({ header, title, hideTitle = false, flush = false, width 
   else if (insights.data && hero.data) body = children;
 
   const banners = [
-    needsReauth && <ReconnectBanner key="reauth" />,
+    (needsReauth || hero.data?.needs_reauth) && <ReconnectBanner key="reauth" />,
     syncBlocked && <RoadBlockedCard key="sync" onRetry={save} retrying={saving} />,
     !blockedWithoutData && failed.length > 0 && <RoadBlockedCard key="query" onRetry={retry} retrying={retrying} />,
   ].filter(Boolean);

@@ -111,7 +111,8 @@ public class HeroQueryService {
                 RestDays.toDays(user.getRestDays()),
                 new HeroResponse.HeroClass(classView.chosen(), classView.current(), classView.scored(),
                         classView.qualified(), classView.canSwitchAt()),
-                state.lastEvaluatedOn()));
+                state.lastEvaluatedOn(),
+                user.isNeedsReauth()));
     }
 
     /**

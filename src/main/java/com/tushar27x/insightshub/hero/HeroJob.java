@@ -74,6 +74,10 @@ public class HeroJob {
         } // close() waits for every task
 
         Summary summary = counts.summary();
+        if (summary.waitingForReauth() > 0) {
+            log.warn("Hero job: {} of {} heroes are waiting for a re-login (GitHub rejected their token), their days are not settled",
+                    summary.waitingForReauth(), due.size());
+        }
         log.info("Hero job done in {} ms: {}", (System.nanoTime() - start) / 1_000_000, summary);
         return summary;
     }

@@ -32,7 +32,9 @@ public record HeroResponse(
         String timezone,
         List<DayOfWeek> restDays,
         @JsonProperty("class") HeroClass heroClass,
-        LocalDate lastEvaluatedOn) {
+        LocalDate lastEvaluatedOn,
+        @Schema(description = "GitHub rejected the stored token: the hero job skips this hero until the next login")
+        boolean needsReauth) {
 
     /** @param dayEndsAt the next local midnight, for the countdown */
     @Schema(name = "HeroToday")

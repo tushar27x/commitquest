@@ -185,6 +185,8 @@ export interface Hero {
   rest_days: Weekday[];
   class: HeroClass;
   last_evaluated_on: LocalDate;
+  /** GitHub rejected the stored token: the hero job skips this hero until the next login. */
+  needs_reauth: boolean;
 }
 
 // GET /api/user/hero/events?days=30
